@@ -1,0 +1,23 @@
+{
+    "name": "onebot/libonebot",
+    "type": "library",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "crazywhalecc",
+            "email": "crazywhalecc@163.com"
+        }
+    ],
+    "minimum-stability": "stable",
+    "require": {
+        "swoole/ide-helper": "@dev"
+    },
+    "autoload": {
+        "psr-4": {
+            "OneBot\\": "src/OneBot"
+        },
+        "files": [
+            "src/OneBot/V12/global_defines.php"
+        ]
+    }
+}
