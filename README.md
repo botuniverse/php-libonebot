@@ -6,7 +6,7 @@ PHP 的 LibOneBot 库。LibOneBot 可以帮助 OneBot 实现者快速在新的�
 
 **当前版本还在开发中，在发布正式版之前此库内的接口可能会发生较大变动。**
 
-更新日志：<docs/update.md>
+开发进度见 [更新日志](/docs/update.md)。
 
 ## 使用
 
