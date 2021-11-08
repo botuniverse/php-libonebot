@@ -1,16 +1,12 @@
 <?php
 
-namespace App;
+namespace OneBot\V12\Action;
 
-use OneBot\V12\Action\ActionBase;
-use OneBot\V12\Action\ActionResponse;
 use OneBot\Console\Console;
-use OneBot\V12\Exception\OneBotFailureException;
 use OneBot\V12\Object\ActionObject;
-use OneBot\V12\RetCode;
 use OneBot\V12\Utils;
 
-class ReplAction extends ActionBase
+class ReplAction
 {
     public function onSendMessage(ActionObject $action): ActionResponse {
         Console::success(Utils::msgToString($action->params['message']));
