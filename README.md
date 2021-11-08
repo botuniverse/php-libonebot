@@ -29,6 +29,19 @@ $ob->setActionHandler(\OneBot\V12\Action\ReplAction::class);
 $ob->run();
 ```
 
+在 `demo.json` 中写如下代码：
+
+```json
+{
+    "http": {
+        "host": "0.0.0.0",
+        "port": 9600,
+        "enable": true,
+        "event_enabled": true
+    }
+}
+```
+
 此 demo 以一个命令行交互的方式使用 LibOneBot 快速完成了一个 OneBot 实现，命令行中输入内容即可发送到 OneBot，使用 HTTP 或 WebSocket 发送给 LibOneBot 后可以将信息显示在终端内。
 
 ```bash
