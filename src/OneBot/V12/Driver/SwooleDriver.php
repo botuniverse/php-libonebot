@@ -5,13 +5,13 @@ namespace OneBot\V12\Driver;
 
 
 use OneBot\V12\ActionResponse;
-use OneBot\V12\Console;
+use OneBot\Console\Console;
 use OneBot\V12\CoreActionInterface;
 use OneBot\V12\Driver\Config\Config;
 use OneBot\V12\Object\ActionObject;
 use OneBot\V12\Object\EventObject;
 use OneBot\V12\OneBot;
-use OneBot\V12\OneBotException;
+use OneBot\V12\Exception\OneBotException;
 use OneBot\V12\Utils;
 use Swoole\Http\Request;
 use Swoole\Http\Response;
@@ -45,7 +45,7 @@ class SwooleDriver implements Driver
 
     }
 
-    public function run() {
+    public function initComm() {
         $enabled_com = $this->config->getEnabledCommunications();
         $has_ws = false;
         $has_http = false;
@@ -70,6 +70,9 @@ class SwooleDriver implements Driver
                 //TODO: 在协程状态下启动纯客户端模式
             });
         }
+    }
+
+    public function run() {
         if ($this->server !== null) $this->server->start();
     }
 

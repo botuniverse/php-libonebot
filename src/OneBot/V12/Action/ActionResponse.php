@@ -1,8 +1,10 @@
 <?php
 
 
-namespace OneBot\V12;
+namespace OneBot\V12\Action;
 
+
+use OneBot\V12\RetCode;
 
 class ActionResponse
 {
@@ -19,7 +21,14 @@ class ActionResponse
     public function ok($data = []): ActionResponse {
         $this->retcode = 0;
         $this->data = $data;
-        $this->message = "";
+        $this->message = "ok";
+        return $this;
+    }
+
+    public function fail($retcode, $message = ""): ActionResponse {
+        $this->retcode = $retcode;
+        $this->data = [];
+        $this->message = $message === "" ? RetCode::getMessage($retcode) : $message;
         return $this;
     }
 }

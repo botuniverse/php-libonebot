@@ -18,5 +18,7 @@ interface Driver
 
     public function emitOBEvent(EventObject $event);
 
+    public function initComm();
+
     public function run();
 }

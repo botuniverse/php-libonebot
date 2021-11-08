@@ -13,4 +13,8 @@ class Console
     public static function success($msg) {
         echo date("[H:i:s] ") . "[S] " . $msg . PHP_EOL;
     }
+
+    public static function error($msg) {
+        echo date("[H:i:s] ") . "[E] " . $msg . PHP_EOL;
+    }
 }

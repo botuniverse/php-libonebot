@@ -10,7 +10,11 @@
     ],
     "minimum-stability": "stable",
     "require": {
-        "swoole/ide-helper": "@dev"
+        "swoole/ide-helper": "@dev",
+        "workerman/workerman": "^4.0",
+        "ext-json": "*",
+        "ext-posix": "*",
+        "symfony/var-dumper": "^5.3"
     },
     "autoload": {
         "psr-4": {

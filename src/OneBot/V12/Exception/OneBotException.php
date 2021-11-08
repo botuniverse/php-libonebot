@@ -1,7 +1,7 @@
 <?php
 
 
-namespace OneBot\V12;
+namespace OneBot\V12\Exception;
 
 
 use Exception;

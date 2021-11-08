@@ -1,13 +1,11 @@
 <?php
 
-
 namespace OneBot\V12\Driver\Config;
 
-
-use OneBot\V12\OneBotException;
+use OneBot\V12\Exception\OneBotException;
 use OneBot\V12\Utils;
 
-class SwooleDriverConfig implements Config
+class WorkermanConfig implements Config
 {
     /** @var array */
     private $object;
@@ -25,7 +23,7 @@ class SwooleDriverConfig implements Config
         $this->object = $json;
     }
 
-    public function getEnabledCommunications(): array {
+    public function getEnabledCommunications() {
         $enabled = [];
         foreach ($this->object as $k => $v) {
             if ($k === "http" && ($v["enable"] ?? false) === true) {
@@ -86,7 +84,7 @@ class SwooleDriverConfig implements Config
 
     /**
      * 校验配置文件是否符合onebot标准
-     * TODO: 完成检验配置文件
+     * TODO: 完成检验配置文件（workerman）
      */
     private function validate() {
 
