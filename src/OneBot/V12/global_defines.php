@@ -1,4 +1,7 @@
-<?php
+<?php /** @noinspection PhpDefineCanBeReplacedWithConstInspection */
+
+define("ONEBOT_VERSION", "12");
+define("ONEBOT_LIBOB_VERSION", "0.1.0");
 
 define("ONEBOT_JSON", 1);
 define("ONEBOT_MSGPACK", 2);

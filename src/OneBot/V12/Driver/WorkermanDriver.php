@@ -3,6 +3,9 @@
 namespace OneBot\V12\Driver;
 
 use Error;
+use Throwable;
+use MessagePack\Exception\UnpackingFailedException;
+use MessagePack\MessagePack;
 use OneBot\V12\Action\ActionResponse;
 use OneBot\Console\Console;
 use OneBot\V12\Driver\Config\Config;
@@ -13,7 +16,6 @@ use OneBot\V12\Driver\Workerman\Worker;
 use OneBot\V12\OneBot;
 use OneBot\V12\RetCode;
 use OneBot\V12\Utils;
-use Throwable;
 use Workerman\Connection\TcpConnection;
 use Workerman\Protocols\Http\Request;
 use Workerman\Protocols\Http\Response;
@@ -61,6 +63,11 @@ class WorkermanDriver implements Driver
         Worker::runAll();
     }
 
+    /**
+     * @internal
+     * @param TcpConnection $connection
+     * @param Request|null $request
+     */
     public function onHttpMessage(TcpConnection $connection, ?Request $request) {
         try {
             // 区分msgpack和json格式
@@ -74,8 +81,16 @@ class WorkermanDriver implements Driver
                 $action_obj = new ActionObject($json["action"], $json["params"] ?? [], $json["echo"] ?? null);
             } elseif (($request->header["content-type"] ?? null) === "application/msgpack") {
                 $raw_type = ONEBOT_MSGPACK;
-                throw new OneBotFailureException(RetCode::BAD_REQUEST);
-                //TODO: 完成对msgpack格式的处理
+                $obj = $request->rawBody();
+                try {
+                    $msgpack = MessagePack::unpack($obj);
+                } catch (UnpackingFailedException $e) {
+                    throw new OneBotFailureException(RetCode::BAD_REQUEST);
+                }
+                if (!isset($msgpack["action"])) {
+                    throw new OneBotFailureException(RetCode::BAD_REQUEST);
+                }
+                $action_obj = $msgpack;
             } else {
                 // 两者都不是的话，直接报错
                 throw new OneBotFailureException(RetCode::BAD_REQUEST);
@@ -118,9 +133,16 @@ class WorkermanDriver implements Driver
                 break;
             case ONEBOT_MSGPACK:
                 $response->withHeader('content-type', 'application/msgpack');
-                // TODO: 完成对msgpack格式的处理
+                $response->withBody(MessagePack::pack($body));
                 $connection->send($response);
                 break;
         }
+    }
+
+    /**
+     * @return Config
+     */
+    public function getConfig(): Config {
+        return $this->config;
     }
 }

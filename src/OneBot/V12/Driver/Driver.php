@@ -20,5 +20,7 @@ interface Driver
 
     public function initComm();
 
+    public function getConfig(): Config;
+
     public function run();
 }

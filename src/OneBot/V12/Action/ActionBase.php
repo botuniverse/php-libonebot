@@ -3,7 +3,9 @@
 namespace OneBot\V12\Action;
 
 use OneBot\V12\Object\ActionObject;
+use OneBot\V12\OneBot;
 use OneBot\V12\RetCode;
+use OneBot\V12\Utils;
 
 abstract class ActionBase
 {
@@ -56,7 +58,21 @@ abstract class ActionBase
         return ActionResponse::create($action->echo)->fail(RetCode::UNSUPPORTED_ACTION);
     }
 
-    public function onGetLatestEvent(ActionObject $action): ActionResponse {
+    public function onGetLatestEvents(ActionObject $action): ActionResponse {
         return ActionResponse::create($action->echo)->fail(RetCode::UNSUPPORTED_ACTION);
+    }
+
+    public function onGetSupportedActions(ActionObject $action): ActionResponse {
+        $reflection = new \ReflectionClass($this);
+        $list = [];
+        foreach ($reflection->getMethods() as $v) {
+            $sep = Utils::camelToSeparator($v->getName());
+            if (substr($sep, 0, 3) === 'on_') {
+                $list[] = substr($sep, 3);
+            } elseif (substr($sep, 0, 4) === 'ext_') {
+                $list[] = OneBot::getInstance()->getPlatform() . '.' . substr($sep, 4);
+            }
+        }
+        return ActionResponse::create($action->echo)->ok($list);
     }
 }

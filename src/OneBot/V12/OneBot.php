@@ -89,4 +89,8 @@ class OneBot
     public function getPlatform(): string {
         return $this->platform;
     }
+
+    public function getDriver() {
+        return $this->driver;
+    }
 }
