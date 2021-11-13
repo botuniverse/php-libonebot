@@ -36,6 +36,7 @@
     },
     "require-dev": {
         "friendsofphp/php-cs-fixer": "^3.2",
+        "phpstan/phpstan": "^1.1",
         "swoole/ide-helper": "@dev"
     },
     "autoload": {
@@ -47,6 +48,7 @@
         ]
     },
     "scripts": {
-        "cs-fix": "php-cs-fixer fix $1"
+        "cs-fix": "php-cs-fixer fix $1",
+        "analyse": "phpstan analyse --memory-limit 300M -l 0 ./src"
     }
 }
