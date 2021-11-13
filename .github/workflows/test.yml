@@ -14,8 +14,7 @@ jobs:
         uses: "shivammathur/setup-php@v2"
         with:
           php-version: "7.2"
-      - name: Install Swoole
-        run: "pecl install swoole"
+          extensions: swoole
       - name: Install Composer Dependencies
         uses: "ramsey/composer-install@v1"
       - name: Run Static Analysis
