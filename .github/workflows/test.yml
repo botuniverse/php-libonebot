@@ -10,10 +10,11 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
-      - name: Setup PHP 7.1
+      - name: Setup PHP 7.2
         uses: "shivammathur/setup-php@v2"
         with:
           php-version: "7.2"
+          extensions: swoole/swoole-src@4.8.0
       - name: Install Composer Dependencies
         uses: "ramsey/composer-install@v1"
       - name: Run Static Analysis
