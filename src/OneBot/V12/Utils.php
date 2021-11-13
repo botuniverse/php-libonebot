@@ -49,6 +49,8 @@ class Utils
         if (isset(Utils::$cache["core_action_methods"])) {
             return Utils::$cache["core_action_methods"];
         } else {
+            // TODO: Create CoreActionInterface
+            // @phpstan-ignore-next-line
             $reflection = new ReflectionClass(CoreActionInterface::class);
             $list = [];
             foreach ($reflection->getMethods() as $k => $v) {
