@@ -19,11 +19,6 @@ class ActionObject
         $this->echo = $echo;
     }
 
-    /**
-     * @param array $arr
-     *
-     * @return ActionObject
-     */
     public static function fromArray(array $arr): ActionObject
     {
         return new self($arr['action'], $arr['params'] ?? [], $arr['echo'] ?? null);

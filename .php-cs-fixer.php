@@ -66,11 +66,6 @@ return (new PhpCsFixer\Config())
         'single_quote' => true,
         'standardize_not_equals' => true,
         'multiline_comment_opening_closing' => true,
-        'binary_operator_spaces' => [
-            'operators' => [
-                '|' => 'no_space',
-            ],
-        ],
     ])
     ->setFinder(
         PhpCsFixer\Finder::create()

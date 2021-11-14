@@ -98,16 +98,16 @@ class SwooleDriver implements Driver
             $obj = $request->rawContent();
             $json = json_decode($obj, true);
             if (!isset($json['action'])) {
-                //TODO: 错误处理
+                // TODO: 错误处理
             }
             $action_obj = new ActionObject($json['action'], $json['params'] ?? [], $json['echo'] ?? null);
         } elseif (($request->header['content-type'] ?? null) === 'application/msgpack') {
+            // TODO: 完成对msgpack格式的处理
             $raw_type = ONEBOT_MSGPACK;
             $action_obj = new ActionObject('T');
-            //TODO: 完成对msgpack格式的处理
         } else {
+            // TODO: 处理非法的Content类型
             throw new OneBotException();
-            //TODO: 处理非法的Content类型
         }
         switch (Utils::getActionType($action_obj)) {
             case ONEBOT_CORE_ACTION:

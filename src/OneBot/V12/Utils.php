@@ -13,12 +13,7 @@ class Utils
 {
     public static $cache = [];
 
-    /**
-     * @param $arr
-     *
-     * @return bool
-     */
-    public static function isAssocArray($arr): bool
+    public static function isAssocArray(array $arr): bool
     {
         return array_values($arr) !== $arr;
     }
@@ -86,8 +81,11 @@ class Utils
         if (isset(ActionBase::$ext_cache[$action])) {
             return ActionBase::$ext_cache[$action];
         }
-        if (substr($action, 0,
-                strlen(OneBot::getInstance()->getPlatform()) + 1) === (OneBot::getInstance()->getPlatform() . '.')) {
+        if (substr(
+            $action,
+            0,
+            strlen(OneBot::getInstance()->getPlatform()) + 1
+        ) === (OneBot::getInstance()->getPlatform() . '.')) {
             $func = self::separatorToCamel('ext_' . substr($action, strlen(OneBot::getInstance()->getPlatform()) + 1));
             if (method_exists($handler, $func)) {
                 return ActionBase::$ext_cache[$action] = $func;
