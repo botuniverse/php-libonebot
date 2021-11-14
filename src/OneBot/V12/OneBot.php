@@ -33,11 +33,9 @@ class OneBot
     /**
      * OneBot constructor.
      *
-     * @param $implement_name
-     *
      * @throws OneBotException
      */
-    public function __construct($implement_name, string $platform = 'default')
+    public function __construct(string $implement_name, string $platform = 'default')
     {
         $this->implement_name = $implement_name;
         $this->platform = $platform;
