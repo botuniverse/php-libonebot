@@ -4,9 +4,8 @@
 namespace OneBot\V12\Driver;
 
 
-use OneBot\V12\ActionResponse;
+use OneBot\V12\Action\ActionResponse;
 use OneBot\Console\Console;
-use OneBot\V12\CoreActionInterface;
 use OneBot\V12\Driver\Config\Config;
 use OneBot\V12\Object\ActionObject;
 use OneBot\V12\Object\EventObject;
@@ -158,5 +157,10 @@ class SwooleDriver implements Driver
                 $response->end($data);
                 break;
         }
+    }
+
+    public function getConfig(): Config
+    {
+        return $this->config;
     }
 }

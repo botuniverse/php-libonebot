@@ -1,0 +1,23 @@
+name: Test
+
+on:
+  - push
+  - pull_request
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Setup PHP 7.2
+        uses: "shivammathur/setup-php@v2"
+        with:
+          php-version: "7.2"
+          extensions: swoole
+      - name: Install Composer Dependencies
+        run: "composer install"
+      - name: Run Static Analysis
+        run: "composer analyse"
+      - name: Run PHP CS Fixer Check
+        run: "./vendor/bin/php-cs-fixer fix --dry-run --diff"

@@ -1,3 +1,4 @@
+### Composer ###
 composer.phar
 /vendor/
 composer.lock
@@ -5,3 +6,32 @@ composer.lock
 # Commit your application's lock file https://getcomposer.org/doc/01-basic-usage.md#commit-your-composer-lock-file-to-version-control
 # You may choose to ignore a library lock file http://getcomposer.org/doc/02-libraries.md#lock-file
 # composer.lock
+
+### Git ###
+# Created by git for backups. To disable backups in Git:
+# $ git config --global mergetool.keepBackup false
+*.orig
+
+# Created by git when using merge tools for conflicts
+*.BACKUP.*
+*.BASE.*
+*.LOCAL.*
+*.REMOTE.*
+*_BACKUP_*.txt
+*_BASE_*.txt
+*_LOCAL_*.txt
+*_REMOTE_*.txt
+
+### PhpStorm ###
+/.idea
+
+### VisualStudioCode ###
+/.vscode
+*.code-workspace
+
+# Local History for Visual Studio Code
+.history/
+
+# Ignore all local history of files
+.history
+.ionide
