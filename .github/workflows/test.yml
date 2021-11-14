@@ -16,7 +16,7 @@ jobs:
           php-version: "7.2"
           extensions: swoole
       - name: Install Composer Dependencies
-        uses: "ramsey/composer-install@v1"
+        run: "composer install"
       - name: Run Static Analysis
         run: "composer analyse"
       - name: Run PHP CS Fixer Check
