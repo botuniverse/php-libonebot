@@ -1,32 +1,47 @@
 <?php
 
+declare(strict_types=1);
+
 namespace OneBot\V12;
 
 class RetCode
 {
-    const OK = 0;
+    public const OK = 0;
 
-    const BAD_REQUEST = 10001;
-    const UNSUPPORTED_ACTION = 10002;
-    const BAD_PARAM = 10003;
-    const UNSUPPORTED_PARAM = 10004;
-    const UNSUPPORTED_SEGMENT = 10005;
-    const BAD_SEGMENT_DATA = 10006;
-    const UNSUPPORTED_SEGMENT_DATA = 10007;
+    public const BAD_REQUEST = 10001;
 
-    const BAD_HANDLER = 20001;
-    const INTERNAL_HANDLER_ERROR = 20002;
+    public const UNSUPPORTED_ACTION = 10002;
 
-    const DATABASE_ERROR = 31000;
-    const FILESYSTEM_ERROR = 32000;
-    const NETWORK_ERROR = 33000;
-    const PLATFORM_ERROR = 34000;
-    const LOGIC_ERROR = 35000;
-    const I_AM_TIRED = 36000;
+    public const BAD_PARAM = 10003;
 
-    const UNKNOWN_ERROR = 99999;
+    public const UNSUPPORTED_PARAM = 10004;
 
-    public static function getMessage($retcode): string {
+    public const UNSUPPORTED_SEGMENT = 10005;
+
+    public const BAD_SEGMENT_DATA = 10006;
+
+    public const UNSUPPORTED_SEGMENT_DATA = 10007;
+
+    public const BAD_HANDLER = 20001;
+
+    public const INTERNAL_HANDLER_ERROR = 20002;
+
+    public const DATABASE_ERROR = 31000;
+
+    public const FILESYSTEM_ERROR = 32000;
+
+    public const NETWORK_ERROR = 33000;
+
+    public const PLATFORM_ERROR = 34000;
+
+    public const LOGIC_ERROR = 35000;
+
+    public const I_AM_TIRED = 36000;
+
+    public const UNKNOWN_ERROR = 99999;
+
+    public static function getMessage($retcode): string
+    {
         $msg = [
             self::OK => 'OK',
             self::BAD_REQUEST => 'Bad Request',

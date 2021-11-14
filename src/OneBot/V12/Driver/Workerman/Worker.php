@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace OneBot\V12\Driver\Workerman;
 
 use const OS_TYPE_LINUX;
@@ -8,7 +10,8 @@ class Worker extends \Workerman\Worker
 {
     public static $internal_running = false;
 
-    protected static function parseCommand() {
+    protected static function parseCommand()
+    {
         if (static::$_OS !== OS_TYPE_LINUX) {
             return;
         }
@@ -17,18 +20,18 @@ class Worker extends \Workerman\Worker
         // Check argv;
         $start_file = $argv[0];
         $usage = "Usage: php yourfile <command> [mode]\nCommands: \nstart\t\tStart worker in DEBUG mode.\n\t\tUse mode -d to start in DAEMON mode.\nstop\t\tStop worker.\n\t\tUse mode -g to stop gracefully.\nrestart\t\tRestart workers.\n\t\tUse mode -d to start in DAEMON mode.\n\t\tUse mode -g to stop gracefully.\nreload\t\tReload codes.\n\t\tUse mode -g to reload gracefully.\nstatus\t\tGet worker status.\n\t\tUse mode -d to show live status.\nconnections\tGet worker connections.\n";
-        $available_commands = array(
+        $available_commands = [
             'start',
             'stop',
             'restart',
             'reload',
             'status',
             'connections',
-        );
-        $available_mode = array(
+        ];
+        $available_mode = [
             '-d',
-            '-g'
-        );
+            '-g',
+        ];
         $command = $mode = '';
         foreach ($argv as $value) {
             if (\in_array($value, $available_commands)) {
@@ -53,22 +56,22 @@ class Worker extends \Workerman\Worker
             }
         }
         start:
-        static::log("Workerman[$start_file] $command $mode_str");
+        static::log("Workerman[{$start_file}] {$command} {$mode_str}");
 
         // Get master process PID.
-        $master_pid = \is_file(static::$pidFile) ? (int)\file_get_contents(static::$pidFile) : 0;
+        $master_pid = \is_file(static::$pidFile) ? (int) \file_get_contents(static::$pidFile) : 0;
         // Master is still alive?
         if (static::checkMasterIsAlive($master_pid)) {
             if ($command === 'start') {
-                static::log("Workerman[$start_file] already running");
+                static::log("Workerman[{$start_file}] already running");
                 exit;
             }
         } elseif ($command !== 'start' && $command !== 'restart') {
-            static::log("Workerman[$start_file] not run");
+            static::log("Workerman[{$start_file}] not run");
             exit;
         }
 
-        $statistics_file = __DIR__ . "/../workerman-$master_pid.status";
+        $statistics_file = __DIR__ . "/../workerman-{$master_pid}.status";
 
         // execute command.
         switch ($command) {
@@ -97,7 +100,6 @@ class Worker extends \Workerman\Worker
                     }
                     static::safeEcho("\nPress Ctrl+C to quit.\n\n");
                 }
-                exit(0);
             case 'connections':
                 if (\is_file($statistics_file) && \is_writable($statistics_file)) {
                     \unlink($statistics_file);
@@ -116,11 +118,11 @@ class Worker extends \Workerman\Worker
                 if ($mode === '-g') {
                     static::$_gracefulStop = true;
                     $sig = \SIGHUP;
-                    static::log("Workerman[$start_file] is gracefully stopping ...");
+                    static::log("Workerman[{$start_file}] is gracefully stopping ...");
                 } else {
                     static::$_gracefulStop = false;
                     $sig = \SIGINT;
-                    static::log("Workerman[$start_file] is stopping ...");
+                    static::log("Workerman[{$start_file}] is stopping ...");
                 }
                 // Send stop signal to master process.
                 $master_pid && \posix_kill($master_pid, $sig);
@@ -129,11 +131,11 @@ class Worker extends \Workerman\Worker
                 $start_time = \time();
                 // Check master process is still alive?
                 while (1) {
-                    $master_is_alive = $master_pid && \posix_kill((int)$master_pid, 0);
+                    $master_is_alive = $master_pid && \posix_kill((int) $master_pid, 0);
                     if ($master_is_alive) {
                         // Timeout?
                         if (!static::$_gracefulStop && \time() - $start_time >= $timeout) {
-                            static::log("Workerman[$start_file] stop fail");
+                            static::log("Workerman[{$start_file}] stop fail");
                             exit;
                         }
                         // Waiting amoment.
@@ -141,7 +143,7 @@ class Worker extends \Workerman\Worker
                         continue;
                     }
                     // Stop success.
-                    static::log("Workerman[$start_file] stop success");
+                    static::log("Workerman[{$start_file}] stop success");
                     if ($command === 'stop') {
                         exit(0);
                     }
@@ -159,10 +161,8 @@ class Worker extends \Workerman\Worker
                 }
                 \posix_kill($master_pid, $sig);
                 exit;
-            default :
-                if (isset($command)) {
-                    static::safeEcho('Unknown command: ' . $command . "\n");
-                }
+            default:
+                static::safeEcho('Unknown command: ' . $command . "\n");
                 exit($usage);
         }
     }

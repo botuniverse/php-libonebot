@@ -1,12 +1,16 @@
 <?php
 
+declare(strict_types=1);
+
 namespace OneBot\V12\Object;
 
 class ActionObject
 {
-    public $action = "";
+    public $action = '';
+
     public $params = [];
-    public $echo = null;
+
+    public $echo;
 
     public function __construct($action, $params = [], $echo = null)
     {
@@ -16,12 +20,12 @@ class ActionObject
     }
 
     /**
-     * @param $arr
+     * @param array $arr
      *
      * @return ActionObject
      */
-    public static function fromArray($arr): ActionObject
+    public static function fromArray(array $arr): ActionObject
     {
-        return new self($arr["action"], $arr["params"] ?? [], $arr["echo"] ?? null);
+        return new self($arr['action'], $arr['params'] ?? [], $arr['echo'] ?? null);
     }
 }
