@@ -7,17 +7,29 @@ namespace OneBot\V12\Driver;
 use OneBot\V12\Driver\Config\Config;
 use OneBot\V12\Object\EventObject;
 
-interface Driver
+abstract class Driver
 {
-    public function getName(): string;
+    /** @var Config */
+    protected $config;
 
-    public function setConfig(Config $config);
+    public function getName(): string
+    {
+        return rtrim(strtolower(self::class), 'driver');
+    }
 
-    public function getConfig(): Config;
+    public function setConfig(Config $config)
+    {
+        $this->config = $config;
+    }
 
-    public function emitOBEvent(EventObject $event);
+    public function getConfig(): Config
+    {
+        return $this->config;
+    }
 
-    public function initComm();
+    abstract public function emitOBEvent(EventObject $event);
 
-    public function run();
+    abstract public function initComm();
+
+    abstract public function run();
 }

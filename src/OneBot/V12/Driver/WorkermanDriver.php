@@ -9,7 +9,6 @@ use MessagePack\Exception\UnpackingFailedException;
 use MessagePack\MessagePack;
 use OneBot\Console\Console;
 use OneBot\V12\Action\ActionResponse;
-use OneBot\V12\Driver\Config\Config;
 use OneBot\V12\Driver\Workerman\Worker;
 use OneBot\V12\Exception\OneBotFailureException;
 use OneBot\V12\Object\ActionObject;
@@ -22,29 +21,9 @@ use Workerman\Connection\TcpConnection;
 use Workerman\Protocols\Http\Request;
 use Workerman\Protocols\Http\Response;
 
-class WorkermanDriver implements Driver
+class WorkermanDriver extends Driver
 {
-    /**
-     * @var Config
-     */
-    private $config;
-
     private $http_worker;
-
-    public function getName(): string
-    {
-        return 'workerman';
-    }
-
-    public function setConfig(Config $config)
-    {
-        $this->config = $config;
-    }
-
-    public function getConfig(): Config
-    {
-        return $this->config;
-    }
 
     public function emitOBEvent(EventObject $event)
     {
