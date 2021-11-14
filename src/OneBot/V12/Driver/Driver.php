@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace OneBot\V12\Driver;
 
-use OneBot\V12\Driver\Config\Config;
+use OneBot\V12\Config\ConfigInterface;
 use OneBot\V12\Object\EventObject;
 
 abstract class Driver
 {
-    /** @var Config */
+    /** @var ConfigInterface */
     protected $config;
 
     public function getName(): string
@@ -17,12 +17,12 @@ abstract class Driver
         return rtrim(strtolower(self::class), 'driver');
     }
 
-    public function setConfig(Config $config)
+    public function setConfig(ConfigInterface $config)
     {
         $this->config = $config;
     }
 
-    public function getConfig(): Config
+    public function getConfig(): ConfigInterface
     {
         return $this->config;
     }

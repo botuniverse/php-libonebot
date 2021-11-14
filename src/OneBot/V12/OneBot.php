@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace OneBot\V12;
 
 use OneBot\V12\Action\ActionBase;
-use OneBot\V12\Driver\Config\Config;
+use OneBot\V12\Config\ConfigInterface;
 use OneBot\V12\Driver\Driver;
 use OneBot\V12\Exception\OneBotException;
 use OneBot\V12\Object\EventObject;
@@ -52,7 +52,7 @@ class OneBot
         return self::$obj;
     }
 
-    public function setServerDriver(Driver $driver, Config $config): OneBot
+    public function setServerDriver(Driver $driver, ConfigInterface $config): OneBot
     {
         $this->driver = $driver;
         $this->driver->setConfig($config);

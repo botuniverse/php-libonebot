@@ -1,8 +1,30 @@
 {
-    "http": {
-        "host": "0.0.0.0",
-        "port": 9600,
-        "enable": true,
-        "event_enabled": true
+    "communications": {
+        "http": {
+            "host": "0.0.0.0",
+            "port": 9600,
+            "enable": true,
+            "event_enabled": true
+        },
+        "ws_reverse": {
+            "host": "0.0.0.0",
+            "port": 9600,
+            "enable": false,
+            "event_enabled": true
+        },
+        "http_webhook": [
+            {
+                "url": "0.0.0.0",
+                "port": 9600,
+                "enable": false,
+                "event_enabled": true
+            },
+            {
+                "url": "0.0.0.0",
+                "port": 9600,
+                "enable": true,
+                "event_enabled": true
+            }
+        ]
     }
 }
