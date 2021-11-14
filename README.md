@@ -1,3 +1,8 @@
+<p align="center">
+  <a href="https://github.com/botuniverse/php-libonebot/releases"><img src="https://img.shields.io/github/v/release/botuniverse/php-libonebot?include_prereleases&logo=github&style=flat-square" alt="Version"/></a>
+  <a href="https://github.com/botuniverse/php-libonebot"><img src="https://img.shields.io/github/license/botuniverse/php-libonebot?style=flat-square" alt="License"/></a>
+</p>
+
 # php-libonebot
 
 PHP 的 LibOneBot 库。LibOneBot 可以帮助 OneBot 实现者快速在新的聊天机器人平台实现 OneBot v12 接口标准。
@@ -14,7 +19,7 @@ PHP 的 LibOneBot 库。LibOneBot 可以帮助 OneBot 实现者快速在新的�
 composer require onebot/libonebot
 ```
 
-## 尝试 demo
+## 尝试 Demo
 
 在 require 下载 libob 库后，新建文件 `demo.php` 和 `demo.json`，并在 `demo.php` 中写如下代码：
 
@@ -23,8 +28,11 @@ composer require onebot/libonebot
 
 require_once "vendor/autoload.php";
 
-$ob = new \OneBot\V12\OneBot("repl", "qq");
-$ob->setServerDriver(new \OneBot\V12\Driver\WorkermanDriver(), new \OneBot\V12\Driver\Config\WorkermanConfig("demo.json"));
+$ob = new \OneBot\V12\OneBot('repl', 'qq');
+$ob->setServerDriver(
+    new \OneBot\V12\Driver\WorkermanDriver(),
+    new \OneBot\V12\Config\Config('demo.json')
+);
 $ob->setActionHandler(\OneBot\V12\Action\ReplAction::class);
 $ob->run();
 ```
@@ -33,16 +41,26 @@ $ob->run();
 
 ```json
 {
-    "http": {
-        "host": "0.0.0.0",
-        "port": 9600,
-        "enable": true,
-        "event_enabled": true
+    "communications": {
+        "http": {
+            "enable": true,
+            "host": "0.0.0.0",
+            "port": 9600,
+            "access_token": "ABC",
+            "event_enabled": true,
+            "event_buffer_size": 0
+        },
+        "http_webhook": {
+            "enable": true,
+            "url": "http://example.com",
+            "access_token": "ABC",
+            "timeout": 0
+        }
     }
 }
 ```
 
-此 demo 以一个命令行交互的方式使用 LibOneBot 快速完成了一个 OneBot 实现，命令行中输入内容即可发送到 OneBot，使用 HTTP 或 WebSocket 发送给 LibOneBot 后可以将信息显示在终端内。
+此 Demo 以一个命令行交互的方式使用 LibOneBot 快速完成了一个 OneBot 实现，命令行中输入内容即可发送到 OneBot，使用 HTTP 或 WebSocket 发送给 LibOneBot 后可以将信息显示在终端内。
 
 ```bash
 # 运行 OneBot 实现
