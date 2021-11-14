@@ -6,7 +6,6 @@ namespace OneBot\V12\Driver;
 
 use OneBot\Console\Console;
 use OneBot\V12\Action\ActionResponse;
-use OneBot\V12\Driver\Config\Config;
 use OneBot\V12\Exception\OneBotException;
 use OneBot\V12\Object\ActionObject;
 use OneBot\V12\Object\EventObject;
@@ -19,11 +18,8 @@ use Swoole\Server;
 use Swoole\WebSocket\Frame;
 use Swoole\WebSocket\Server as SwooleWebSocketServer;
 
-class SwooleDriver implements Driver
+class SwooleDriver extends Driver
 {
-    /** @var null|Config */
-    private $config;
-
     /**
      * @var SwooleHttpServer|SwooleWebSocketServer
      */
@@ -31,21 +27,6 @@ class SwooleDriver implements Driver
 
     public function __construct()
     {
-    }
-
-    public function getName(): string
-    {
-        return 'swoole';
-    }
-
-    public function setConfig(Config $config)
-    {
-        $this->config = $config;
-    }
-
-    public function getConfig(): Config
-    {
-        return $this->config;
     }
 
     public function emitOBEvent(EventObject $event)

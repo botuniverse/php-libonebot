@@ -7,6 +7,7 @@ namespace OneBot\V12;
 use OneBot\V12\Action\ActionBase;
 use OneBot\V12\Exception\OneBotFailureException;
 use OneBot\V12\Object\ActionObject;
+use PASVL\Validation\ValidatorBuilder;
 use ReflectionClass;
 
 class Utils
@@ -97,5 +98,16 @@ class Utils
             }
         }
         throw new OneBotFailureException(RetCode::UNSUPPORTED_ACTION);
+    }
+
+    /**
+     * 验证 $input 是否符合指定 $pattern.
+     *
+     * @see https://github.com/lezhnev74/pasvl
+     */
+    public static function validateArray(array $pattern, array $input)
+    {
+        $builder = ValidatorBuilder::forArray($pattern);
+        $builder->build()->validate($input);
     }
 }

@@ -1,8 +1,18 @@
 {
-    "http": {
-        "host": "0.0.0.0",
-        "port": 9600,
-        "enable": true,
-        "event_enabled": true
+    "communications": {
+        "http": {
+            "enable": true,
+            "host": "0.0.0.0",
+            "port": 9600,
+            "access_token": "ABC",
+            "event_enabled": true,
+            "event_buffer_size": 0
+        },
+        "http_webhook": {
+            "enable": true,
+            "url": "http://example.com",
+            "access_token": "ABC",
+            "timeout": 0
+        }
     }
 }
