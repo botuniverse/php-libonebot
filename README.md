@@ -3,7 +3,6 @@
     <img alt="Version" src="https://img.shields.io/github/v/release/botuniverse/php-libonebot?include_prereleases&logo=github&style=flat-square" />
   </a>
   <img alt="GitHub Workflow Status" src="https://img.shields.io/github/workflow/status/botuniverse/php-libonebot/Test?logo=github&style=flat-square" />
-  <img alt="Packagist Latest Release" src="http://img.shields.io/packagist/v/onebot/libonebot.svg?style=flat-square" />
   <img alt="License" src="https://img.shields.io/github/license/botuniverse/php-libonebot?style=flat-square&logo=open%20source%20initiative&logoColor=white" />
   <img alt="Packagist PHP Version Support" src="https://img.shields.io/packagist/php-v/onebot/libonebot?color=777bb3&logo=php&logoColor=white&style=flat-square" />
 </p>
