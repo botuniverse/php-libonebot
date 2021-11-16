@@ -1,6 +1,6 @@
 name: 🐛 漏洞（BUG）报告
 description: ⚠️ 请不要直接在此提交安全漏洞
-labels: Bug
+labels: bug
 
 body:
   - type: input

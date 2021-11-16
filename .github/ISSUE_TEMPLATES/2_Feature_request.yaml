@@ -1,5 +1,7 @@
 name: 🚀 功能建议
 description: 新功能、改进的意见、草案
+labels: enhancement
+
 body:
   - type: textarea
     id: description
