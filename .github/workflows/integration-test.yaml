@@ -9,7 +9,7 @@ on:
       - develop
 
 jobs:
-  analysis:
+  integration:
     name: Integration Test (PHP ${{ matrix.php-versions }}) (OS ${{ matrix.operating-system }})
     runs-on: ${{ matrix.operating-system }}
     strategy:
