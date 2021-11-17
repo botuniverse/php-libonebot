@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace OneBot\V12\Driver;
 
-use OneBot\Console\Console;
+use OneBot\Logger\Console\ConsoleLogger;
 use OneBot\V12\Action\ActionResponse;
 use OneBot\V12\Exception\OneBotException;
 use OneBot\V12\Object\ActionObject;
@@ -50,7 +50,8 @@ class SwooleDriver extends Driver
             $this->server = new SwooleWebSocketServer($enabled_com[$has_ws]['host'], $enabled_com[$has_ws]['port']);
             $this->initServer();
             if ($has_http !== false) {
-                Console::warning('检测到同时开启了http和正向ws，http的配置项将被忽略。');
+                // TODO: 改用通用logger
+                ConsoleLogger::getInstance()->warning('检测到同时开启了http和正向ws，http的配置项将被忽略。');
                 $this->initHttpServer();
             }
             $this->initWebSocketServer();

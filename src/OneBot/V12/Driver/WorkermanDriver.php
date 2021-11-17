@@ -7,7 +7,7 @@ namespace OneBot\V12\Driver;
 use Error;
 use MessagePack\Exception\UnpackingFailedException;
 use MessagePack\MessagePack;
-use OneBot\Console\Console;
+use OneBot\Logger\Console\ConsoleLogger;
 use OneBot\V12\Action\ActionResponse;
 use OneBot\V12\Driver\Workerman\Worker;
 use OneBot\V12\Exception\OneBotFailureException;
@@ -97,11 +97,13 @@ class WorkermanDriver extends Driver
         } catch (OneBotFailureException $e) {
             $response_obj = ActionResponse::create($e->getActionObject()->echo ?? null)->fail($e->getRetCode());
             $this->sendWithBody($connection, ONEBOT_JSON, $response_obj);
-            Console::warning('OneBot Failure: ' . RetCode::getMessage($e->getRetCode()) . '(' . $e->getRetCode() . ') at ' . $e->getFile() . ':' . $e->getLine());
+            // TODO: 改用通用logger
+            ConsoleLogger::getInstance()->warning('OneBot Failure: ' . RetCode::getMessage($e->getRetCode()) . '(' . $e->getRetCode() . ') at ' . $e->getFile() . ':' . $e->getLine());
         } catch (Throwable|Error $e) {
             $response_obj = ActionResponse::create($action_obj->echo ?? null)->fail(RetCode::INTERNAL_HANDLER_ERROR);
             $this->sendWithBody($connection, ONEBOT_JSON, $response_obj);
-            Console::error('Unhandled ' . get_class($e) . ': ' . $e->getMessage() . "\nStack trace:\n" . $e->getTraceAsString());
+            // TODO: 改用通用logger
+            ConsoleLogger::getInstance()->error('Unhandled ' . get_class($e) . ': ' . $e->getMessage() . "\nStack trace:\n" . $e->getTraceAsString());
         }
     }
 
