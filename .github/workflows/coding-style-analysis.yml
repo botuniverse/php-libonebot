@@ -1,17 +1,13 @@
-name: Test
+name: Coding Style Analysis
 
 on:
   - push
   - pull_request
 
 jobs:
-  build:
-    name: Build (PHP ${{ matrix.php-versions }}) (OS ${{ matrix.operating-system }})
-    runs-on: ${{ matrix.operating-system }}
-    strategy:
-      matrix:
-        operating-system: ["ubuntu-latest", "macos-latest"]
-        php-versions: ["7.2", "7.3", "7.4", "8.0"]
+  analysis:
+    name: Coding Style Analysis
+    runs-on: "ubuntu-latest"
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
@@ -19,7 +15,7 @@ jobs:
       - name: Setup PHP 7.2
         uses: "shivammathur/setup-php@v2"
         with:
-          php-version: ${{ matrix.php-versions }}
+          php-version: "7.2"
           extensions: swoole, posix, json
 
       - name: Setup problem matchers for PHP
