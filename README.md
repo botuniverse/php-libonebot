@@ -11,7 +11,8 @@
 
 PHP 的 LibOneBot 库。LibOneBot 可以帮助 OneBot 实现者快速在新的聊天机器人平台实现 OneBot v12 接口标准。
 
-基于 LibOneBot 实现 OneBot 时，OneBot 实现者只需专注于编写与聊天机器人平台对接的逻辑，包括通过长轮询或 webhook 方式从机器人平台获得事件，并将其转换为 OneBot 事件，以及处理 OneBot 动作请求，并将其转换为对机器人平台 API 的调用。
+基于 LibOneBot 实现 OneBot 时，OneBot 实现者只需专注于编写与聊天机器人平台对接的逻辑，包括通过长轮询或 webhook 方式从机器人平台获得事件，并将其转换为 OneBot 事件，以及处理 OneBot
+动作请求，并将其转换为对机器人平台 API 的调用。
 
 **当前版本还在开发中，在发布正式版之前此库内的接口可能会发生较大变动。**
 
@@ -50,18 +51,12 @@ $ob->run();
             "enable": true,
             "host": "0.0.0.0",
             "port": 9600,
-            "access_token": "ABC",
             "event_enabled": true,
             "event_buffer_size": 0
-        },
-        "http_webhook": {
-            "enable": true,
-            "url": "http://example.com",
-            "access_token": "ABC",
-            "timeout": 0
         }
     }
 }
+
 ```
 
 此 Demo 以一个命令行交互的方式使用 LibOneBot 快速完成了一个 OneBot 实现，命令行中输入内容即可发送到 OneBot，使用 HTTP 或 WebSocket 发送给 LibOneBot 后可以将信息显示在终端内。
@@ -69,4 +64,38 @@ $ob->run();
 ```bash
 # 运行 OneBot 实现
 php demo.php
+```
+
+启动后可以利用 Postman 或 Curl 等工具发起请求，以 OneVot V12 协议的[发送消息动作](https://12.onebot.dev/interface/action/message/)为例：
+
+```shell
+curl --location --request POST 'http://localhost:9600/' \
+--header 'Content-Type: application/json' \
+--data-raw '{
+    "action": "send_message",
+    "params": {
+        "detail_type": "group",
+        "group_id": "12467",
+        "message": [
+            {
+                "type": "text",
+                "data": {
+                    "text": "我是文字巴拉巴拉巴拉"
+                }
+            }
+        ]
+    }
+}'
+```
+
+你应该可以看到 OneBot 命令行中出现以下消息：
+
+```shell
+[2021-11-18 18:44:39] [INFO] 我是文字巴拉巴拉巴拉
+```
+
+并收到以下响应：
+
+```text
+{"status":"ok","retcode":0,"data":{"message_id":5007842},"message":""}%
 ```
