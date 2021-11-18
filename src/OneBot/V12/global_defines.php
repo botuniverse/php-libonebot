@@ -23,3 +23,8 @@ function ob_dump($var, ...$moreVars)
     }
     return $var;
 }
+
+function logger(): Psr\Log\LoggerInterface
+{
+    return \OneBot\V12\OneBot::getInstance()->getLogger();
+}

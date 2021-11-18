@@ -4,15 +4,12 @@ declare(strict_types=1);
 
 namespace OneBot\Logger\Console;
 
-use OneBot\Util\Singleton;
 use Psr\Log\AbstractLogger;
 use Psr\Log\InvalidArgumentException;
 use Psr\Log\LogLevel;
 
 class ConsoleLogger extends AbstractLogger
 {
-    use Singleton;
-
     public static $format = '[%date%] [%level%] %body%';
 
     public static $date_format = 'Y-m-d H:i:s';
@@ -46,7 +43,7 @@ class ConsoleLogger extends AbstractLogger
 
     protected static $logLevel;
 
-    private function __construct($logLevel = LogLevel::INFO)
+    public function __construct($logLevel = LogLevel::INFO)
     {
         self::$logLevel = $logLevel;
     }

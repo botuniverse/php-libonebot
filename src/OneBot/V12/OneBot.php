@@ -4,19 +4,22 @@ declare(strict_types=1);
 
 namespace OneBot\V12;
 
+use OneBot\Util\Singleton;
 use OneBot\V12\Action\ActionBase;
 use OneBot\V12\Config\ConfigInterface;
 use OneBot\V12\Driver\Driver;
 use OneBot\V12\Exception\OneBotException;
 use OneBot\V12\Object\EventObject;
+use Psr\Log\LoggerAwareInterface;
+use Psr\Log\LoggerAwareTrait;
 
 /**
  * Class OneBot.
  */
-class OneBot
+class OneBot implements LoggerAwareInterface
 {
-    /** @var null|OneBot */
-    private static $obj;
+    use Singleton;
+    use LoggerAwareTrait;
 
     /** @var string */
     private $implement_name;
@@ -39,39 +42,32 @@ class OneBot
     {
         $this->implement_name = $implement_name;
         $this->platform = $platform;
-        if (self::$obj !== null) {
+        if (isset(self::$instance)) {
             throw new OneBotException('只能有一个OneBot实例！');
         }
-        self::$obj = $this;
+        self::$instance = $this;
     }
 
-    public static function getInstance(): ?OneBot
+    public function getLogger(): \Psr\Log\LoggerInterface
     {
-        return self::$obj;
+        return $this->logger;
     }
 
-    public function setServerDriver(Driver $driver, ConfigInterface $config): OneBot
+    public function getPlatform(): string
+    {
+        return $this->platform;
+    }
+
+    public function getDriver(): ?Driver
+    {
+        return $this->driver;
+    }
+
+    public function setDriver(Driver $driver, ConfigInterface $config): OneBot
     {
         $this->driver = $driver;
         $this->driver->setConfig($config);
         return $this;
-    }
-
-    public function callOBEvent(EventObject $event)
-    {
-        $this->driver->emitOBEvent($event);
-    }
-
-    /**
-     * @throws OneBotException
-     */
-    public function run()
-    {
-        if ($this->driver === null) {
-            throw new OneBotException('你需要指定一种驱动器');
-        }
-        $this->driver->initComm();
-        $this->driver->run();
     }
 
     public function getActionHandler(): ?ActionBase
@@ -96,13 +92,20 @@ class OneBot
         return $this;
     }
 
-    public function getPlatform(): string
+    public function callOBEvent(EventObject $event)
     {
-        return $this->platform;
+        $this->driver->emitOBEvent($event);
     }
 
-    public function getDriver(): ?Driver
+    /**
+     * @throws OneBotException
+     */
+    public function run()
     {
-        return $this->driver;
+        if ($this->driver === null) {
+            throw new OneBotException('你需要指定一种驱动器');
+        }
+        $this->driver->initComm();
+        $this->driver->run();
     }
 }
