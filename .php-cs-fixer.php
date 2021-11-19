@@ -66,6 +66,7 @@ return (new PhpCsFixer\Config())
         'single_quote' => true,
         'standardize_not_equals' => true,
         'multiline_comment_opening_closing' => true,
+        'phpdoc_summary' => false,
     ])
     ->setFinder(
         PhpCsFixer\Finder::create()
