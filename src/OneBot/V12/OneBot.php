@@ -9,7 +9,7 @@ use OneBot\V12\Action\ActionBase;
 use OneBot\V12\Config\ConfigInterface;
 use OneBot\V12\Driver\Driver;
 use OneBot\V12\Exception\OneBotException;
-use OneBot\V12\Object\EventObject;
+use OneBot\V12\Object\Event\EventObject;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerAwareTrait;
 

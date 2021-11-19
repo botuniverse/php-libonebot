@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace OneBot\V12\Driver;
 
 use OneBot\V12\Config\ConfigInterface;
-use OneBot\V12\Object\EventObject;
+use OneBot\V12\Object\Event\EventObject;
 
 abstract class Driver
 {

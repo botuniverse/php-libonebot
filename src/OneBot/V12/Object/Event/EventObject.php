@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace OneBot\V12\Object;
+namespace OneBot\V12\Object\Event;
 
 use JsonSerializable;
 use MessagePack\CanBePacked;

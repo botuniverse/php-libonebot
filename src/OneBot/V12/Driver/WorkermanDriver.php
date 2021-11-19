@@ -11,7 +11,7 @@ use OneBot\V12\Action\ActionResponse;
 use OneBot\V12\Driver\Workerman\Worker;
 use OneBot\V12\Exception\OneBotFailureException;
 use OneBot\V12\Object\ActionObject;
-use OneBot\V12\Object\EventObject;
+use OneBot\V12\Object\Event\EventObject;
 use OneBot\V12\OneBot;
 use OneBot\V12\RetCode;
 use OneBot\V12\Utils;
