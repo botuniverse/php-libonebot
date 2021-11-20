@@ -1,3 +1,4 @@
+<!--suppress HtmlDeprecatedAttribute -->
 <p align="center">
   <a href="https://github.com/botuniverse/php-libonebot/releases">
     <img alt="Version" src="https://img.shields.io/github/v/release/botuniverse/php-libonebot?include_prereleases&logo=github&style=flat-square" />
@@ -31,10 +32,13 @@ composer require onebot/libonebot
 ```php
 <?php
 
-require_once "vendor/autoload.php";
+declare(strict_types=1);
 
-$ob = new \OneBot\V12\OneBot('repl', 'qq');
-$ob->setServerDriver(
+require_once 'vendor/autoload.php';
+
+$ob = new \OneBot\V12\OneBot('repl', 'qq', 'REPL-1');
+$ob->setLogger(new \OneBot\Logger\Console\ConsoleLogger());
+$ob->setDriver(
     new \OneBot\V12\Driver\WorkermanDriver(),
     new \OneBot\V12\Config\Config('demo.json')
 );
@@ -56,7 +60,6 @@ $ob->run();
         }
     }
 }
-
 ```
 
 此 Demo 以一个命令行交互的方式使用 LibOneBot 快速完成了一个 OneBot 实现，命令行中输入内容即可发送到 OneBot，使用 HTTP 或 WebSocket 发送给 LibOneBot 后可以将信息显示在终端内。

@@ -15,7 +15,8 @@ use Psr\Log\LoggerAwareTrait;
 use Psr\Log\LoggerInterface;
 
 /**
- * Class OneBot, this is the main class of LibOneBot.
+ * Class OneBot
+ * 一切从这里开始，这句话是真人写的，不是AI写的
  */
 class OneBot implements LoggerAwareInterface
 {
