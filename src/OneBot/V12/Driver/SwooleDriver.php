@@ -7,7 +7,7 @@ namespace OneBot\V12\Driver;
 use OneBot\V12\Action\ActionResponse;
 use OneBot\V12\Exception\OneBotException;
 use OneBot\V12\Object\ActionObject;
-use OneBot\V12\Object\EventObject;
+use OneBot\V12\Object\Event\OneBotEvent;
 use OneBot\V12\OneBot;
 use OneBot\V12\Utils;
 use Swoole\Http\Request;
@@ -28,7 +28,7 @@ class SwooleDriver extends Driver
     {
     }
 
-    public function emitOBEvent(EventObject $event)
+    public function emitOBEvent(OneBotEvent $event)
     {
     }
 
