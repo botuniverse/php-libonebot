@@ -6,6 +6,7 @@ namespace OneBot\V12\Object\Event\Message;
 
 use DateTimeInterface;
 use OneBot\V12\Exception\OneBotException;
+use OneBot\V12\Object\Event\HasGroupId;
 use OneBot\V12\Object\MessageSegment;
 
 /**
@@ -13,12 +14,7 @@ use OneBot\V12\Object\MessageSegment;
  */
 class GroupMessageEvent extends MessageEvent
 {
-    /**
-     * 群 ID
-     *
-     * @var string
-     */
-    public $group_id;
+    use HasGroupId;
 
     /**
      * @param string                                 $group_id 群 ID

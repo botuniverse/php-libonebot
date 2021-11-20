@@ -7,6 +7,8 @@ namespace OneBot\V12\Object\Event\Message;
 use DateTimeInterface;
 use InvalidArgumentException;
 use OneBot\V12\Exception\OneBotException;
+use OneBot\V12\Object\Event\HasMessageId;
+use OneBot\V12\Object\Event\HasUserId;
 use OneBot\V12\Object\Event\OneBotEvent;
 use OneBot\V12\Object\MessageSegment;
 
@@ -15,12 +17,8 @@ use OneBot\V12\Object\MessageSegment;
  */
 abstract class MessageEvent extends OneBotEvent
 {
-    /**
-     * 消息 ID
-     *
-     * @var string
-     */
-    public $message_id;
+    use HasUserId;
+    use HasMessageId;
 
     /**
      * 消息内容
@@ -35,13 +33,6 @@ abstract class MessageEvent extends OneBotEvent
      * @var null|string
      */
     public $alt_message;
-
-    /**
-     * 用户 ID
-     *
-     * @var string
-     */
-    public $user_id;
 
     /**
      * @param string                                 $detail_type 事件详细类型
@@ -64,6 +55,7 @@ abstract class MessageEvent extends OneBotEvent
         }
 
         $this->message = $message;
+        $this->user_id = $user_id;
     }
 
     /**
