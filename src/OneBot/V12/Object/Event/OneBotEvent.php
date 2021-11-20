@@ -6,15 +6,13 @@ namespace OneBot\V12\Object\Event;
 
 use DateTimeInterface;
 use JsonSerializable;
-use MessagePack\CanBePacked;
-use MessagePack\MessagePack;
-use MessagePack\Packer;
 use OneBot\V12\Exception\OneBotException;
+use OneBot\V12\OneBot;
 
 /**
  * OneBot 事件
  */
-abstract class OneBotEvent implements JsonSerializable, CanBePacked
+abstract class OneBotEvent implements JsonSerializable
 {
     /**
      * 事件 ID
@@ -88,28 +86,24 @@ abstract class OneBotEvent implements JsonSerializable, CanBePacked
 
         if ($time === null) {
             $time = time();
-        }
-        if ($time instanceof DateTimeInterface) {
+        } elseif ($time instanceof DateTimeInterface) {
             $time = $time->getTimestamp();
         }
 
-        $this->id = 0; // TODO: 自动生成事件 ID
-        $this->impl = 'internal'; // TODO: 自动读取 OB 实现名称
-        $this->platform = 'internal'; // TODO: 自动读取实现平台名称
-        $this->self_id = 'internal'; // TODO: 自动读取机器人 ID
+        $ob = OneBot::getInstance();
+
+        $this->id = ob_uuidgen();
+        $this->impl = $ob->getImplementName();
+        $this->platform = $ob->getPlatform();
+        $this->self_id = $ob->getSelfId();
         $this->time = $time;
         $this->type = $type;
         $this->detail_type = $detail_type;
         $this->sub_type = $sub_type;
     }
 
-    public function jsonSerialize(): string
+    public function jsonSerialize()
     {
-        return json_encode($this);
-    }
-
-    public function pack(Packer $packer): string
-    {
-        return MessagePack::pack($this);
+        return $this;
     }
 }
