@@ -9,7 +9,7 @@ use OneBot\V12\Action\ActionBase;
 use OneBot\V12\Config\ConfigInterface;
 use OneBot\V12\Driver\Driver;
 use OneBot\V12\Exception\OneBotException;
-use OneBot\V12\Object\Event\EventObject;
+use OneBot\V12\Object\Event\OneBotEvent;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerAwareTrait;
 
@@ -92,7 +92,7 @@ class OneBot implements LoggerAwareInterface
         return $this;
     }
 
-    public function callOBEvent(EventObject $event)
+    public function callOBEvent(OneBotEvent $event)
     {
         $this->driver->emitOBEvent($event);
     }

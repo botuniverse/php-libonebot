@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace OneBot\V12\Object\Event;
 
+use DateTimeInterface;
 use JsonSerializable;
 use MessagePack\CanBePacked;
 use MessagePack\MessagePack;
@@ -11,9 +12,9 @@ use MessagePack\Packer;
 use OneBot\V12\Exception\OneBotException;
 
 /**
- * OneBot 事件对象
+ * OneBot 事件
  */
-abstract class EventObject implements JsonSerializable, CanBePacked
+abstract class OneBotEvent implements JsonSerializable, CanBePacked
 {
     /**
      * 事件 ID
@@ -72,12 +73,10 @@ abstract class EventObject implements JsonSerializable, CanBePacked
     public $sub_type;
 
     /**
-     * 构造事件对象
-     *
-     * @param string                      $type        事件类型
-     * @param string                      $detail_type 事件详细类型
-     * @param string                      $sub_type    事件子类型
-     * @param null|\DateTimeInterface|int $time        事件发生时间，不传或为null则使用当前时间
+     * @param string                     $type        事件类型
+     * @param string                     $detail_type 事件详细类型
+     * @param string                     $sub_type    事件子类型
+     * @param null|DateTimeInterface|int $time        事件发生时间，可为DateTime对象或时间戳，不传或为null则使用当前时间
      *
      * @throws OneBotException
      */
@@ -90,7 +89,7 @@ abstract class EventObject implements JsonSerializable, CanBePacked
         if ($time === null) {
             $time = time();
         }
-        if ($time instanceof \DateTimeInterface) {
+        if ($time instanceof DateTimeInterface) {
             $time = $time->getTimestamp();
         }
 

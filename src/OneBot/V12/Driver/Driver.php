@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace OneBot\V12\Driver;
 
 use OneBot\V12\Config\ConfigInterface;
-use OneBot\V12\Object\Event\EventObject;
+use OneBot\V12\Object\Event\OneBotEvent;
 
 abstract class Driver
 {
@@ -27,7 +27,7 @@ abstract class Driver
         return $this->config;
     }
 
-    abstract public function emitOBEvent(EventObject $event);
+    abstract public function emitOBEvent(OneBotEvent $event);
 
     abstract public function initComm();
 
