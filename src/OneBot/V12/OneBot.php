@@ -33,9 +33,8 @@ class OneBot implements LoggerAwareInterface
 
     /** @var null|ActionBase */
     private $action_handler;
-    /**
-     * @var string
-     */
+
+    /** @var string */
     private $self_id;
 
     /**
@@ -115,17 +114,11 @@ class OneBot implements LoggerAwareInterface
         $this->driver->run();
     }
 
-    /**
-     * @return string
-     */
     public function getImplementName(): string
     {
         return $this->implement_name;
     }
 
-    /**
-     * @return string
-     */
     public function getSelfId(): string
     {
         return $this->self_id;
