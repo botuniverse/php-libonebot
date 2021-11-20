@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 require_once 'vendor/autoload.php';
 
-$ob = new \OneBot\V12\OneBot('repl', 'qq');
+$ob = new \OneBot\V12\OneBot('repl', 'qq', 'REPL-1');
 $ob->setLogger(new \OneBot\Logger\Console\ConsoleLogger());
 $ob->setDriver(
     new \OneBot\V12\Driver\WorkermanDriver(),
