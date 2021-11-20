@@ -12,9 +12,10 @@ use OneBot\V12\Exception\OneBotException;
 use OneBot\V12\Object\Event\OneBotEvent;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerAwareTrait;
+use Psr\Log\LoggerInterface;
 
 /**
- * Class OneBot.
+ * Class OneBot, this is the main class of LibOneBot.
  */
 class OneBot implements LoggerAwareInterface
 {
@@ -32,15 +33,20 @@ class OneBot implements LoggerAwareInterface
 
     /** @var null|ActionBase */
     private $action_handler;
+    /**
+     * @var string
+     */
+    private $self_id;
 
     /**
      * OneBot constructor.
      *
      * @throws OneBotException
      */
-    public function __construct(string $implement_name, string $platform = 'default')
+    public function __construct(string $implement_name, string $platform = 'default', string $self_id = 'default')
     {
         $this->implement_name = $implement_name;
+        $this->self_id = $self_id;
         $this->platform = $platform;
         if (isset(self::$instance)) {
             throw new OneBotException('只能有一个OneBot实例！');
@@ -48,7 +54,7 @@ class OneBot implements LoggerAwareInterface
         self::$instance = $this;
     }
 
-    public function getLogger(): \Psr\Log\LoggerInterface
+    public function getLogger(): LoggerInterface
     {
         return $this->logger;
     }
@@ -107,5 +113,21 @@ class OneBot implements LoggerAwareInterface
         }
         $this->driver->initComm();
         $this->driver->run();
+    }
+
+    /**
+     * @return string
+     */
+    public function getImplementName(): string
+    {
+        return $this->implement_name;
+    }
+
+    /**
+     * @return string
+     */
+    public function getSelfId(): string
+    {
+        return $this->self_id;
     }
 }
