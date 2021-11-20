@@ -1,7 +1,9 @@
 <?php
 
 declare(strict_types=1);
-/** @noinspection PhpDefineCanBeReplacedWithConstInspection */
+
+use OneBot\V12\Exception\OneBotException;
+
 define('ONEBOT_VERSION', '12');
 define('ONEBOT_LIBOB_VERSION', '0.1.0');
 
@@ -29,12 +31,15 @@ function logger(): Psr\Log\LoggerInterface
     return \OneBot\V12\OneBot::getInstance()->getLogger();
 }
 
-function ob_uuidgen($uppercase = false): string
+/**
+ * @throws OneBotException
+ */
+function ob_uuidgen(bool $uppercase = false): string
 {
     try {
         $data = random_bytes(16);
     } catch (Exception $e) {
-        return '';
+        throw new OneBotException('Failed to generate UUID: ' . $e->getMessage(), $e->getCode(), $e);
     }
     $data[6] = chr(ord($data[6]) & 0x0F | 0x40);
     $data[8] = chr(ord($data[8]) & 0x3F | 0x80);
