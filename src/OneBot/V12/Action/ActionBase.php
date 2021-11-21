@@ -8,6 +8,7 @@ use OneBot\V12\Object\ActionObject;
 use OneBot\V12\OneBot;
 use OneBot\V12\RetCode;
 use OneBot\V12\Utils;
+use ReflectionClass;
 
 abstract class ActionBase
 {
@@ -79,7 +80,7 @@ abstract class ActionBase
 
     public function onGetSupportedActions(ActionObject $action): ActionResponse
     {
-        $reflection = new \ReflectionClass($this);
+        $reflection = new ReflectionClass($this);
         $list = [];
         foreach ($reflection->getMethods() as $v) {
             $sep = Utils::camelToSeparator($v->getName());

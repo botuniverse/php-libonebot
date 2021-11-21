@@ -65,10 +65,10 @@
         "hooks": {
             "pre-commit": [
                 "echo committing as $(git config user.name)",
-                "./vendor/bin/php-cs-fixer fix --dry-run --stop-on-violation ./src"
+                "./vendor/bin/php-cs-fixer fix --dry-run --diff ./src"
             ],
             "pre-push": [
-                "./vendor/bin/php-cs-fixer fix --dry-run --stop-on-violation ./src",
+                "./vendor/bin/php-cs-fixer fix --dry-run --diff ./src",
                 "composer analyse"
             ],
             "post-merge": "composer install"
