@@ -19,4 +19,5 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: dessant/label-actions@v2
-        config-path: '.github/label-actions.yaml'
+        with:
+          config-path: '.github/label-actions.yaml'
