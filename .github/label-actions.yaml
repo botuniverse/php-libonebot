@@ -1,0 +1,31 @@
+# Configuration for Label Actions - https://github.com/dessant/label-actions
+
+resolution/cannot-reproduce:
+  comment: >
+    我们的开发人员无法复现此问题，如有可能，请提供完整的复现用例及截图等资料。
+
+resolution/duplicate:
+  comment: >
+    这与现有的一个Issue/PR重复了。
+  close: true
+  lock: true
+  lock-reason: 'duplicated'
+
+resolution/invalid:
+  comment: >
+    我们的开发人员认为这是一个无效的问题，请确保您查阅了我们的贡献指南及提供了必要的信息。
+  close: true
+
+resolution/rejected:
+  comment: >
+    此提案已被我们的开发人员拒绝。
+  close: true
+
+resoluton/wontfix:
+  comment: >
+    抱歉，我们暂时不会处理。
+  close: true
+
+'accept PRs':
+  comment: >
+    我们的开发人员认为这是一个不错的提案，您（或其他有意向的人）可以就此提交 PR。
