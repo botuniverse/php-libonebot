@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 use OneBot\V12\Exception\OneBotException;
+use OneBot\V12\OneBot;
+use Symfony\Component\VarDumper\VarDumper;
 
 define('ONEBOT_VERSION', '12');
 define('ONEBOT_LIBOB_VERSION', '0.1.0');
@@ -16,9 +18,9 @@ define('ONEBOT_UNKNOWN_ACTION', 0);
 
 function ob_dump($var, ...$moreVars)
 {
-    \Symfony\Component\VarDumper\VarDumper::dump($var);
+    VarDumper::dump($var);
     foreach ($moreVars as $v) {
-        \Symfony\Component\VarDumper\VarDumper::dump($v);
+        VarDumper::dump($v);
     }
     if (1 < func_num_args()) {
         return func_get_args();
@@ -28,7 +30,7 @@ function ob_dump($var, ...$moreVars)
 
 function logger(): Psr\Log\LoggerInterface
 {
-    return \OneBot\V12\OneBot::getInstance()->getLogger();
+    return OneBot::getInstance()->getLogger();
 }
 
 /**
