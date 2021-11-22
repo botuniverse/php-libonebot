@@ -11,6 +11,8 @@ use OneBot\V12\OneBot;
 
 /**
  * OneBot 事件
+ *
+ * @internal
  */
 abstract class OneBotEvent implements JsonSerializable
 {

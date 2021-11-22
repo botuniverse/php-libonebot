@@ -10,6 +10,8 @@ use OneBot\V12\Object\Event\OneBotEvent;
 
 /**
  * OneBot 元事件
+ *
+ * @internal
  */
 abstract class MetaEvent extends OneBotEvent
 {
