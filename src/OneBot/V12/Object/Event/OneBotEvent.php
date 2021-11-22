@@ -102,8 +102,8 @@ abstract class OneBotEvent implements JsonSerializable
         $this->sub_type = $sub_type;
     }
 
-    public function jsonSerialize()
+    public function jsonSerialize(): array
     {
-        return $this;
+        return (array) $this;
     }
 }
