@@ -13,7 +13,7 @@ use OneBot\V12\Object\Event\HasOperatorId;
 /**
  * OneBot 群消息删除事件
  */
-class GroupMessageDeleteNoticeEvent extends NoticeEvent
+final class GroupMessageDeleteNoticeEvent extends NoticeEvent
 {
     use HasGroupId;
     use HasOperatorId;

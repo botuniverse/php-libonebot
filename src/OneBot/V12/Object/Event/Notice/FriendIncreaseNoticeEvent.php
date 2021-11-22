@@ -10,7 +10,7 @@ use OneBot\V12\Exception\OneBotException;
 /**
  * OneBot 好友增加事件
  */
-class FriendIncreaseNoticeEvent extends NoticeEvent
+final class FriendIncreaseNoticeEvent extends NoticeEvent
 {
     /**
      * @param string                     $sub_type 事件子类型

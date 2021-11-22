@@ -12,7 +12,7 @@ use OneBot\V12\Object\MessageSegment;
 /**
  * 群消息事件
  */
-class GroupMessageEvent extends MessageEvent
+final class GroupMessageEvent extends MessageEvent
 {
     use HasGroupId;
 
