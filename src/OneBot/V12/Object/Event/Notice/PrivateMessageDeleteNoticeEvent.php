@@ -11,7 +11,7 @@ use OneBot\V12\Object\Event\HasMessageId;
 /**
  * OneBot 私聊消息删除事件
  */
-final class PrivateMessageDeleteNoticeEvent extends NoticeEvent
+class PrivateMessageDeleteNoticeEvent extends NoticeEvent
 {
     use HasMessageId;
 

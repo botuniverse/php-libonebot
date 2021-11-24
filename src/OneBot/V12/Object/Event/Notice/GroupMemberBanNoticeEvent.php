@@ -12,7 +12,7 @@ use OneBot\V12\Object\Event\HasOperatorId;
 /**
  * OneBot 群成员禁言事件
  */
-final class GroupMemberBanNoticeEvent extends NoticeEvent
+class GroupMemberBanNoticeEvent extends NoticeEvent
 {
     use HasGroupId;
     use HasOperatorId;

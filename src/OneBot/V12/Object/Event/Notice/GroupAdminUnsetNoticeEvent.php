@@ -12,7 +12,7 @@ use OneBot\V12\Object\Event\HasOperatorId;
 /**
  * OneBot 群管理员取消设置
  */
-final class GroupAdminUnsetNoticeEvent extends NoticeEvent
+class GroupAdminUnsetNoticeEvent extends NoticeEvent
 {
     use HasGroupId;
     use HasOperatorId;

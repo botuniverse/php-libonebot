@@ -11,7 +11,7 @@ use OneBot\V12\Object\MessageSegment;
 /**
  * OneBot 私聊消息事件
  */
-final class PrivateMessageEvent extends MessageEvent
+class PrivateMessageEvent extends MessageEvent
 {
     /**
      * @param string                                 $user_id 用户 ID

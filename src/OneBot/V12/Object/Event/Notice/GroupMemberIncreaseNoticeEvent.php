@@ -12,7 +12,7 @@ use OneBot\V12\Object\Event\HasOperatorId;
 /**
  * OneBot 群成员增加事件
  */
-final class GroupMemberIncreaseNoticeEvent extends NoticeEvent
+class GroupMemberIncreaseNoticeEvent extends NoticeEvent
 {
     use HasGroupId;
     use HasOperatorId;
