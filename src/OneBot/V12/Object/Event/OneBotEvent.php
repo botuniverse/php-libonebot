@@ -16,61 +16,32 @@ use OneBot\V12\OneBot;
  */
 abstract class OneBotEvent implements JsonSerializable
 {
-    /**
-     * 事件 ID
-     *
-     * @var string
-     */
+    /** @var string 事件ID */
     public $id;
 
-    /**
-     * OneBot 实现名称
-     *
-     * @var string
-     */
+    /** @var string OneBot实现名称 */
     public $impl;
 
-    /**
-     * OneBot 实现平台名称
-     *
-     * @var string
-     */
+    /** @var string OneBot实现平台名称 */
     public $platform;
 
-    /**
-     * 机器人 ID
-     *
-     * @var string
-     */
+    /** @var string 机器人ID */
     public $self_id;
 
-    /**
-     * 事件发生事件
-     *
-     * @var int
-     */
+    /** @var int 事件发生时间 */
     public $time;
 
-    /**
-     * 事件类型
-     *
-     * @var string
-     */
+    /** @var string 事件类型 */
     public $type;
 
-    /**
-     * 事件详细类型
-     *
-     * @var string
-     */
+    /** @var string 事件详细类型 */
     public $detail_type;
 
-    /**
-     * 事件子类型
-     *
-     * @var string
-     */
+    /** @var string 事件子类型 */
     public $sub_type;
+
+    /** @var array 扩展数据 */
+    private $extended_data = [];
 
     /**
      * @param string                     $type        事件类型
@@ -104,8 +75,71 @@ abstract class OneBotEvent implements JsonSerializable
         $this->sub_type = $sub_type;
     }
 
+    /**
+     * 获取扩展数据
+     */
+    public function getExtendedData(): array
+    {
+        return $this->extended_data;
+    }
+
+    /**
+     * 设置扩展数据
+     */
+    public function setExtendedData(array $extended_data): self
+    {
+        $this->extended_data = [];
+        foreach ($extended_data as $key => $value) {
+            $this->extended_data["{$this->platform}.{$key}"] = $value;
+        }
+        return $this;
+    }
+
+    /**
+     * 获取扩展数据项
+     *
+     * @return null|mixed
+     */
+    public function getExtendedDatum(string $key)
+    {
+        return $this->extended_data["{$this->platform}.{$key}"] ?? null;
+    }
+
+    /**
+     * 设置扩展数据项
+     *
+     * @param mixed $value
+     *
+     * @return $this
+     */
+    public function setExtendedDatum(string $key, $value): self
+    {
+        $this->extended_data["{$this->platform}.{$key}"] = $value;
+        return $this;
+    }
+
+    /**
+     * 删除扩展数据项
+     *
+     * @return $this
+     */
+    public function unsetExtendedDatum(string $key): self
+    {
+        unset($this->extended_data["{$this->platform}.{$key}"]);
+        return $this;
+    }
+
     public function jsonSerialize(): array
     {
-        return (array) $this;
+        return array_merge([
+            'id' => $this->id,
+            'impl' => $this->impl,
+            'platform' => $this->platform,
+            'self_id' => $this->self_id,
+            'time' => $this->time,
+            'type' => $this->type,
+            'detail_type' => empty($this->extended_data) ? $this->detail_type : "{$this->impl}.{$this->detail_type}",
+            'sub_type' => $this->sub_type,
+        ], $this->extended_data);
     }
 }

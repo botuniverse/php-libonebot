@@ -7,6 +7,6 @@ namespace OneBot\V12\Object\Event\Request;
 /**
  * OneBot 扩展请求事件类
  */
-abstract class ExtendedRequestEvent extends RequestEvent
+class ExtendedRequestEvent extends RequestEvent
 {
 }

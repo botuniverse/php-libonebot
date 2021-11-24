@@ -7,6 +7,6 @@ namespace OneBot\V12\Object\Event\Notice;
 /**
  * OneBot 扩展通知事件类
  */
-abstract class ExtendedNoticeEvent extends NoticeEvent
+class ExtendedNoticeEvent extends NoticeEvent
 {
 }
