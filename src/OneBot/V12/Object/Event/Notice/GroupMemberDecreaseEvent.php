@@ -12,7 +12,7 @@ use OneBot\V12\Object\Event\HasOperatorId;
 /**
  * OneBot 群成员减少事件
  */
-class GroupMemberDecreaseNoticeEvent extends NoticeEvent
+class GroupMemberDecreaseEvent extends NoticeEvent
 {
     use HasGroupId;
     use HasOperatorId;

@@ -8,9 +8,9 @@ use DateTimeInterface;
 use OneBot\V12\Exception\OneBotException;
 
 /**
- * OneBot 好友增加事件
+ * OneBot 好友减少事件
  */
-class FriendIncreaseNoticeEvent extends NoticeEvent
+class FriendDecreaseEvent extends NoticeEvent
 {
     /**
      * @param string                     $sub_type 事件子类型
@@ -21,6 +21,6 @@ class FriendIncreaseNoticeEvent extends NoticeEvent
      */
     public function __construct(string $sub_type, string $user_id, $time = null)
     {
-        parent::__construct('friend_increase', $sub_type, $user_id, $time);
+        parent::__construct('friend_decrease', $sub_type, $user_id, $time);
     }
 }

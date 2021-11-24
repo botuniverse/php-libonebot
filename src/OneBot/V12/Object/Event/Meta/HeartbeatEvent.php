@@ -10,7 +10,7 @@ use OneBot\V12\Exception\OneBotException;
 /**
  * OneBot 心跳事件
  */
-class HeartbeatMetaEvent extends MetaEvent
+class HeartbeatEvent extends MetaEvent
 {
     /**
      * 与下次心跳的间隔，单位毫秒
