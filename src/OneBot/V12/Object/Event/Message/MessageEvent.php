@@ -14,6 +14,8 @@ use OneBot\V12\Object\MessageSegment;
 
 /**
  * OneBot 消息事件
+ *
+ * @internal
  */
 abstract class MessageEvent extends OneBotEvent
 {

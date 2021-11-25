@@ -11,6 +11,8 @@ use OneBot\V12\Object\Event\OneBotEvent;
 
 /**
  * OneBot 通知事件
+ *
+ * @internal
  */
 abstract class NoticeEvent extends OneBotEvent
 {

@@ -10,6 +10,8 @@ use OneBot\V12\Object\Event\OneBotEvent;
 
 /**
  * OneBot 请求事件
+ *
+ * @internal
  */
 abstract class RequestEvent extends OneBotEvent
 {

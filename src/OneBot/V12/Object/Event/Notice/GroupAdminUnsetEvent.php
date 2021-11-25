@@ -10,9 +10,9 @@ use OneBot\V12\Object\Event\HasGroupId;
 use OneBot\V12\Object\Event\HasOperatorId;
 
 /**
- * OneBot 群成员增加事件
+ * OneBot 群管理员取消设置
  */
-class GroupMemberIncreaseNoticeEvent extends NoticeEvent
+class GroupAdminUnsetEvent extends NoticeEvent
 {
     use HasGroupId;
     use HasOperatorId;
@@ -28,7 +28,7 @@ class GroupMemberIncreaseNoticeEvent extends NoticeEvent
      */
     public function __construct(string $sub_type, string $group_id, string $user_id, string $operator_id, $time = null)
     {
-        parent::__construct('group_member_increase', $sub_type, $user_id, $time);
+        parent::__construct('group_admin_unset', $sub_type, $user_id, $time);
 
         $this->group_id = $group_id;
         $this->operator_id = $operator_id;
