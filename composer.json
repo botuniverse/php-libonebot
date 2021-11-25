@@ -38,7 +38,9 @@
         "lezhnev74/pasvl": "^1.0",
         "rybakit/msgpack": "^0.9.0",
         "symfony/var-dumper": "^5.3",
-        "workerman/workerman": "^4.0"
+        "workerman/workerman": "^4.0",,
+        "psr/cache": "^1.0",
+        "psr/log": "^1.1"
     },
     "require-dev": {
         "brainmaestro/composer-git-hooks": "^2.8",
