@@ -33,14 +33,15 @@
     "require": {
         "php": "^7.2|^7.3|^7.4|^8.0|^8.1",
         "ext-json": "*",
+        "ext-pdo": "*",
         "ext-posix": "*",
         "hassankhan/config": "^2.2",
         "lezhnev74/pasvl": "^1.0",
+        "psr/cache": "^1.0",
+        "psr/log": "^1.1",
         "rybakit/msgpack": "^0.9.0",
         "symfony/var-dumper": "^5.3",
-        "workerman/workerman": "^4.0",
-        "psr/cache": "^1.0",
-        "psr/log": "^1.1"
+        "workerman/workerman": "^4.0"
     },
     "require-dev": {
         "brainmaestro/composer-git-hooks": "^2.8",
