@@ -33,6 +33,17 @@ function logger(): Psr\Log\LoggerInterface
     return OneBot::getInstance()->getLogger();
 }
 
+function config(string $key = null, $default = null)
+{
+    $config = OneBot::getInstance()->getDriver()->getConfig();
+    if (!is_null($key)) {
+        /** @var mixed $config */
+        $config = $config->get($key, $default);
+    }
+
+    return $config;
+}
+
 /**
  * @throws OneBotException
  */
