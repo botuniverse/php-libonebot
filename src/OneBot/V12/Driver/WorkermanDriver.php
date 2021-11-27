@@ -96,11 +96,11 @@ class WorkermanDriver extends Driver
         } catch (OneBotFailureException $e) {
             $response_obj = ActionResponse::create($e->getActionObject()->echo ?? null)->fail($e->getRetCode());
             $this->sendWithBody($connection, ONEBOT_JSON, $response_obj);
-            logger()->warning('OneBot Failure: ' . RetCode::getMessage($e->getRetCode()) . '(' . $e->getRetCode() . ') at ' . $e->getFile() . ':' . $e->getLine());
+            ob_logger()->warning('OneBot Failure: ' . RetCode::getMessage($e->getRetCode()) . '(' . $e->getRetCode() . ') at ' . $e->getFile() . ':' . $e->getLine());
         } catch (Throwable|Error $e) {
             $response_obj = ActionResponse::create($action_obj->echo ?? null)->fail(RetCode::INTERNAL_HANDLER_ERROR);
             $this->sendWithBody($connection, ONEBOT_JSON, $response_obj);
-            logger()->error('Unhandled ' . get_class($e) . ': ' . $e->getMessage() . "\nStack trace:\n" . $e->getTraceAsString());
+            ob_logger()->error('Unhandled ' . get_class($e) . ': ' . $e->getMessage() . "\nStack trace:\n" . $e->getTraceAsString());
         }
     }
 

@@ -11,7 +11,7 @@ class ReplAction extends ActionBase
 {
     public function onSendMessage(ActionObject $action): ActionResponse
     {
-        logger()->info(Utils::msgToString($action->params['message']));
+        ob_logger()->info(Utils::msgToString($action->params['message']));
         return ActionResponse::create($action->echo)->ok(['message_id' => mt_rand(0, 9999999)]);
     }
 }

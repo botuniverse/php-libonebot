@@ -49,7 +49,7 @@ class SwooleDriver extends Driver
             $this->server = new SwooleWebSocketServer($enabled_com[$has_ws]['host'], $enabled_com[$has_ws]['port']);
             $this->initServer();
             if ($has_http !== false) {
-                logger()->warning('检测到同时开启了http和正向ws，http的配置项将被忽略。');
+                ob_logger()->warning('检测到同时开启了http和正向ws，http的配置项将被忽略。');
                 $this->initHttpServer();
             }
             $this->initWebSocketServer();
@@ -78,6 +78,7 @@ class SwooleDriver extends Driver
             $obj = $request->rawContent();
             $json = json_decode($obj, true);
             if (!isset($json['action'])) {
+                throw new OneBotException();
                 // TODO: 错误处理
             }
             $action_obj = new ActionObject($json['action'], $json['params'] ?? [], $json['echo'] ?? null);
