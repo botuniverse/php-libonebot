@@ -13,7 +13,7 @@ class SQLite extends \PDO
 {
     public function __construct()
     {
-        if (config('lib.db', false)) {
+        if (ob_config('lib.db', false)) {
             parent::__construct('sqlite:' . __DIR__ . '/../../../../cache/db');
         } else {
             throw new OneBotException('数据库支持未启用');
