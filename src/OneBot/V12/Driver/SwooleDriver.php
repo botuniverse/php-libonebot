@@ -4,18 +4,19 @@ declare(strict_types=1);
 
 namespace OneBot\V12\Driver;
 
+use Error;
+use MessagePack\MessagePack;
 use OneBot\V12\Action\ActionResponse;
-use OneBot\V12\Exception\OneBotException;
-use OneBot\V12\Object\ActionObject;
+use OneBot\V12\Exception\OneBotFailureException;
 use OneBot\V12\Object\Event\OneBotEvent;
-use OneBot\V12\OneBot;
-use OneBot\V12\Utils;
+use OneBot\V12\RetCode;
 use Swoole\Http\Request;
 use Swoole\Http\Response;
 use Swoole\Http\Server as SwooleHttpServer;
 use Swoole\Server;
 use Swoole\WebSocket\Frame;
 use Swoole\WebSocket\Server as SwooleWebSocketServer;
+use Throwable;
 
 class SwooleDriver extends Driver
 {
@@ -49,7 +50,7 @@ class SwooleDriver extends Driver
             $this->server = new SwooleWebSocketServer($enabled_com[$has_ws]['host'], $enabled_com[$has_ws]['port']);
             $this->initServer();
             if ($has_http !== false) {
-                logger()->warning('检测到同时开启了http和正向ws，http的配置项将被忽略。');
+                ob_logger()->warning('检测到同时开启了http和正向ws，http的配置项将被忽略。');
                 $this->initHttpServer();
             }
             $this->initWebSocketServer();
@@ -73,39 +74,29 @@ class SwooleDriver extends Driver
 
     public function onRequestEvent(Request $request, Response $response)
     {
-        if (($request->header['content-type'] ?? null) === 'application/json') {
-            $raw_type = ONEBOT_JSON;
-            $obj = $request->rawContent();
-            $json = json_decode($obj, true);
-            if (!isset($json['action'])) {
-                // TODO: 错误处理
+        try {
+            if (($request->header['content-type'] ?? null) === 'application/json') {
+                $response_obj = $this->emitHttpRequest($request->rawContent());
+                $response->setHeader('content-type', 'application/json');
+                $response->end(json_encode($response_obj, JSON_UNESCAPED_UNICODE));
+            } elseif (($request->header['content-type'] ?? null) === 'application/msgpack') {
+                $response_obj = $this->emitHttpRequest($request->rawContent());
+                $response->setHeader('content-type', 'application/msgpack');
+                $response->end(MessagePack::pack($response_obj));
+            } else {
+                throw new OneBotFailureException(RetCode::BAD_REQUEST);
             }
-            $action_obj = new ActionObject($json['action'], $json['params'] ?? [], $json['echo'] ?? null);
-        } elseif (($request->header['content-type'] ?? null) === 'application/msgpack') {
-            // TODO: 完成对msgpack格式的处理
-            $raw_type = ONEBOT_MSGPACK;
-            $action_obj = new ActionObject('T');
-        } else {
-            // TODO: 处理非法的Content类型
-            throw new OneBotException();
+        } catch (OneBotFailureException $e) {
+            $response_obj = ActionResponse::create($e->getActionObject()->echo ?? null)->fail($e->getRetCode());
+            $response->setHeader('content-type', 'application/json');
+            $response->end(json_encode($response_obj, JSON_UNESCAPED_UNICODE));
+            ob_logger()->warning('OneBot Failure: ' . RetCode::getMessage($e->getRetCode()) . '(' . $e->getRetCode() . ') at ' . $e->getFile() . ':' . $e->getLine());
+        } catch (Throwable|Error $e) {
+            $response_obj = ActionResponse::create($action_obj->echo ?? null)->fail(RetCode::INTERNAL_HANDLER_ERROR);
+            $response->setHeader('content-type', 'application/json');
+            $response->end(json_encode($response_obj, JSON_UNESCAPED_UNICODE));
+            ob_logger()->error('Unhandled ' . get_class($e) . ': ' . $e->getMessage() . "\nStack trace:\n" . $e->getTraceAsString());
         }
-        switch (Utils::getActionType($action_obj)) {
-            case ONEBOT_CORE_ACTION:
-                $handler = OneBot::getInstance()->getCoreActionHandler();
-                $emit = Utils::getCoreActionMethods()[$action_obj->action];
-                $handler->echo = $action_obj->echo;
-                $response_obj = $handler->{$emit}($action_obj->params, $action_obj->echo);
-                break;
-            case ONEBOT_EXTENDED_ACTION:
-                $handler = OneBot::getInstance()->getExtendedActions()[$action_obj->action];
-                $response_obj = call_user_func($handler, $action_obj->params, $action_obj->echo);
-                break;
-            default:
-                $response_obj = new ActionResponse();
-                $response_obj->retcode = -1;
-                break;
-        }
-        $this->emitHttpResponse($response, $response_obj, $raw_type);
     }
 
     /**
@@ -150,16 +141,5 @@ class SwooleDriver extends Driver
     private function onCloseEvent(?Server $server, $fd)
     {
         //TODO: 编写swoole断开ws连接请求的流程
-    }
-
-    private function emitHttpResponse(Response $response, ActionResponse $response_obj, $type = ONEBOT_JSON)
-    {
-        switch ($type) {
-            case ONEBOT_JSON:
-                $data = json_encode($response_obj, JSON_UNESCAPED_UNICODE);
-                $response->header('Content-Type', 'application/json');
-                $response->end($data);
-                break;
-        }
     }
 }

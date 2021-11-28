@@ -1,4 +1,7 @@
 {
+    "lib": {
+        "db": false
+    },
     "communications": {
         "http": {
             "enable": true,

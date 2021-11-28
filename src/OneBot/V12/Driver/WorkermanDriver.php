@@ -5,16 +5,12 @@ declare(strict_types=1);
 namespace OneBot\V12\Driver;
 
 use Error;
-use MessagePack\Exception\UnpackingFailedException;
 use MessagePack\MessagePack;
 use OneBot\V12\Action\ActionResponse;
 use OneBot\V12\Driver\Workerman\Worker;
 use OneBot\V12\Exception\OneBotFailureException;
-use OneBot\V12\Object\ActionObject;
 use OneBot\V12\Object\Event\OneBotEvent;
-use OneBot\V12\OneBot;
 use OneBot\V12\RetCode;
-use OneBot\V12\Utils;
 use Throwable;
 use Workerman\Connection\TcpConnection;
 use Workerman\Protocols\Http\Request;
@@ -57,50 +53,29 @@ class WorkermanDriver extends Driver
     public function onHttpMessage(TcpConnection $connection, ?Request $request)
     {
         try {
-            // 区分msgpack和json格式
             if ($request->header('content-type') === 'application/json') {
-                $raw_type = ONEBOT_JSON;
-                $obj = $request->rawBody();
-                $json = json_decode($obj, true);
-                if (!isset($json['action'])) {
-                    throw new OneBotFailureException(RetCode::BAD_REQUEST);
-                }
-                $action_obj = new ActionObject($json['action'], $json['params'] ?? [], $json['echo'] ?? null);
-            } elseif (($request->header['content-type'] ?? null) === 'application/msgpack') {
-                $raw_type = ONEBOT_MSGPACK;
-                $obj = $request->rawBody();
-                try {
-                    $msgpack = MessagePack::unpack($obj);
-                } catch (UnpackingFailedException $e) {
-                    throw new OneBotFailureException(RetCode::BAD_REQUEST);
-                }
-                if (!isset($msgpack['action'])) {
-                    throw new OneBotFailureException(RetCode::BAD_REQUEST);
-                }
-                $action_obj = $msgpack;
+                $response_obj = $this->emitHttpRequest($request->rawBody());
+                $response = new Response();
+                $response->withHeader('content-type', 'application/json');
+                $response->withBody(json_encode($response_obj, JSON_UNESCAPED_UNICODE));
+                $connection->send($response);
+            } elseif ($request->header('content-type') === 'application/msgpack') {
+                $response_obj = $this->emitHttpRequest($request->rawBody(), ONEBOT_MSGPACK);
+                $response = new Response();
+                $response->withHeader('content-type', 'application/msgpack');
+                $response->withBody(MessagePack::pack($response_obj));
+                $connection->send($response);
             } else {
-                // 两者都不是的话，直接报错
                 throw new OneBotFailureException(RetCode::BAD_REQUEST);
-            }
-
-            // 解析调用action handler
-            $action_handler = OneBot::getInstance()->getActionHandler();
-            $action_call_func = Utils::getActionFuncName($action_handler, $action_obj->action);
-            $response_obj = $action_handler->{$action_call_func}($action_obj);
-            if ($response_obj instanceof ActionResponse) {
-                $this->sendWithBody($connection, $raw_type, $response_obj);
-            } else {
-                $fail_response = ActionResponse::create($action_obj->echo)->fail(RetCode::BAD_HANDLER);
-                $this->sendWithBody($connection, $raw_type, $fail_response);
             }
         } catch (OneBotFailureException $e) {
             $response_obj = ActionResponse::create($e->getActionObject()->echo ?? null)->fail($e->getRetCode());
             $this->sendWithBody($connection, ONEBOT_JSON, $response_obj);
-            logger()->warning('OneBot Failure: ' . RetCode::getMessage($e->getRetCode()) . '(' . $e->getRetCode() . ') at ' . $e->getFile() . ':' . $e->getLine());
+            ob_logger()->warning('OneBot Failure: ' . RetCode::getMessage($e->getRetCode()) . '(' . $e->getRetCode() . ') at ' . $e->getFile() . ':' . $e->getLine());
         } catch (Throwable|Error $e) {
             $response_obj = ActionResponse::create($action_obj->echo ?? null)->fail(RetCode::INTERNAL_HANDLER_ERROR);
             $this->sendWithBody($connection, ONEBOT_JSON, $response_obj);
-            logger()->error('Unhandled ' . get_class($e) . ': ' . $e->getMessage() . "\nStack trace:\n" . $e->getTraceAsString());
+            ob_logger()->error('Unhandled ' . get_class($e) . ': ' . $e->getMessage() . "\nStack trace:\n" . $e->getTraceAsString());
         }
     }
 

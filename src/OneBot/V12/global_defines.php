@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use OneBot\V12\Exception\OneBotException;
 use OneBot\V12\OneBot;
+use Psr\Log\LoggerInterface;
 use Symfony\Component\VarDumper\VarDumper;
 
 define('ONEBOT_VERSION', '12');
@@ -16,6 +17,13 @@ define('ONEBOT_CORE_ACTION', 1);
 define('ONEBOT_EXTENDED_ACTION', 2);
 define('ONEBOT_UNKNOWN_ACTION', 0);
 
+/**
+ * 更漂亮的dump变量
+ *
+ * @param $var
+ * @param ...$moreVars
+ * @return array|mixed
+ */
 function ob_dump($var, ...$moreVars)
 {
     VarDumper::dump($var);
@@ -28,9 +36,29 @@ function ob_dump($var, ...$moreVars)
     return $var;
 }
 
-function logger(): Psr\Log\LoggerInterface
+/**
+ * 更漂亮的logger输出
+ */
+function ob_logger(): LoggerInterface
 {
     return OneBot::getInstance()->getLogger();
+}
+
+/**
+ * 返回ob配置项
+ *
+ * @param  null  $default
+ * @return mixed
+ */
+function ob_config(string $key = null, $default = null)
+{
+    $config = OneBot::getInstance()->getDriver()->getConfig();
+    if (!is_null($key)) {
+        /** @var mixed $config */
+        $config = $config->get($key, $default);
+    }
+
+    return $config;
 }
 
 /**
