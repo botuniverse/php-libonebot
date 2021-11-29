@@ -33,9 +33,12 @@
     "require": {
         "php": "^7.2|^7.3|^7.4|^8.0|^8.1",
         "ext-json": "*",
+        "ext-pdo": "*",
         "ext-posix": "*",
         "hassankhan/config": "^2.2",
         "lezhnev74/pasvl": "^1.0",
+        "psr/cache": "^1.0",
+        "psr/log": "^1.1",
         "rybakit/msgpack": "^0.9.0",
         "symfony/var-dumper": "^5.3",
         "workerman/workerman": "^4.0"
@@ -65,10 +68,10 @@
         "hooks": {
             "pre-commit": [
                 "echo committing as $(git config user.name)",
-                "./vendor/bin/php-cs-fixer fix --dry-run --stop-on-violation ./src"
+                "./vendor/bin/php-cs-fixer fix --dry-run --diff ./src"
             ],
             "pre-push": [
-                "./vendor/bin/php-cs-fixer fix --dry-run --stop-on-violation ./src",
+                "./vendor/bin/php-cs-fixer fix --dry-run --diff ./src",
                 "composer analyse"
             ],
             "post-merge": "composer install"

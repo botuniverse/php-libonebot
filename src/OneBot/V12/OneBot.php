@@ -9,28 +9,33 @@ use OneBot\V12\Action\ActionBase;
 use OneBot\V12\Config\ConfigInterface;
 use OneBot\V12\Driver\Driver;
 use OneBot\V12\Exception\OneBotException;
-use OneBot\V12\Object\EventObject;
+use OneBot\V12\Object\Event\OneBotEvent;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerAwareTrait;
+use Psr\Log\LoggerInterface;
 
 /**
- * Class OneBot.
+ * OneBot 入口类
+ * 一切从这里开始，这句话是真人写的，不是AI写的
  */
 class OneBot implements LoggerAwareInterface
 {
     use Singleton;
     use LoggerAwareTrait;
 
-    /** @var string */
+    /** @var string 实现名称 */
     private $implement_name;
 
-    /** @var string */
+    /** @var string 实现平台 */
     private $platform;
 
-    /** @var null|Driver */
+    /** @var string 机器人 ID */
+    private $self_id;
+
+    /** @var null|Driver 驱动器 */
     private $driver;
 
-    /** @var null|ActionBase */
+    /** @var null|ActionBase 动作处理器 */
     private $action_handler;
 
     /**
@@ -38,9 +43,10 @@ class OneBot implements LoggerAwareInterface
      *
      * @throws OneBotException
      */
-    public function __construct(string $implement_name, string $platform = 'default')
+    public function __construct(string $implement_name, string $platform = 'default', string $self_id = 'default')
     {
         $this->implement_name = $implement_name;
+        $this->self_id = $self_id;
         $this->platform = $platform;
         if (isset(self::$instance)) {
             throw new OneBotException('只能有一个OneBot实例！');
@@ -48,14 +54,24 @@ class OneBot implements LoggerAwareInterface
         self::$instance = $this;
     }
 
-    public function getLogger(): \Psr\Log\LoggerInterface
+    public function getLogger(): LoggerInterface
     {
         return $this->logger;
+    }
+
+    public function getImplementName(): string
+    {
+        return $this->implement_name;
     }
 
     public function getPlatform(): string
     {
         return $this->platform;
+    }
+
+    public function getSelfId(): string
+    {
+        return $this->self_id;
     }
 
     public function getDriver(): ?Driver
@@ -76,7 +92,9 @@ class OneBot implements LoggerAwareInterface
     }
 
     /**
-     * @param mixed $handler
+     * 设置动作处理器
+     *
+     * @param ActionBase|string $handler 动作处理器
      *
      * @throws OneBotException
      */
@@ -92,12 +110,14 @@ class OneBot implements LoggerAwareInterface
         return $this;
     }
 
-    public function callOBEvent(EventObject $event)
+    public function callOBEvent(OneBotEvent $event)
     {
         $this->driver->emitOBEvent($event);
     }
 
     /**
+     * 运行服务
+     *
      * @throws OneBotException
      */
     public function run()

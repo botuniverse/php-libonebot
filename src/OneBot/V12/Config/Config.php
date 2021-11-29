@@ -79,6 +79,9 @@ class Config extends \Noodlehaus\Config implements ConfigInterface
     protected function validateConfig()
     {
         $pattern = [
+            'lib' => [
+                'db' => ':bool',
+            ],
             'communications' => [
                 'http?' => [
                     'enable' => ':bool',
