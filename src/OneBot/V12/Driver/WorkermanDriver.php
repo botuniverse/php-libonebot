@@ -20,8 +20,9 @@ class WorkermanDriver extends Driver
 {
     private $http_worker;
 
-    public function emitOBEvent(OneBotEvent $event)
+    public function emitOBEvent(OneBotEvent $event): bool
     {
+        return false;
     }
 
     public function initComm()
