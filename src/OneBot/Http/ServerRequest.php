@@ -13,7 +13,7 @@ use function array_key_exists;
 use function is_array;
 use function is_object;
 
-class ServerRequest extends Request implements ServerRequestInterface
+class ServerRequest implements ServerRequestInterface
 {
     use RequestTrait;
 
@@ -36,18 +36,33 @@ class ServerRequest extends Request implements ServerRequestInterface
     private $uploadedFiles = [];
 
     /**
-     * @param string                               $method       HTTP method
-     * @param string|UriInterface                  $uri          URI
-     * @param array                                $headers      Request headers
-     * @param null|resource|StreamInterface|string $body         Request body
-     * @param string                               $version      Protocol version
-     * @param array                                $serverParams Typically the $_SERVER superglobal
+     * @param string                               $method  HTTP method
+     * @param string|UriInterface                  $uri     URI
+     * @param array                                $headers Request headers
+     * @param null|resource|StreamInterface|string $body    Request body
+     * @param string                               $version Protocol version
      */
     public function __construct(string $method, $uri, array $headers = [], $body = null, string $version = '1.1', array $serverParams = [])
     {
         $this->serverParams = $serverParams;
 
-        parent::__construct($method, $uri, $headers, $body, $version);
+        if (!($uri instanceof UriInterface)) {
+            $uri = new Uri($uri);
+        }
+
+        $this->method = $method;
+        $this->uri = $uri;
+        $this->setHeaders($headers);
+        $this->protocol = $version;
+
+        if (!$this->hasHeader('Host')) {
+            $this->updateHostFromUri();
+        }
+
+        // If we got nobody, defer initialization of the stream until Request::getBody()
+        if ($body !== '' && $body !== null) {
+            $this->stream = Stream::create($body);
+        }
     }
 
     public function getServerParams(): array
