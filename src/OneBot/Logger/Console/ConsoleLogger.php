@@ -45,7 +45,7 @@ class ConsoleLogger extends AbstractLogger
 
     public function __construct($logLevel = LogLevel::INFO)
     {
-        self::$logLevel = $logLevel;
+        self::$logLevel = array_flip(self::$levels)[$logLevel];
     }
 
     public function colorize($string, $level)
