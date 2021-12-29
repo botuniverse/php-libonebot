@@ -20,4 +20,4 @@ jobs:
     steps:
       - uses: dessant/label-actions@v2
         with:
-          config-path: '.github/label-actions.yaml'
+          config-path: '/.github/label-actions.yaml'
