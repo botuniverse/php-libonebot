@@ -8,6 +8,21 @@ class Worker extends \Workerman\Worker
 {
     public static $internal_running = false;
 
+    public static function runAll()
+    {
+        static::checkSapiEnv();
+        static::init();
+        static::parseCommand();
+        static::daemonize();
+        static::initWorkers();
+        static::installSignal();
+        static::saveMasterPid();
+        //static::displayUI();
+        static::forkWorkers();
+        static::resetStd();
+        static::monitorWorkers();
+    }
+
     protected static function parseCommand()
     {
         if (static::$_OS !== OS_TYPE_LINUX) {
