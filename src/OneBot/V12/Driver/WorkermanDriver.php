@@ -9,6 +9,7 @@ use MessagePack\MessagePack;
 use OneBot\V12\Action\ActionResponse;
 use OneBot\V12\Driver\Workerman\Worker;
 use OneBot\V12\Exception\OneBotFailureException;
+use OneBot\V12\MPUtils;
 use OneBot\V12\Object\Event\OneBotEvent;
 use OneBot\V12\RetCode;
 use Throwable;
@@ -39,6 +40,9 @@ class WorkermanDriver extends Driver
             $this->http_worker->count = $enabled_com[$has_http]['worker_count'] ?? 4;
             Worker::$internal_running = true; // 加上这句就可以不需要必须输 start 命令才能启动了，直接启动
             $this->http_worker->onMessage = [$this, 'onHttpMessage'];
+            $this->http_worker->onWorkerStart = function (Worker $worker) {
+                MPUtils::initProcess(ONEBOT_PROCESS_WORKER, $worker->id);
+            };
         }
     }
 

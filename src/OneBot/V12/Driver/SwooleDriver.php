@@ -8,6 +8,7 @@ use Error;
 use MessagePack\MessagePack;
 use OneBot\V12\Action\ActionResponse;
 use OneBot\V12\Exception\OneBotFailureException;
+use OneBot\V12\MPUtils;
 use OneBot\V12\Object\Event\OneBotEvent;
 use OneBot\V12\RetCode;
 use Swoole\Http\Request;
@@ -117,6 +118,7 @@ class SwooleDriver extends Driver
         ]);
         $this->server->on('workerstart', function (Server $server) {
             echo '已启动服务器 at ' . $server->host . ':' . $server->port;
+            MPUtils::initProcess(ONEBOT_PROCESS_WORKER, $server->worker_id);
         });
     }
 

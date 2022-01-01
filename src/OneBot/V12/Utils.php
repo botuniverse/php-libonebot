@@ -6,9 +6,7 @@ namespace OneBot\V12;
 
 use OneBot\V12\Action\ActionBase;
 use OneBot\V12\Exception\OneBotFailureException;
-use OneBot\V12\Object\ActionObject;
 use PASVL\Validation\ValidatorBuilder;
-use ReflectionClass;
 
 class Utils
 {
@@ -17,18 +15,6 @@ class Utils
     public static function isAssocArray(array $arr): bool
     {
         return array_values($arr) !== $arr;
-    }
-
-    public static function getActionType(ActionObject $action_obj): int
-    {
-        $action = $action_obj->action;
-        if (isset(self::getCoreActionMethods()[$action])) {
-            return ONEBOT_CORE_ACTION;
-        }
-        if (isset(OneBot::getInstance()->getExtendedActions()[$action])) {
-            return ONEBOT_EXTENDED_ACTION;
-        }
-        return ONEBOT_UNKNOWN_ACTION;
     }
 
     public static function separatorToCamel($name, $separator = '_'): string
@@ -42,22 +28,6 @@ class Utils
         return strtolower(preg_replace('/([a-z])([A-Z])/', '$1' . $separator . '$2', $str));
     }
 
-    public static function getCoreActionMethods(): array
-    {
-        if (isset(Utils::$cache['core_action_methods'])) {
-            return Utils::$cache['core_action_methods'];
-        }
-        // TODO: Create CoreActionInterface
-        // @phpstan-ignore-next-line
-        $reflection = new ReflectionClass(CoreActionInterface::class);
-        $list = [];
-        foreach ($reflection->getMethods() as $k => $v) {
-            $method_name = substr($v->getName(), 2);
-            $list[self::camelToSeparator($method_name)] = $v->getName();
-        }
-        return Utils::$cache['core_action_methods'] = $list;
-    }
-
     public static function msgToString($message): string
     {
         $result = '';
@@ -67,6 +37,8 @@ class Utils
                     $result .= $v['data']['text'];
                 }
             }
+        } else {
+            $result = $message;
         }
         return $result;
     }

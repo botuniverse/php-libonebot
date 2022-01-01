@@ -17,6 +17,12 @@ define('ONEBOT_CORE_ACTION', 1);
 define('ONEBOT_EXTENDED_ACTION', 2);
 define('ONEBOT_UNKNOWN_ACTION', 0);
 
+define('ONEBOT_PROCESS_MASTER', 1);
+define('ONEBOT_PROCESS_MANAGER', 2);
+define('ONEBOT_PROCESS_WORKER', 4);
+define('ONEBOT_PROCESS_USER', 8);
+define('ONEBOT_PROCESS_TASKWORKER', 16);
+
 /**
  * 更漂亮的dump变量
  *
