@@ -32,4 +32,10 @@ class WebSocketClient implements WebSocketClientInterface
         // TODO: Implement withRequest() method.
         return $this;
     }
+
+    public function push($data): bool
+    {
+        // TODO: Implement push() method.
+        return false;
+    }
 }

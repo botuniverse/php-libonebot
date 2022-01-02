@@ -10,6 +10,7 @@ use OneBot\Http\Client\SwooleClient;
 use OneBot\Http\HttpFactory;
 use OneBot\V12\Driver\WebSocketClientInterface;
 use Psr\Http\Message\RequestInterface;
+use Swoole\Coroutine\Http\Client;
 use Swoole\WebSocket\Frame;
 
 class WebSocketClient implements WebSocketClientInterface
@@ -18,6 +19,7 @@ class WebSocketClient implements WebSocketClientInterface
 
     private $set;
 
+    /** @var Client */
     private $client;
 
     private $close_func;
@@ -62,7 +64,11 @@ class WebSocketClient implements WebSocketClientInterface
         if (!$this->is_available) {
             return false;
         }
+        ob_dump($this->request->getUri());
         $uri = $this->request->getUri()->getPath();
+        if ($uri === '') {
+            $uri = '/';
+        }
         if (($query = $this->request->getUri()->getQuery()) !== '') {
             $uri .= '?' . $query;
         }
@@ -107,5 +113,10 @@ class WebSocketClient implements WebSocketClientInterface
     {
         $this->close_func = $callable;
         return $this;
+    }
+
+    public function push($data): bool
+    {
+        return $this->client->push($data);
     }
 }

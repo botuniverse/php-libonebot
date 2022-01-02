@@ -18,4 +18,6 @@ interface WebSocketClientInterface
     public function setMessageCallback(callable $callable): WebSocketClientInterface;
 
     public function setCloseCallback(callable $callable): WebSocketClientInterface;
+
+    public function push($data): bool;
 }
