@@ -37,6 +37,7 @@ class StreamClient implements ClientInterface
     public function __construct($config = [])
     {
         $this->config = empty($config) ? $this->config : $config;
+        $this->config['stream_context'] = stream_context_create($this->config['stream_context_options'], $this->config['stream_context_param']);
     }
 
     /**
