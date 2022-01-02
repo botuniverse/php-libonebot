@@ -35,7 +35,7 @@ abstract class Driver
         return $this->config;
     }
 
-    abstract public function emitOBEvent(OneBotEvent $event);
+    abstract public function emitOBEvent(OneBotEvent $event): bool;
 
     abstract public function initComm();
 

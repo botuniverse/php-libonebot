@@ -30,8 +30,9 @@ class SwooleDriver extends Driver
     {
     }
 
-    public function emitOBEvent(OneBotEvent $event)
+    public function emitOBEvent(OneBotEvent $event): bool
     {
+        return false;
     }
 
     public function initComm()
@@ -92,7 +93,7 @@ class SwooleDriver extends Driver
             $response->setHeader('content-type', 'application/json');
             $response->end(json_encode($response_obj, JSON_UNESCAPED_UNICODE));
             ob_logger()->warning('OneBot Failure: ' . RetCode::getMessage($e->getRetCode()) . '(' . $e->getRetCode() . ') at ' . $e->getFile() . ':' . $e->getLine());
-        } catch (Throwable|Error $e) {
+        } catch (Throwable | Error $e) {
             $response_obj = ActionResponse::create($action_obj->echo ?? null)->fail(RetCode::INTERNAL_HANDLER_ERROR);
             $response->setHeader('content-type', 'application/json');
             $response->end(json_encode($response_obj, JSON_UNESCAPED_UNICODE));
