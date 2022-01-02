@@ -57,7 +57,7 @@ class SwooleClient implements ClientInterface
         return HttpFactory::getInstance()->createResponse($client->statusCode, null, $client->getHeaders(), $client->getBody());
     }
 
-    private function buildBaseClient(RequestInterface $request): Client
+    public function buildBaseClient(RequestInterface $request): Client
     {
         $uri = $request->getUri();
         $client = new Client($uri->getHost(), $uri->getPort() ?? ($uri->getScheme() === 'https' ? 443 : 80), $uri->getScheme() === 'https');
