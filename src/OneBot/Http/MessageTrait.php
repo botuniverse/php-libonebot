@@ -120,7 +120,7 @@ trait MessageTrait
         if ($this->stream === null) {
             $this->stream = Stream::create();
         }
-
+        $this->stream->rewind();
         return $this->stream;
     }
 
