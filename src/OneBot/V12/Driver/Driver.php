@@ -6,6 +6,8 @@ namespace OneBot\V12\Driver;
 
 use MessagePack\Exception\UnpackingFailedException;
 use MessagePack\MessagePack;
+use OneBot\Http\Client\StreamClient;
+use OneBot\Http\Client\SwooleClient;
 use OneBot\V12\Action\ActionResponse;
 use OneBot\V12\Config\ConfigInterface;
 use OneBot\V12\Exception\OneBotFailureException;
@@ -19,6 +21,16 @@ abstract class Driver
 {
     /** @var ConfigInterface */
     protected $config;
+
+    protected $default_client_class;
+
+    protected $alt_client_class;
+
+    public function __construct($default_client_class = SwooleClient::class, $alt_client_class = StreamClient::class)
+    {
+        $this->default_client_class = $default_client_class;
+        $this->alt_client_class = $alt_client_class;
+    }
 
     public function getName(): string
     {

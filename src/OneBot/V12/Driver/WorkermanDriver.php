@@ -19,7 +19,7 @@ use Workerman\Protocols\Http\Response;
 
 class WorkermanDriver extends Driver
 {
-    private $http_worker;
+    protected $http_worker;
 
     public function emitOBEvent(OneBotEvent $event): bool
     {

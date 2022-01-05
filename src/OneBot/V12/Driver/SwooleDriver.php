@@ -24,11 +24,7 @@ class SwooleDriver extends Driver
     /**
      * @var SwooleHttpServer|SwooleWebSocketServer
      */
-    private $server;
-
-    public function __construct()
-    {
-    }
+    protected $server;
 
     public function emitOBEvent(OneBotEvent $event): bool
     {
