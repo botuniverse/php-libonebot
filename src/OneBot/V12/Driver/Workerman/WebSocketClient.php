@@ -65,6 +65,11 @@ class WebSocketClient implements WebSocketClientInterface
     public function send($data): bool
     {
         $this->connection->send($data);
-        return false;
+        return true;
+    }
+
+    public function push($data): bool
+    {
+        return $this->send($data);
     }
 }

@@ -55,4 +55,6 @@ interface WebSocketClientInterface
     public function setCloseCallback(callable $callable): WebSocketClientInterface;
 
     public function send($data): bool;
+
+    public function push($data): bool;
 }
