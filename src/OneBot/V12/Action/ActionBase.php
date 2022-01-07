@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace OneBot\V12\Action;
 
+use OneBot\Util\Utils;
 use OneBot\V12\Object\ActionObject;
 use OneBot\V12\OneBot;
 use OneBot\V12\RetCode;
-use OneBot\V12\Utils;
 use ReflectionClass;
 
 abstract class ActionBase
