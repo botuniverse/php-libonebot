@@ -31,19 +31,21 @@ class Response implements ResponseInterface
     private $statusCode;
 
     /**
-     * @param int                                  $status  Status code
+     * @param int|string                           $status  Status code
      * @param array                                $headers Response headers
      * @param null|resource|StreamInterface|string $body    Response body
      * @param string                               $version Protocol version
      * @param null|string                          $reason  Reason phrase (when empty a default will be used based on the status code)
      */
-    public function __construct(int $status = 200, array $headers = [], $body = null, string $version = '1.1', string $reason = null)
+    public function __construct($status = 200, array $headers = [], $body = null, string $version = '1.1', string $reason = null)
     {
         // If we got nobody, defer initialization of the stream until Response::getBody()
         if ($body !== '' && $body !== null) {
             $this->stream = Stream::create($body);
         }
-
+        if (is_string($status)) {
+            $status = intval($status);
+        }
         $this->statusCode = $status;
         $this->setHeaders($headers);
         if ($reason === null && isset(self::PHRASES[$this->statusCode])) {

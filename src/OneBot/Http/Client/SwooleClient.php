@@ -2,23 +2,41 @@
 
 declare(strict_types=1);
 
-namespace OneBot\V12\Driver\Swoole;
+namespace OneBot\Http\Client;
 
+use OneBot\Http\Client\Exception\ClientException;
+use OneBot\Http\Client\Exception\NetworkException;
 use OneBot\Http\HttpFactory;
-use OneBot\Http\Response;
 use Psr\Http\Client\ClientInterface;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
+use Swoole\Coroutine;
 use Swoole\Coroutine\Http\Client;
-use function implode;
 
-class HttpClient implements ClientInterface
+/**
+ * Swoole HTTP Client based on PSR-18.
+ * TODO: 错误处理
+ */
+class SwooleClient implements ClientInterface
 {
     private $set = [];
 
-    public function withSwooleSet(array $set): HttpClient
+    /**
+     * @throws ClientException
+     */
+    public function __construct(array $set = [])
     {
-        $this->set = $set;
+        if (Coroutine::getCid() === -1) {
+            throw new ClientException('API must be called in the coroutine');
+        }
+        $this->withSwooleSet($set);
+    }
+
+    public function withSwooleSet(array $set = []): SwooleClient
+    {
+        if (!empty($set)) {
+            $this->set = $set;
+        }
         return $this;
     }
 
@@ -32,12 +50,14 @@ class HttpClient implements ClientInterface
         if (($fragment = $request->getUri()->getFragment()) !== '') {
             $uri .= '?' . $fragment;
         }
-        $result = $client->execute($uri);
-        HttpFactory::getInstance()->createResponse();
-        return new Response();
+        $client->execute($uri);
+        if ($client->errCode !== 0) {
+            throw new NetworkException($request, $client->errMsg, $client->errCode);
+        }
+        return HttpFactory::getInstance()->createResponse($client->statusCode, null, $client->getHeaders(), $client->getBody());
     }
 
-    private function buildBaseClient(RequestInterface $request): Client
+    public function buildBaseClient(RequestInterface $request): Client
     {
         $uri = $request->getUri();
         $client = new Client($uri->getHost(), $uri->getPort() ?? ($uri->getScheme() === 'https' ? 443 : 80), $uri->getScheme() === 'https');

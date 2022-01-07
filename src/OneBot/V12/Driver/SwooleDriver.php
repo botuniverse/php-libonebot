@@ -6,9 +6,9 @@ namespace OneBot\V12\Driver;
 
 use Error;
 use MessagePack\MessagePack;
+use OneBot\Util\MPUtils;
 use OneBot\V12\Action\ActionResponse;
 use OneBot\V12\Exception\OneBotFailureException;
-use OneBot\V12\MPUtils;
 use OneBot\V12\Object\Event\OneBotEvent;
 use OneBot\V12\RetCode;
 use Swoole\Http\Request;
@@ -24,11 +24,7 @@ class SwooleDriver extends Driver
     /**
      * @var SwooleHttpServer|SwooleWebSocketServer
      */
-    private $server;
-
-    public function __construct()
-    {
-    }
+    protected $server;
 
     public function emitOBEvent(OneBotEvent $event): bool
     {

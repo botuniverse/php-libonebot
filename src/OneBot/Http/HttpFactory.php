@@ -4,9 +4,6 @@ declare(strict_types=1);
 
 namespace OneBot\Http;
 
-use Http\Message\MessageFactory;
-use Http\Message\StreamFactory;
-use Http\Message\UriFactory;
 use InvalidArgumentException;
 use OneBot\Util\Singleton;
 use Psr\Http\Message\RequestInterface;
@@ -15,19 +12,18 @@ use Psr\Http\Message\StreamInterface;
 use Psr\Http\Message\UriInterface;
 use RuntimeException;
 
-class HttpFactory implements MessageFactory, StreamFactory, UriFactory
+class HttpFactory
 {
     use Singleton;
 
     /**
      * Creates a new PSR-7 request.
      *
-     * @param string                               $method
      * @param string|UriInterface                  $uri
      * @param null|resource|StreamInterface|string $body
-     * @param string                               $protocolVersion
+     * @param mixed                                $protocolVersion
      */
-    public function createRequest($method, $uri, array $headers = [], $body = null, $protocolVersion = '1.1'): RequestInterface
+    public function createRequest(string $method, $uri, array $headers = [], $body = null, $protocolVersion = '1.1'): RequestInterface
     {
         return new Request($method, $uri, $headers, $body, $protocolVersion);
     }

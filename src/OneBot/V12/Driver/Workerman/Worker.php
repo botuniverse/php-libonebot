@@ -1,13 +1,20 @@
 <?php
 
+/** @noinspection PhpComposerExtensionStubsInspection */
+
 declare(strict_types=1);
 
 namespace OneBot\V12\Driver\Workerman;
+
+use Exception;
 
 class Worker extends \Workerman\Worker
 {
     public static $internal_running = false;
 
+    /**
+     * @throws Exception
+     */
     public static function runAll()
     {
         static::checkSapiEnv();

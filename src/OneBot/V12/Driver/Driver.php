@@ -6,6 +6,10 @@ namespace OneBot\V12\Driver;
 
 use MessagePack\Exception\UnpackingFailedException;
 use MessagePack\MessagePack;
+use OneBot\Http\Client\StreamClient;
+use OneBot\Http\Client\SwooleClient;
+use OneBot\Util\Utils;
+use OneBot\V12\Action\ActionBase;
 use OneBot\V12\Action\ActionResponse;
 use OneBot\V12\Config\ConfigInterface;
 use OneBot\V12\Exception\OneBotFailureException;
@@ -13,12 +17,23 @@ use OneBot\V12\Object\ActionObject;
 use OneBot\V12\Object\Event\OneBotEvent;
 use OneBot\V12\OneBot;
 use OneBot\V12\RetCode;
-use OneBot\V12\Utils;
 
 abstract class Driver
 {
     /** @var ConfigInterface */
     protected $config;
+
+    protected $default_client_class;
+
+    protected $alt_client_class;
+
+    protected $_events = [];
+
+    public function __construct($default_client_class = SwooleClient::class, $alt_client_class = StreamClient::class)
+    {
+        $this->default_client_class = $default_client_class;
+        $this->alt_client_class = $alt_client_class;
+    }
 
     public function getName(): string
     {
@@ -71,8 +86,42 @@ abstract class Driver
         }
         // 解析调用action handler
         $action_handler = OneBot::getInstance()->getActionHandler();
-        $action_call_func = Utils::getActionFuncName($action_handler, $action_obj->action);
+        $action_call_func = $this->getActionFuncName($action_handler, $action_obj->action);
+        if ($action_call_func === null) {
+            return ActionResponse::create($action_obj->echo)->fail(RetCode::UNSUPPORTED_ACTION);
+        }
         $response_obj = $action_handler->{$action_call_func}($action_obj);
         return $response_obj instanceof ActionResponse ? $response_obj : ActionResponse::create($action_obj->echo)->fail(RetCode::BAD_HANDLER);
+    }
+
+    /**
+     * @throws OneBotFailureException
+     * @return mixed|string
+     */
+    private function getActionFuncName(ActionBase $handler, string $action)
+    {
+        if (isset(ActionBase::$core_cache[$action])) {
+            return ActionBase::$core_cache[$action];
+        }
+
+        if (isset(ActionBase::$ext_cache[$action])) {
+            return ActionBase::$ext_cache[$action];
+        }
+        if (substr(
+            $action,
+            0,
+            strlen(OneBot::getInstance()->getPlatform()) + 1
+        ) === (OneBot::getInstance()->getPlatform() . '.')) {
+            $func = Utils::separatorToCamel('ext_' . substr($action, strlen(OneBot::getInstance()->getPlatform()) + 1));
+            if (method_exists($handler, $func)) {
+                return ActionBase::$ext_cache[$action] = $func;
+            }
+        } else {
+            $func = Utils::separatorToCamel('on_' . $action);
+            if (method_exists($handler, $func)) {
+                return ActionBase::$core_cache[$action] = $func;
+            }
+        }
+        throw new OneBotFailureException(RetCode::UNSUPPORTED_ACTION);
     }
 }
