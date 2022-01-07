@@ -6,9 +6,9 @@ namespace OneBot\V12\Driver;
 
 use Error;
 use MessagePack\MessagePack;
-use OneBot\Util\MPUtils;
 use OneBot\V12\Action\ActionResponse;
 use OneBot\V12\Exception\OneBotFailureException;
+use OneBot\V12\MPUtils;
 use OneBot\V12\Object\Event\OneBotEvent;
 use OneBot\V12\RetCode;
 use Swoole\Http\Request;
