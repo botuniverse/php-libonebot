@@ -4,9 +4,13 @@ declare(strict_types=1);
 
 namespace OneBot\V12\Action;
 
+use OneBot\Util\Utils;
 use OneBot\V12\Object\ActionObject;
-use OneBot\V12\Utils;
 
+/**
+ * Demo REPL Action Handler.
+ * Just for test.
+ */
 class ReplAction extends ActionBase
 {
     public function onSendMessage(ActionObject $action): ActionResponse

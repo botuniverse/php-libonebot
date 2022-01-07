@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace OneBot\V12;
+namespace OneBot\Util;
 
 class MPUtils
 {

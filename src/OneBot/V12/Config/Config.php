@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace OneBot\V12\Config;
 
+use OneBot\Util\Utils;
 use OneBot\V12\Exception\OneBotException;
-use OneBot\V12\Utils;
 
 class Config extends \Noodlehaus\Config implements ConfigInterface
 {
