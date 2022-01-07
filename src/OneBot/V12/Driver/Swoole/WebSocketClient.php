@@ -64,7 +64,6 @@ class WebSocketClient implements WebSocketClientInterface
         if (!$this->status != self::STATUS_INITIAL) {
             return false;
         }
-        ob_dump($this->request->getUri());
         $uri = $this->request->getUri()->getPath();
         if ($uri === '') {
             $uri = '/';
