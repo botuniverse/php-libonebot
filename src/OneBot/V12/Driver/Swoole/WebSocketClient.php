@@ -15,7 +15,8 @@ use Swoole\WebSocket\Frame;
 
 class WebSocketClient implements WebSocketClientInterface
 {
-    public $is_available = false;
+    /** @var int */
+    public $status = self::STATUS_INITIAL;
 
     private $set;
 
@@ -34,7 +35,6 @@ class WebSocketClient implements WebSocketClientInterface
     public function __construct(array $set = ['websocket_mask' => true])
     {
         $this->set = $set;
-        $this->is_available = true;
     }
 
     /**
@@ -59,9 +59,9 @@ class WebSocketClient implements WebSocketClientInterface
     /**
      * @throws NetworkException
      */
-    public function create(): bool
+    public function connect(): bool
     {
-        if (!$this->is_available) {
+        if (!$this->status != self::STATUS_INITIAL) {
             return false;
         }
         ob_dump($this->request->getUri());
@@ -80,11 +80,13 @@ class WebSocketClient implements WebSocketClientInterface
             throw new NetworkException($this->request, $this->client->errMsg);
         }
         if ($r) {
+            $this->status = self::STATUS_ESTABLISHED;
             go(function () {
                 while (true) {
                     $result = $this->client->recv(60);
                     if ($result === false) {
                         if ($this->client->connected === false) {
+                            $this->status = self::STATUS_CLOSED;
                             go(function () {
                                 call_user_func($this->close_func, $this->client);
                             });
@@ -92,7 +94,6 @@ class WebSocketClient implements WebSocketClientInterface
                         }
                     } elseif ($result instanceof Frame) {
                         go(function () use ($result) {
-                            $this->is_available = false;
                             call_user_func($this->message_func, $result, $this->client);
                         });
                     }
@@ -115,7 +116,7 @@ class WebSocketClient implements WebSocketClientInterface
         return $this;
     }
 
-    public function push($data): bool
+    public function send($data): bool
     {
         return $this->client->push($data);
     }
