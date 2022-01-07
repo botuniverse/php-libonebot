@@ -61,7 +61,7 @@ class WebSocketClient implements WebSocketClientInterface
      */
     public function connect(): bool
     {
-        if (!$this->status != self::STATUS_INITIAL) {
+        if ($this->status !== self::STATUS_INITIAL) {
             return false;
         }
         $uri = $this->request->getUri()->getPath();
