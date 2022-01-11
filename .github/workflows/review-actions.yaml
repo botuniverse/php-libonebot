@@ -10,7 +10,6 @@ jobs:
   postreview:
     runs-on: ubuntu-latest
     if: ${{ (github.event_name == 'pull_request_review') && (github.event.action == 'submitted') }}
-    env: r
     steps:
       - name: "Mark PR as ready for merge"
         if: ${{ (github.event.review.state == 'approved') }}
