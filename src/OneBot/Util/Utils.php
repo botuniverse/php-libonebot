@@ -15,15 +15,15 @@ class Utils
         return array_values($arr) !== $arr;
     }
 
-    public static function separatorToCamel($name, $separator = '_'): string
+    public static function separatorToCamel(string $string, string $separator = '_'): string
     {
-        $name = $separator . str_replace($separator, ' ', strtolower($name));
-        return ltrim(str_replace(' ', '', ucwords($name)), $separator);
+        $string = $separator . str_replace($separator, ' ', strtolower($string));
+        return ltrim(str_replace(' ', '', ucwords($string)), $separator);
     }
 
-    public static function camelToSeparator($str, $separator = '_'): string
+    public static function camelToSeparator(string $string, string $separator = '_'): string
     {
-        return strtolower(preg_replace('/([a-z])([A-Z])/', '$1' . $separator . '$2', $str));
+        return strtolower(ltrim(preg_replace('/[A-Z]([A-Z](?![a-z]))*/', $separator . '$0', $string), '_'));
     }
 
     public static function msgToString($message): string
