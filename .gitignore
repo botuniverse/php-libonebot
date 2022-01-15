@@ -38,3 +38,5 @@ cghooks.lock
 # Ignore all local history of files
 .history
 .ionide
+
+.phpunit.result.cache
