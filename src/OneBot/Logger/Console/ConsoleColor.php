@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace OneBot\Logger\Console;
 
-class ConsoleColor
+class ConsoleColor implements \Stringable
 {
     public const RESET = 0;
 
@@ -96,18 +96,32 @@ class ConsoleColor
         return sprintf("\033[%sm%s\033[%dm", $style_code, $this->text, self::RESET);
     }
 
+    public static function apply(array $styles, string $text): ConsoleColor
+    {
+        $instance = new self();
+        $instance->setText($text);
+        $instance->applyStyles($styles);
+        return $instance;
+    }
+
+    public function applyStyles(array $styles): ConsoleColor
+    {
+        $this->styles = array_merge($this->styles, $styles);
+        return $this;
+    }
+
+    public function setText(string $text): ConsoleColor
+    {
+        $this->text = $text;
+        return $this;
+    }
+
     protected function addStyle(string $style): ConsoleColor
     {
         $style = strtolower(preg_replace('/(?<!^)[A-Z]/', '_$0', $style));
         if (array_key_exists($style, self::STYLES)) {
             $this->styles[] = $style;
         }
-        return $this;
-    }
-
-    protected function setText(string $text): ConsoleColor
-    {
-        $this->text = $text;
         return $this;
     }
 }
