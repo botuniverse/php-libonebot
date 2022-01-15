@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace OneBot\Logger\Console;
 
+/**
+ * @deprecated no longer used by internal code and not recommended
+ */
 class TermColor
 {
     public const RESET = "\e[0m";      // 重设样式

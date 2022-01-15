@@ -16,18 +16,16 @@ class ConsoleLogger extends AbstractLogger
 
     /**
      * @var string[] 颜色表
-     *
-     * TODO: redesign color schema
      */
-    protected static $colors = [
-        LogLevel::EMERGENCY => 'red',
-        LogLevel::ALERT => 'red',
-        LogLevel::CRITICAL => 'red',
-        LogLevel::ERROR => 'red',
-        LogLevel::WARNING => 'yellow',
-        LogLevel::NOTICE => 'yellow',
-        LogLevel::INFO => 'lightblue',
-        LogLevel::DEBUG => 'gray',
+    protected static $styles = [
+        LogLevel::EMERGENCY => ['blink', 'white', 'bg_bright_red'],
+        LogLevel::ALERT => ['white', 'bg_bright_red'],
+        LogLevel::CRITICAL => ['underline', 'red'],
+        LogLevel::ERROR => ['red'],
+        LogLevel::WARNING => ['bright_yellow'],
+        LogLevel::NOTICE => ['cyan'],
+        LogLevel::INFO => ['green'],
+        LogLevel::DEBUG => ['gray'],
     ];
 
     protected static $levels = [
@@ -48,42 +46,14 @@ class ConsoleLogger extends AbstractLogger
         self::$logLevel = array_flip(self::$levels)[$logLevel];
     }
 
-    public function colorize($string, $level)
+    public function colorize($string, $level): string
     {
         $string = $this->stringify($string);
-        $color = self::$colors[$level] ?? '';
-        switch ($color) {
-            case 'black':
-                return TermColor::color8(30) . $string . TermColor::RESET;
-            case 'red':
-                return TermColor::color8(31) . $string . TermColor::RESET;
-            case 'green':
-                return TermColor::color8(32) . $string . TermColor::RESET;
-            case 'yellow':
-                return TermColor::color8(33) . $string . TermColor::RESET;
-            case 'blue':
-                return TermColor::color8(34) . $string . TermColor::RESET;
-            case 'pink': // I really don't know what stupid color it is.
-            case 'lightpurple':
-                return TermColor::color8(35) . $string . TermColor::RESET;
-            case 'lightblue':
-                return TermColor::color8(36) . $string . TermColor::RESET;
-            case 'white':
-                return TermColor::color8(37) . $string . TermColor::RESET;
-            case 'gold':
-                return TermColor::frontColor256(214) . $string . TermColor::RESET;
-            case 'gray':
-                return TermColor::frontColor256(59) . $string . TermColor::RESET;
-            case 'lightlightblue':
-                return TermColor::frontColor256(63) . $string . TermColor::RESET;
-            case '':
-                return $string;
-            default:
-                return TermColor::frontColor256($color) . $string . TermColor::RESET;
-        }
+        $styles = self::$styles[$level] ?? [];
+        return ConsoleColor::apply($styles, $string)->__toString();
     }
 
-    public function trace()
+    public function trace(): void
     {
         $log = "Stack trace:\n";
         $trace = debug_backtrace();
@@ -121,9 +91,9 @@ class ConsoleLogger extends AbstractLogger
 //        $trace = debug_backtrace()[1] ?? ['file' => '', 'function' => ''];
 //        $trace = '[' . ($trace['class'] ?? '') . ':' . ($trace['function'] ?? '') . '] ';
 
-    public function log($level, $message, array $context = [])
+    public function log($level, $message, array $context = []): void
     {
-        if (!in_array($level, self::$levels)) {
+        if (!in_array($level, self::$levels, true)) {
             throw new InvalidArgumentException();
         }
 
