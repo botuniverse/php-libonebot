@@ -130,10 +130,20 @@ class ConsoleColor
                 return;
             }
             // 8bit (256color)
-            preg_match('~^(bg_)?color_(\d{1,3})$~', $style, $matches);
-            $type = $matches[1] === 'bg_' ? '48' : '38';
-            $value = $matches[2];
-            $style = "{$type};5;{$value}";
+            if (str_contains($style, 'color')) {
+                preg_match('~^(bg_)?color_(\d{1,3})$~', $style, $matches);
+                $type = $matches[1] === 'bg_' ? '48' : '38';
+                $value = $matches[2];
+                $style = "{$type};5;{$value}";
+                return;
+            }
+            // 24bit (rgb)
+            if (str_contains($style, 'rgb')) {
+                preg_match('~^(bg_)?rgb_(\d{1,3})_(\d{1,3})_(\d{1,3})$~', $style, $matches);
+                $type = $matches[1] === 'bg_' ? '48' : '38';
+                [, , $r, $g, $b] = $matches;
+                $style = "{$type};2;{$r};{$g};{$b}";
+            }
         });
 
         return implode(';', $this->styles);
