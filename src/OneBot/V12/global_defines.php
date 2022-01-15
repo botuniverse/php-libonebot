@@ -25,8 +25,7 @@ define('ONEBOT_PROCESS_TASKWORKER', 16);
 /**
  * 更漂亮的dump变量
  *
- * @param $var
- * @param ...$moreVars
+ * @param  mixed       $var
  * @return array|mixed
  */
 function ob_dump($var, ...$moreVars)
@@ -56,7 +55,7 @@ function ob_logger(): LoggerInterface
 /**
  * 返回ob配置项
  *
- * @param  null  $default
+ * @param  null|mixed $default
  * @return mixed
  */
 function ob_config(string $key = null, $default = null)
