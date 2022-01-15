@@ -9,26 +9,37 @@ use PHPUnit\Framework\TestCase;
 /**
  * @internal
  * @coversNothing
+ * @see https://github.com/botuniverse/php-libonebot/pull/32
  */
 class ConsoleColorTest extends TestCase
 {
-    /**
-     * @see https://github.com/botuniverse/php-libonebot/pull/32
-     */
-    public function testColor()
+    public function testClassicColorCanOutput(): void
     {
-        ob_start();
-        echo ConsoleColor::apply(['rgb_135_0_255'], '█████');
-        echo ConsoleColor::apply(['rgb_255_135_215'], '█████');
-        echo ConsoleColor::apply(['rgb_20_120_255'], '█████');
-        $content = ob_get_clean();
-        $this->assertSame("\e[38;2;135;0;255m█████\e[0m\e[38;2;255;135;215m█████\e[0m\e[38;2;20;120;255m█████\e[0m", $content);
+        $output = ConsoleColor::red('test')->__toString();
+        $this->assertSame("\033[31mtest\033[0m", $output);
     }
 
-    public function testAddStyle()
+    public function test256ColorCanOutput(): void
     {
-        $cc = new ConsoleColor();
-        $cc->red('asd');
-        $this->assertSame("\033[31masd\033[0m", strval($cc));
+        $output = ConsoleColor::apply(['color_211'], 'test')->__toString();
+        $this->assertSame("\033[38;5;211mtest\033[0m", $output);
+    }
+
+    public function testRGBColorCanOutput(): void
+    {
+        $output = ConsoleColor::apply(['rgb_135_0_255'], 'test')->__toString();
+        $this->assertSame("\033[38;2;135;0;255mtest\033[0m", $output);
+    }
+
+    public function testStyleCanApplyFluently(): void
+    {
+        $output = ConsoleColor::red('test')->bold()->italic()->__toString();
+        $this->assertSame("\033[31;1;3mtest\033[0m", $output);
+    }
+
+    public function testStyleCanCombine(): void
+    {
+        $output = ConsoleColor::red('test')->green()->__toString();
+        $this->assertSame("\033[31;32mtest\033[0m", $output);
     }
 }
