@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace OneBot\Logger\Console;
 
-class ConsoleColor implements \Stringable
+class ConsoleColor
 {
     public const RESET = 0;
 
