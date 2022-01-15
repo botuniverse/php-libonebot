@@ -87,11 +87,7 @@ class ConsoleColor implements \Stringable
 
     public function __toString()
     {
-        array_walk($this->styles, static function (&$style) {
-            $style = self::STYLES[$style];
-        });
-
-        $style_code = implode(';', $this->styles);
+        $style_code = $this->getStylesCode();
 
         return sprintf("\033[%sm%s\033[%dm", $style_code, $this->text, self::RESET);
     }
@@ -123,5 +119,23 @@ class ConsoleColor implements \Stringable
             $this->styles[] = $style;
         }
         return $this;
+    }
+
+    protected function getStylesCode(): string
+    {
+        array_walk($this->styles, static function (&$style) {
+            // 4bit (classic)
+            if (array_key_exists($style, self::STYLES)) {
+                $style = self::STYLES[$style];
+                return;
+            }
+            // 8bit (256color)
+            preg_match('~^(bg_)?color_(\d{1,3})$~', $style, $matches);
+            $type = $matches[1] === 'bg_' ? '48' : '38';
+            $value = $matches[2];
+            $style = "{$type};5;{$value}";
+        });
+
+        return implode(';', $this->styles);
     }
 }
