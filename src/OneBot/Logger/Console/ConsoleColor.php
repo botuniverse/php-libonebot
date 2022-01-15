@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace OneBot\Logger\Console;
 
+use OneBot\Util\Utils;
+
 /**
  * @method static none($text = null)
  * @method static bold($text = null)
@@ -162,7 +164,7 @@ class ConsoleColor
 
     protected function addStyle(string $style): ConsoleColor
     {
-        $style = strtolower(preg_replace('/(?<!^)[A-Z]/', '_$0', $style));
+        $style = Utils::separatorToCamel($style);
         if (array_key_exists($style, self::STYLES)) {
             $this->styles[] = $style;
         }
