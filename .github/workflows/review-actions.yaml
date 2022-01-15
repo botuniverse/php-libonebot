@@ -1,0 +1,45 @@
+name: "Review Actions"
+
+on:
+  pull_request:
+    types: [ review_requested, review_request_removed ]
+  pull_request_review:
+    types: [ submitted ]
+
+jobs:
+  prereview:
+    runs-on: ubuntu-latest
+    if: ${{ (github.event_name == 'pull_request') }}
+    steps:
+      - name: "Mark PR as wait for review"
+        if: ${{ (github.event.action == 'review_requested') }}
+        uses: andymckay/labeler@1.0.4
+        with:
+          add-labels: "status/wait-for-review"
+          remove-labels: "status/wip, status/wait-for-review, status/do-not-merge, lifecycle/ready-for-merge"
+      - name: "Mark PR as work in progress"
+        if: ${{ (github.event.action == 'review_request_removed') }}
+        uses: andymckay/labeler@1.0.4
+        with:
+          add-labels: "status/wip"
+          remove-labels: "status/wip, status/wait-for-review, status/do-not-merge, lifecycle/ready-for-merge"
+
+  postreview:
+    runs-on: ubuntu-latest
+    if: ${{ (github.event_name == 'pull_request_review') && (github.event.action == 'submitted') }}
+    steps:
+      - name: "Mark PR as ready for merge"
+        if: ${{ (github.event.review.state == 'approved') }}
+        uses: andymckay/labeler@1.0.4
+        with:
+          add-labels: "lifecycle/ready-for-merge"
+          remove-labels: "status/wip, status/wait-for-review, status/do-not-merge, lifecycle/ready-for-merge"
+
+      - name: "Mark PR as do not merge"
+        if: ${{ (github.event.review.state) == 'request_changes' }}
+        uses: andymckay/labeler@1.0.4
+        with:
+          add-labels: "status/do-not-merge"
+          remove-labels: "status/wip, status/wait-for-review, status/do-not-merge, lifecycle/ready-for-merge"
+
+# related labels: status/wip, status/wait-for-review, status/do-not-merge, lifecycle/ready-for-merge
