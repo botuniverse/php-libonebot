@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace OneBot\V12;
 
+use OneBot\Driver\Driver;
+use OneBot\Driver\Event\Event;
+use OneBot\Driver\Event\EventProvider;
 use OneBot\Util\Singleton;
 use OneBot\V12\Action\ActionBase;
 use OneBot\V12\Config\ConfigInterface;
-use OneBot\V12\Driver\Driver;
 use OneBot\V12\Exception\OneBotException;
 use OneBot\V12\Object\Event\OneBotEvent;
 use Psr\Log\LoggerAwareInterface;
@@ -22,6 +24,9 @@ class OneBot implements LoggerAwareInterface
 {
     use Singleton;
     use LoggerAwareTrait;
+
+    /** @var ConfigInterface 配置文件对象 */
+    private $config;
 
     /** @var string 实现名称 */
     private $implement_name;
@@ -82,7 +87,7 @@ class OneBot implements LoggerAwareInterface
     public function setDriver(Driver $driver, ConfigInterface $config): OneBot
     {
         $this->driver = $driver;
-        $this->driver->setConfig($config);
+        $this->setConfig($config);
         return $this;
     }
 
@@ -112,7 +117,6 @@ class OneBot implements LoggerAwareInterface
 
     public function callOBEvent(OneBotEvent $event)
     {
-        $this->driver->emitOBEvent($event);
     }
 
     /**
@@ -125,7 +129,24 @@ class OneBot implements LoggerAwareInterface
         if ($this->driver === null) {
             throw new OneBotException('你需要指定一种驱动器');
         }
-        $this->driver->initComm();
+        $this->driver->initDriverProtocols($this->config->getEnabledCommunications());
+        $this->addOneBotEvent();
         $this->driver->run();
+    }
+
+    public function getConfig()
+    {
+        return $this->config;
+    }
+
+    private function addOneBotEvent()
+    {
+        EventProvider::addEventListener(Event::EVENT_HTTP_REQUEST, [OneBotEventListener::class, 'onHttpRequest']);
+        EventProvider::addEventListener(Event::EVENT_WEBSOCKET_OPEN, [OneBotEventListener::class, 'onWebSocketOpen']);
+    }
+
+    private function setConfig(ConfigInterface $config)
+    {
+        $this->config = $config;
     }
 }

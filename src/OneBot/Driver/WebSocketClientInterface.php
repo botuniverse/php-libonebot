@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace OneBot\V12\Driver;
+namespace OneBot\Driver;
 
 use Psr\Http\Message\RequestInterface;
 

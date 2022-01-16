@@ -4,7 +4,7 @@
 
 declare(strict_types=1);
 
-namespace OneBot\V12\Driver\Workerman;
+namespace OneBot\Driver\Workerman;
 
 use Exception;
 
