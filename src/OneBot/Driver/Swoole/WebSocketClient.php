@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace OneBot\V12\Driver\Swoole;
+namespace OneBot\Driver\Swoole;
 
+use OneBot\Driver\WebSocketClientInterface;
 use OneBot\Http\Client\Exception\ClientException;
 use OneBot\Http\Client\Exception\NetworkException;
 use OneBot\Http\Client\SwooleClient;
 use OneBot\Http\HttpFactory;
-use OneBot\V12\Driver\WebSocketClientInterface;
 use Psr\Http\Message\RequestInterface;
 use Swoole\Coroutine\Http\Client;
 use Swoole\WebSocket\Frame;

@@ -28,4 +28,19 @@ class MPUtils
     {
         return self::$process_type;
     }
+
+    public static function getProcessLogName(): string
+    {
+        switch (self::$process_type) {
+            case ONEBOT_PROCESS_MANAGER:
+                return '[MANAGER] ';
+            case ONEBOT_PROCESS_WORKER:
+            case ONEBOT_PROCESS_TASKWORKER:
+                return '[#' . self::$process_id . '] ';
+            case ONEBOT_PROCESS_USER:
+                return '[USER] ';
+            default:
+                return '';
+        }
+    }
 }

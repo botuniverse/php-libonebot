@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 namespace OneBot\Util;
 
+use OneBot\V12\Action\ActionBase;
+use OneBot\V12\Exception\OneBotFailureException;
+use OneBot\V12\OneBot;
+use OneBot\V12\RetCode;
 use PASVL\Validation\ValidatorBuilder;
 
 class Utils
@@ -50,5 +54,32 @@ class Utils
     {
         $builder = ValidatorBuilder::forArray($pattern);
         $builder->build()->validate($input);
+    }
+
+    public static function getActionFuncName(ActionBase $handler, string $action)
+    {
+        if (isset(ActionBase::$core_cache[$action])) {
+            return ActionBase::$core_cache[$action];
+        }
+
+        if (isset(ActionBase::$ext_cache[$action])) {
+            return ActionBase::$ext_cache[$action];
+        }
+        if (substr(
+            $action,
+            0,
+            strlen(OneBot::getInstance()->getPlatform()) + 1
+        ) === (OneBot::getInstance()->getPlatform() . '.')) {
+            $func = Utils::separatorToCamel('ext_' . substr($action, strlen(OneBot::getInstance()->getPlatform()) + 1));
+            if (method_exists($handler, $func)) {
+                return ActionBase::$ext_cache[$action] = $func;
+            }
+        } else {
+            $func = Utils::separatorToCamel('on_' . $action);
+            if (method_exists($handler, $func)) {
+                return ActionBase::$core_cache[$action] = $func;
+            }
+        }
+        throw new OneBotFailureException(RetCode::UNSUPPORTED_ACTION);
     }
 }
