@@ -50,7 +50,7 @@ class WorkermanDriver extends Driver
 
     private function initHttpServer()
     {
-        $this->http_worker->onMessage = function (TcpConnection $connection, ?Request $request) {
+        $this->http_worker->onMessage = function (TcpConnection $connection, Request $request) {
             ob_logger()->debug('Http request: ' . $request->uri());
             $event = new HttpRequestEvent(HttpFactory::getInstance()->createServerRequest(
                 $request->method(),
