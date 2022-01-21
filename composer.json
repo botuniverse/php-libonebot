@@ -45,14 +45,14 @@
     "require-dev": {
         "brainmaestro/composer-git-hooks": "^2.8",
         "friendsofphp/php-cs-fixer": "^3.2",
-        "nunomaduro/collision": "^4.3",
         "phpstan/phpstan": "^1.1",
         "phpunit/phpunit": "^9.0 || ^8.0",
         "swoole/ide-helper": "~4.4.0",
         "symfony/var-dumper": "^5.3"
     },
     "suggest": {
-        "symfony/var-dumper": "Better display for `ob_dump()` global debug function"
+        "symfony/var-dumper": "Better display for `ob_dump()` global debug function",
+        "nunomaduro/collision": "Better display for exception and error message"
     },
     "autoload": {
         "psr-4": {
