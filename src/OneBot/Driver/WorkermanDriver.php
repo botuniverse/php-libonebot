@@ -10,6 +10,7 @@ use OneBot\Driver\Event\EventDispatcher;
 use OneBot\Driver\Event\HttpRequestEvent;
 use OneBot\Driver\Workerman\Worker;
 use OneBot\Http\HttpFactory;
+use OneBot\Logger\Console\ExceptionHandler;
 use OneBot\Util\MPUtils;
 use Throwable;
 use Workerman\Connection\TcpConnection;
@@ -71,8 +72,7 @@ class WorkermanDriver extends Driver
                 }
                 $connection->send($response);
             } catch (Throwable $e) {
-                ob_logger()->error($e->getMessage());
-                ob_logger()->error($e->getTraceAsString());
+                ExceptionHandler::getInstance()->handle($e);
                 $response->withStatus(500);
                 $response->withBody('Internal Server Error');
                 $connection->send($response);

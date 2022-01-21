@@ -12,6 +12,7 @@ use OneBot\Driver\Event\WebSocketMessageEvent;
 use OneBot\Driver\Event\WebSocketOpenEvent;
 use OneBot\Driver\Event\WorkerStartEvent;
 use OneBot\Http\HttpFactory;
+use OneBot\Logger\Console\ExceptionHandler;
 use OneBot\Util\MPUtils;
 use Swoole\Http\Request;
 use Swoole\Http\Response;
@@ -85,7 +86,7 @@ class SwooleDriver extends Driver
             try {
                 (new EventDispatcher(Event::EVENT_WEBSOCKET_OPEN))->dispatch($event);
             } catch (Throwable $e) {
-                ob_logger()->error($e->getMessage());
+                ExceptionHandler::getInstance()->handle($e);
             }
         });
 
@@ -98,7 +99,7 @@ class SwooleDriver extends Driver
                 $event->setOriginFrame($frame);
                 (new EventDispatcher(Event::EVENT_WEBSOCKET_MESSAGE))->dispatch($event);
             } catch (Throwable $e) {
-                ob_logger()->error($e->getMessage());
+                ExceptionHandler::getInstance()->handle($e);
             }
         });
         $this->server->on('close', function (?Server $server, $fd) {
@@ -107,7 +108,7 @@ class SwooleDriver extends Driver
                 $event = new WebSocketCloseEvent($fd);
                 (new EventDispatcher(Event::EVENT_WEBSOCKET_CLOSE))->dispatch($event);
             } catch (Throwable $e) {
-                ob_logger()->error($e->getMessage());
+                ExceptionHandler::getInstance()->handle($e);
             }
         });
     }
@@ -124,8 +125,7 @@ class SwooleDriver extends Driver
                 $event = new WorkerStartEvent();
                 (new EventDispatcher(Event::EVENT_WORKER_START))->dispatch($event);
             } catch (Throwable $e) {
-                ob_logger()->error($e->getMessage());
-                ob_logger()->error($e->getTraceAsString());
+                ExceptionHandler::getInstance()->handle($e);
             }
         });
     }
@@ -162,8 +162,7 @@ class SwooleDriver extends Driver
                     $response->end();
                 }
             } catch (Throwable $e) {
-                ob_logger()->error($e->getMessage());
-                ob_logger()->error($e->getTraceAsString());
+                ExceptionHandler::getInstance()->handle($e);
                 $response->status(500);
                 $response->end('Internal Server Error');
             }

@@ -51,7 +51,8 @@
         "symfony/var-dumper": "^5.3"
     },
     "suggest": {
-        "symfony/var-dumper": "Better display for `ob_dump()` global debug function"
+        "symfony/var-dumper": "Better display for `ob_dump()` global debug function",
+        "nunomaduro/collision": "Better display for exception and error message"
     },
     "autoload": {
         "psr-4": {
