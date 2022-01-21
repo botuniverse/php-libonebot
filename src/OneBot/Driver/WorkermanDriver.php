@@ -12,7 +12,6 @@ use OneBot\Driver\Workerman\Worker;
 use OneBot\Http\HttpFactory;
 use OneBot\Logger\Console\ExceptionHandler;
 use OneBot\Util\MPUtils;
-use OneBot\V12\Exception\OneBotException;
 use Throwable;
 use Workerman\Connection\TcpConnection;
 use Workerman\Protocols\Http\Request;
