@@ -10,7 +10,9 @@ use OneBot\Driver\Event\EventDispatcher;
 use OneBot\Driver\Event\HttpRequestEvent;
 use OneBot\Driver\Workerman\Worker;
 use OneBot\Http\HttpFactory;
+use OneBot\Logger\Console\ExceptionHandler;
 use OneBot\Util\MPUtils;
+use OneBot\V12\Exception\OneBotException;
 use Throwable;
 use Workerman\Connection\TcpConnection;
 use Workerman\Protocols\Http\Request;
@@ -60,6 +62,7 @@ class WorkermanDriver extends Driver
             ));
             $response = new WorkermanResponse();
             try {
+                throw new OneBotException('你需要指定一种驱动器');
                 (new EventDispatcher(Event::EVENT_HTTP_REQUEST))->dispatch($event);
                 if ($event->getResponse() !== null) {
                     $psr_response = $event->getResponse();
@@ -71,8 +74,7 @@ class WorkermanDriver extends Driver
                 }
                 $connection->send($response);
             } catch (Throwable $e) {
-                ob_logger()->error($e->getMessage());
-                ob_logger()->error($e->getTraceAsString());
+                ExceptionHandler::getInstance()->handle($e);
                 $response->withStatus(500);
                 $response->withBody('Internal Server Error');
                 $connection->send($response);

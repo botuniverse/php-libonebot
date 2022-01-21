@@ -47,13 +47,7 @@ class ConsoleLogger extends AbstractLogger
     public function __construct($logLevel = LogLevel::INFO)
     {
         self::$logLevel = array_flip(self::$levels)[$logLevel];
-        $this->exceptionHandler = new ExceptionHandler();
-        $this->exceptionHandler->enablePrettyPrint();
-    }
-
-    public function getExceptionHandler(): ExceptionHandler
-    {
-        return $this->exceptionHandler;
+        ExceptionHandler::getInstance();
     }
 
     public function colorize($string, $level): string

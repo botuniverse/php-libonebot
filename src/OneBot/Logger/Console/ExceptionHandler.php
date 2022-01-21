@@ -4,26 +4,43 @@ declare(strict_types=1);
 
 namespace OneBot\Logger\Console;
 
-use NunoMaduro\Collision\Handler;
-use Whoops\Run;
+use OneBot\Util\Singleton;
 
 class ExceptionHandler
 {
+    use Singleton;
+
     protected $whoops;
 
-    public function __construct()
+    private function __construct()
     {
-        $this->whoops = new Run();
-        $this->whoops->pushHandler(new Handler());
+        $whoops_class = 'Whoops\Run';
+        $collision_class = 'NunoMaduro\Collision\Handler';
+        if (class_exists($collision_class)) {
+            /* @phpstan-ignore-next-line */
+            $this->whoops = new $whoops_class();
+            $this->whoops->allowQuit(false);
+            $this->whoops->writeToOutput(false);
+            $this->whoops->pushHandler(new $collision_class());
+        }
     }
 
-    public function enablePrettyPrint(): void
+    /**
+     * @return null|\Whoops\Run
+     */
+    public function getWhoops()
     {
-        $this->whoops->register();
+        return $this->whoops;
     }
 
-    public function disablePrettyPrint(): void
+    public function handle(\Throwable $e): void
     {
-        $this->whoops->unregister();
+        if (is_null($this->whoops)) {
+            ob_logger()->error($e->getMessage());
+            ob_logger()->error($e->getTraceAsString());
+            return;
+        }
+
+        $this->whoops->handleException($e);
     }
 }
