@@ -62,7 +62,6 @@ class WorkermanDriver extends Driver
             ));
             $response = new WorkermanResponse();
             try {
-                throw new OneBotException('你需要指定一种驱动器');
                 (new EventDispatcher(Event::EVENT_HTTP_REQUEST))->dispatch($event);
                 if ($event->getResponse() !== null) {
                     $psr_response = $event->getResponse();

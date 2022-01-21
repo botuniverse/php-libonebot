@@ -22,6 +22,7 @@ class ExceptionHandler
             $this->whoops->allowQuit(false);
             $this->whoops->writeToOutput(false);
             $this->whoops->pushHandler(new $collision_class());
+            $this->whoops->register();
         }
     }
 
