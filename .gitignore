@@ -40,3 +40,6 @@ cghooks.lock
 .ionide
 
 .phpunit.result.cache
+
+# ASDF
+.tool-versions
