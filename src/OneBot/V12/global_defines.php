@@ -60,12 +60,7 @@ function ob_logger(): LoggerInterface
  */
 function ob_config(string $key = null, $default = null)
 {
-    $driver = OneBot::getInstance()->getDriver();
-    if (!$driver) {
-        throw new OneBotException('驱动未初始化，无法获取配置');
-    }
-
-    $config = $driver->getConfig();
+    $config = OneBot::getInstance()->getConfig();
     if (!is_null($key)) {
         /** @var mixed $config */
         $config = $config->get($key, $default);

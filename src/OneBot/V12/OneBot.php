@@ -91,6 +91,16 @@ class OneBot implements LoggerAwareInterface
         return $this;
     }
 
+    public function getConfig(): ConfigInterface
+    {
+        return $this->config;
+    }
+
+    public function setConfig(ConfigInterface $config): void
+    {
+        $this->config = $config;
+    }
+
     public function getActionHandler(): ?ActionBase
     {
         return $this->action_handler;
@@ -134,19 +144,9 @@ class OneBot implements LoggerAwareInterface
         $this->driver->run();
     }
 
-    public function getConfig()
-    {
-        return $this->config;
-    }
-
     private function addOneBotEvent()
     {
         EventProvider::addEventListener(Event::EVENT_HTTP_REQUEST, [OneBotEventListener::class, 'onHttpRequest']);
         EventProvider::addEventListener(Event::EVENT_WEBSOCKET_OPEN, [OneBotEventListener::class, 'onWebSocketOpen']);
-    }
-
-    private function setConfig(ConfigInterface $config)
-    {
-        $this->config = $config;
     }
 }
