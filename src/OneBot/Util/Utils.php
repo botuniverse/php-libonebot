@@ -8,7 +8,6 @@ use OneBot\V12\Action\ActionBase;
 use OneBot\V12\Exception\OneBotFailureException;
 use OneBot\V12\OneBot;
 use OneBot\V12\RetCode;
-use PASVL\Validation\ValidatorBuilder;
 
 class Utils
 {
@@ -43,17 +42,6 @@ class Utils
             $result = $message;
         }
         return $result;
-    }
-
-    /**
-     * 验证 $input 是否符合指定 $pattern.
-     *
-     * @see https://github.com/lezhnev74/pasvl
-     */
-    public static function validateArray(array $pattern, array $input)
-    {
-        $builder = ValidatorBuilder::forArray($pattern);
-        $builder->build()->validate($input);
     }
 
     public static function getActionFuncName(ActionBase $handler, string $action)
