@@ -12,21 +12,21 @@ use OneBot\V12\Action\ActionBase;
 use OneBot\V12\Config\ConfigInterface;
 use OneBot\V12\Exception\OneBotException;
 use OneBot\V12\Object\Event\OneBotEvent;
-use Psr\Log\LoggerAwareInterface;
-use Psr\Log\LoggerAwareTrait;
 use Psr\Log\LoggerInterface;
 
 /**
  * OneBot 入口类
  * 一切从这里开始，这句话是真人写的，不是AI写的
  */
-class OneBot implements LoggerAwareInterface
+class OneBot
 {
     use Singleton;
-    use LoggerAwareTrait;
 
     /** @var ConfigInterface 配置文件对象 */
     private $config;
+
+    /** @var LoggerInterface 日志对象 */
+    private $logger;
 
     /** @var string 实现名称 */
     private $implement_name;
@@ -48,14 +48,24 @@ class OneBot implements LoggerAwareInterface
      *
      * @throws OneBotException
      */
-    public function __construct(string $implement_name, string $platform = 'default', string $self_id = 'default')
+    public function __construct(ConfigInterface $config)
     {
-        $this->implement_name = $implement_name;
-        $this->self_id = $self_id;
-        $this->platform = $platform;
         if (isset(self::$instance)) {
             throw new OneBotException('只能有一个OneBot实例！');
         }
+
+        $this->config = $config;
+        $this->implement_name = $config->get('name');
+        $this->self_id = $config->get('self_id');
+        $this->platform = $config->get('platform');
+
+        $loggerConfig = $config->get('logger');
+        $this->logger = new $loggerConfig['class']($loggerConfig['level']);
+
+        $driverConfig = $config->get('driver');
+        $this->driver = new $driverConfig['class']();
+        $this->driver->setConfig($config);
+
         self::$instance = $this;
     }
 
@@ -84,21 +94,9 @@ class OneBot implements LoggerAwareInterface
         return $this->driver;
     }
 
-    public function setDriver(Driver $driver, ConfigInterface $config): OneBot
-    {
-        $this->driver = $driver;
-        $this->setConfig($config);
-        return $this;
-    }
-
     public function getConfig(): ConfigInterface
     {
         return $this->config;
-    }
-
-    public function setConfig(ConfigInterface $config): void
-    {
-        $this->config = $config;
     }
 
     public function getActionHandler(): ?ActionBase

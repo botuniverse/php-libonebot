@@ -21,21 +21,21 @@ class WorkermanDriver extends Driver
 {
     protected $http_worker;
 
-    public function initDriverProtocols(array $comm)
+    public function initDriverProtocols(array $comm): void
     {
-        $has_http = false;
+        $http_index = null;
         foreach ($comm as $k => $v) {
-            if ($v['type'] == 'http') {
-                $has_http = $k;
+            if ($v['type'] === 'http') {
+                $http_index = $k;
             }
         }
-        if ($has_http !== false) {
+        if ($http_index !== null) {
             // 定义 Workerman 的 worker 和相关回调
-            $this->http_worker = new Worker('http://' . $comm[$has_http]['host'] . ':' . $comm[$has_http]['port']);
-            $this->http_worker->count = $comm[$has_http]['worker_count'] ?? 4;
+            $this->http_worker = new Worker('http://' . $comm[$http_index]['host'] . ':' . $comm[$http_index]['port']);
+            $this->http_worker->count = $comm[$http_index]['worker_count'] ?? 4;
             Worker::$internal_running = true; // 加上这句就可以不需要必须输 start 命令才能启动了，直接启动
             $this->initHttpServer();
-            $this->http_worker->onWorkerStart = function (Worker $worker) {
+            $this->http_worker->onWorkerStart = static function (Worker $worker) {
                 MPUtils::initProcess(ONEBOT_PROCESS_WORKER, $worker->id);
             };
         }

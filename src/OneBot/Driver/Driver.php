@@ -40,7 +40,7 @@ abstract class Driver
         return $this->config;
     }
 
-    abstract public function initDriverProtocols(array $comm);
+    abstract public function initDriverProtocols(array $comm): void;
 
     abstract public function run();
 }

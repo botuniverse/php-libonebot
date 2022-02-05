@@ -29,29 +29,29 @@ class SwooleDriver extends Driver
      */
     protected $server;
 
-    public function initDriverProtocols(array $comm)
+    public function initDriverProtocols(array $comm): void
     {
-        $has_ws = false;
-        $has_http = false;
+        $ws_index = null;
+        $http_index = null;
         foreach ($comm as $k => $v) {
-            if ($v['type'] == 'ws') {
-                $has_ws = $k;
+            if ($v['type'] === 'websocket') {
+                $ws_index = $k;
             }
-            if ($v['type'] == 'http') {
-                $has_http = $k;
+            if ($v['type'] === 'http') {
+                $http_index = $k;
             }
         }
-        if ($has_ws !== false) {
-            $this->server = new SwooleWebSocketServer($comm[$has_ws]['host'], $comm[$has_ws]['port']);
+        if ($ws_index !== null) {
+            $this->server = new SwooleWebSocketServer($comm[$ws_index]['host'], $comm[$ws_index]['port']);
             $this->initServer();
-            if ($has_http !== false) {
+            if ($http_index !== null) {
                 ob_logger()->warning('检测到同时开启了http和正向ws，http的配置项将被忽略。');
                 $this->initHttpServer();
             }
             $this->initWebSocketServer();
-        } elseif ($has_http !== false) {
+        } elseif ($http_index !== null) {
             //echo "新建http服务器.\n";
-            $this->server = new SwooleHttpServer($comm[$has_http]['host'], $comm[$has_http]['port']);
+            $this->server = new SwooleHttpServer($comm[$http_index]['host'], $comm[$http_index]['port']);
             $this->initHttpServer();
         } else {
             go(function () {
