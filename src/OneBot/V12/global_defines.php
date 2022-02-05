@@ -60,7 +60,7 @@ function ob_logger(): LoggerInterface
  */
 function ob_config(string $key = null, $default = null)
 {
-    $config = OneBot::getInstance()->getDriver()->getConfig();
+    $config = OneBot::getInstance()->getConfig();
     if (!is_null($key)) {
         /** @var mixed $config */
         $config = $config->get($key, $default);
@@ -83,4 +83,9 @@ function ob_uuidgen(bool $uppercase = false): string
     $data[8] = chr(ord($data[8]) & 0x3F | 0x80);
     return $uppercase ? strtoupper(vsprintf('%s%s-%s-%s-%s-%s%s%s', str_split(bin2hex($data), 4))) :
         vsprintf('%s%s-%s-%s-%s-%s%s%s', str_split(bin2hex($data), 4));
+}
+
+function ob_driver_is(string $driver): bool
+{
+    return OneBot::getInstance()->getDriver() !== null && get_class(OneBot::getInstance()->getDriver()) === $driver;
 }
