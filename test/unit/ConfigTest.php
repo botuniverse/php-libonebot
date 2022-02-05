@@ -1,11 +1,15 @@
 <?php
 
+declare(strict_types=1);
+
 namespace OneBot\V12\Config;
 
 use PHPUnit\Framework\TestCase;
 
 /**
  * @covers \OneBot\V12\Config\Config
+ *
+ * @internal
  */
 class ConfigTest extends TestCase
 {
