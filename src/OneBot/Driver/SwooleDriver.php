@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace OneBot\Driver;
 
-use OneBot\Driver\Event\Event;
 use OneBot\Driver\Event\EventDispatcher;
 use OneBot\Driver\Event\HttpRequestEvent;
 use OneBot\Driver\Event\WebSocketCloseEvent;
@@ -24,11 +23,12 @@ use Throwable;
 
 class SwooleDriver extends Driver
 {
-    /**
-     * @var SwooleHttpServer|SwooleWebSocketServer
-     */
+    /** @var SwooleHttpServer|SwooleWebSocketServer 服务端实例 */
     protected $server;
 
+    /**
+     * {@inheritDoc}
+     */
     public function initDriverProtocols(array $comm): void
     {
         $ws_index = null;
@@ -55,12 +55,15 @@ class SwooleDriver extends Driver
             $this->initHttpServer();
         } else {
             go(function () {
-                //TODO: 在协程状态下启动纯客户端模式
+                // TODO: 在协程状态下启动纯客户端模式
             });
         }
     }
 
-    public function run()
+    /**
+     * {@inheritDoc}
+     */
+    public function run(): void
     {
         if ($this->server !== null) {
             $this->server->start();
@@ -68,9 +71,9 @@ class SwooleDriver extends Driver
     }
 
     /**
-     * 初始化使用ws通信方式的注册事件.
+     * 初始化 Websocket 服务端
      */
-    private function initWebSocketServer()
+    private function initWebSocketServer(): void
     {
         $this->server->on('open', function (SwooleWebSocketServer $server, Request $request) {
             ob_logger()->debug('WebSocket connection open: ' . $request->fd);
@@ -84,7 +87,7 @@ class SwooleDriver extends Driver
                 $content
             ));
             try {
-                (new EventDispatcher(Event::EVENT_WEBSOCKET_OPEN))->dispatch($event);
+                (new EventDispatcher())->dispatch($event);
             } catch (Throwable $e) {
                 ExceptionHandler::getInstance()->handle($e);
             }
@@ -97,23 +100,27 @@ class SwooleDriver extends Driver
                     return $server->push($fd, $data);
                 });
                 $event->setOriginFrame($frame);
-                (new EventDispatcher(Event::EVENT_WEBSOCKET_MESSAGE))->dispatch($event);
+                (new EventDispatcher())->dispatch($event);
             } catch (Throwable $e) {
                 ExceptionHandler::getInstance()->handle($e);
             }
         });
+
         $this->server->on('close', function (?Server $server, $fd) {
             try {
                 ob_logger()->debug('WebSocket closed from: ' . $fd);
                 $event = new WebSocketCloseEvent($fd);
-                (new EventDispatcher(Event::EVENT_WEBSOCKET_CLOSE))->dispatch($event);
+                (new EventDispatcher())->dispatch($event);
             } catch (Throwable $e) {
                 ExceptionHandler::getInstance()->handle($e);
             }
         });
     }
 
-    private function initServer()
+    /**
+     * 初始化服务端
+     */
+    private function initServer(): void
     {
         $this->server->set([
             'max_coroutine' => 300000,
@@ -123,7 +130,7 @@ class SwooleDriver extends Driver
             MPUtils::initProcess(ONEBOT_PROCESS_WORKER, $server->worker_id);
             try {
                 $event = new WorkerStartEvent();
-                (new EventDispatcher(Event::EVENT_WORKER_START))->dispatch($event);
+                (new EventDispatcher())->dispatch($event);
             } catch (Throwable $e) {
                 ExceptionHandler::getInstance()->handle($e);
             }
@@ -131,9 +138,9 @@ class SwooleDriver extends Driver
     }
 
     /**
-     * 初始化使用http通信方式的注册事件.
+     * 初始化 HTTP 服务端
      */
-    private function initHttpServer()
+    private function initHttpServer(): void
     {
         $this->server->on('request', function (Request $request, Response $response) {
             ob_logger()->debug('Http request: ' . $request->server['request_uri']);
@@ -147,12 +154,11 @@ class SwooleDriver extends Driver
                 $content
             ));
             try {
-                (new EventDispatcher(Event::EVENT_HTTP_REQUEST))->dispatch($event);
-                if ($event->getResponse() !== null) {
-                    $psr_response = $event->getResponse();
-                    foreach ($psr_response->getHeaders() as $k => $v) {
-                        if (is_array($v)) {
-                            $response->setHeader($k, implode(';', $v));
+                (new EventDispatcher())->dispatch($event);
+                if (($psr_response = $event->getResponse()) !== null) {
+                    foreach ($psr_response->getHeaders() as $header => $value) {
+                        if (is_array($value)) {
+                            $response->setHeader($header, implode(';', $value));
                         }
                     }
                     $response->setStatusCode($psr_response->getStatusCode());

@@ -22,10 +22,10 @@ class OneBot
 {
     use Singleton;
 
-    /** @var ConfigInterface 配置文件对象 */
+    /** @var ConfigInterface 配置实例 */
     private $config;
 
-    /** @var LoggerInterface 日志对象 */
+    /** @var LoggerInterface 日志实例 */
     private $logger;
 
     /** @var string 实现名称 */
@@ -37,14 +37,14 @@ class OneBot
     /** @var string 机器人 ID */
     private $self_id;
 
-    /** @var null|Driver 驱动器 */
+    /** @var Driver 驱动实例 */
     private $driver;
 
     /** @var null|ActionBase 动作处理器 */
     private $action_handler;
 
     /**
-     * OneBot constructor.
+     * 创建一个 OneBot 实例
      *
      * @throws OneBotException
      */
@@ -69,36 +69,57 @@ class OneBot
         self::$instance = $this;
     }
 
+    /**
+     * 获取日志实例
+     */
     public function getLogger(): LoggerInterface
     {
         return $this->logger;
     }
 
+    /**
+     * 获取实现名称
+     */
     public function getImplementName(): string
     {
         return $this->implement_name;
     }
 
+    /**
+     * 获取实现平台
+     */
     public function getPlatform(): string
     {
         return $this->platform;
     }
 
+    /**
+     * 获取机器人 ID
+     */
     public function getSelfId(): string
     {
         return $this->self_id;
     }
 
-    public function getDriver(): ?Driver
+    /**
+     * 获取驱动实例
+     */
+    public function getDriver(): Driver
     {
         return $this->driver;
     }
 
+    /**
+     * 获取配置实例
+     */
     public function getConfig(): ConfigInterface
     {
         return $this->config;
     }
 
+    /**
+     * 获取动作处理器实例
+     */
     public function getActionHandler(): ?ActionBase
     {
         return $this->action_handler;
@@ -123,26 +144,27 @@ class OneBot
         return $this;
     }
 
-    public function callOBEvent(OneBotEvent $event)
+    /**
+     * 触发 OneBot 事件
+     */
+    public function dispatchEvent(OneBotEvent $event): void
     {
     }
 
     /**
      * 运行服务
-     *
-     * @throws OneBotException
      */
-    public function run()
+    public function run(): void
     {
-        if ($this->driver === null) {
-            throw new OneBotException('你需要指定一种驱动器');
-        }
         $this->driver->initDriverProtocols($this->config->getEnabledCommunications());
-        $this->addOneBotEvent();
+        $this->registerEventListeners();
         $this->driver->run();
     }
 
-    private function addOneBotEvent()
+    /**
+     * 注册事件监听器
+     */
+    private function registerEventListeners(): void
     {
         EventProvider::addEventListener(Event::EVENT_HTTP_REQUEST, [OneBotEventListener::class, 'onHttpRequest']);
         EventProvider::addEventListener(Event::EVENT_WEBSOCKET_OPEN, [OneBotEventListener::class, 'onWebSocketOpen']);

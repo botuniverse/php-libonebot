@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use OneBot\V12\Exception\OneBotException;
+use OneBot\V12\Config\ConfigInterface;
 use OneBot\V12\OneBot;
 use Psr\Log\LoggerInterface;
 
@@ -45,7 +45,7 @@ function ob_dump($var, ...$moreVars)
 }
 
 /**
- * 更漂亮的logger输出
+ * 获取 OneBot 日志实例
  */
 function ob_logger(): LoggerInterface
 {
@@ -53,31 +53,31 @@ function ob_logger(): LoggerInterface
 }
 
 /**
- * 返回ob配置项
+ * 获取 OneBot 配置实例
  *
  * @param  null|mixed $default
  * @return mixed
  */
-function ob_config(string $key = null, $default = null)
+function ob_config(string $key = null, $default = null): ConfigInterface
 {
     $config = OneBot::getInstance()->getConfig();
     if (!is_null($key)) {
-        /** @var mixed $config */
         $config = $config->get($key, $default);
     }
-
     return $config;
 }
 
 /**
- * @throws OneBotException
+ * 生成 UUID
+ *
+ * @param bool $uppercase 是否大写
  */
 function ob_uuidgen(bool $uppercase = false): string
 {
     try {
         $data = random_bytes(16);
     } catch (Exception $e) {
-        throw new OneBotException('Failed to generate UUID: ' . $e->getMessage(), $e->getCode(), $e);
+        throw new RuntimeException('Failed to generate UUID: ' . $e->getMessage(), $e->getCode(), $e);
     }
     $data[6] = chr(ord($data[6]) & 0x0F | 0x40);
     $data[8] = chr(ord($data[8]) & 0x3F | 0x80);
@@ -85,7 +85,12 @@ function ob_uuidgen(bool $uppercase = false): string
         vsprintf('%s%s-%s-%s-%s-%s%s%s', str_split(bin2hex($data), 4));
 }
 
+/**
+ * 判断当前驱动是否为指定驱动
+ *
+ * @param string $driver 驱动名称
+ */
 function ob_driver_is(string $driver): bool
 {
-    return OneBot::getInstance()->getDriver() !== null && get_class(OneBot::getInstance()->getDriver()) === $driver;
+    return get_class(OneBot::getInstance()->getDriver()) === $driver;
 }

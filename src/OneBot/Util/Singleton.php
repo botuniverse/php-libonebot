@@ -6,6 +6,11 @@ namespace OneBot\Util;
 
 trait Singleton
 {
+    /**
+     * 类实例
+     *
+     * @var static
+     */
     private static $instance;
 
     /**
