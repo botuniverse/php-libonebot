@@ -11,24 +11,45 @@ use OneBot\V12\RetCode;
 
 class Utils
 {
-    public static $cache = [];
-
+    /**
+     * 判断是否为关联数组
+     *
+     * @param array $arr 待判断数组
+     */
     public static function isAssocArray(array $arr): bool
     {
         return array_values($arr) !== $arr;
     }
 
+    /**
+     * 将蛇形字符串转换为驼峰命名
+     *
+     * @param string $string    需要进行转换的字符串
+     * @param string $separator 分隔符
+     */
     public static function separatorToCamel(string $string, string $separator = '_'): string
     {
         $string = $separator . str_replace($separator, ' ', strtolower($string));
         return ltrim(str_replace(' ', '', ucwords($string)), $separator);
     }
 
+    /**
+     * 将驼峰字符串转换为蛇形命名
+     *
+     * @param string $string    需要进行转换的字符串
+     * @param string $separator 分隔符
+     */
     public static function camelToSeparator(string $string, string $separator = '_'): string
     {
         return strtolower(ltrim(preg_replace('/[A-Z]([A-Z](?![a-z]))*/', $separator . '$0', $string), '_'));
     }
 
+    /**
+     * 将消息数组转换为字符串
+     * 传入字符串时原样返回
+     *
+     * @param array|string $message 消息
+     */
     public static function msgToString($message): string
     {
         $result = '';
@@ -44,7 +65,12 @@ class Utils
         return $result;
     }
 
-    public static function getActionFuncName(ActionBase $handler, string $action)
+    /**
+     * 获取动作方法名
+     *
+     * @throws OneBotFailureException
+     */
+    public static function getActionFuncName(ActionBase $handler, string $action): string
     {
         if (isset(ActionBase::$core_cache[$action])) {
             return ActionBase::$core_cache[$action];
@@ -53,17 +79,13 @@ class Utils
         if (isset(ActionBase::$ext_cache[$action])) {
             return ActionBase::$ext_cache[$action];
         }
-        if (substr(
-            $action,
-            0,
-            strlen(OneBot::getInstance()->getPlatform()) + 1
-        ) === (OneBot::getInstance()->getPlatform() . '.')) {
-            $func = Utils::separatorToCamel('ext_' . substr($action, strlen(OneBot::getInstance()->getPlatform()) + 1));
+        if (strpos($action, (OneBot::getInstance()->getPlatform() . '.')) === 0) {
+            $func = self::separatorToCamel('ext_' . substr($action, strlen(OneBot::getInstance()->getPlatform()) + 1));
             if (method_exists($handler, $func)) {
                 return ActionBase::$ext_cache[$action] = $func;
             }
         } else {
-            $func = Utils::separatorToCamel('on_' . $action);
+            $func = self::separatorToCamel('on_' . $action);
             if (method_exists($handler, $func)) {
                 return ActionBase::$core_cache[$action] = $func;
             }

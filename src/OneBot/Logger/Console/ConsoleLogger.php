@@ -73,7 +73,7 @@ class ConsoleLogger extends AbstractLogger
                 $t['function'] = 'unknown';
             }
             $log .= "#{$i} {$t['file']}({$t['line']}): ";
-            if (isset($t['object']) and is_object($t['object'])) {
+            if (isset($t['object']) && is_object($t['object'])) {
                 $log .= get_class($t['object']) . '->';
             }
             $log .= "{$t['function']}()\n";

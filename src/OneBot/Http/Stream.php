@@ -98,7 +98,7 @@ class Stream implements StreamInterface
             restore_error_handler();
 
             if ($e instanceof Error) {
-                return trigger_error((string) $e, E_USER_ERROR);
+                trigger_error((string) $e, E_USER_ERROR);
             }
 
             return '';
@@ -119,7 +119,11 @@ class Stream implements StreamInterface
         }
 
         if (is_string($body)) {
-            $resource = fopen('php://temp', 'rw+');
+            // 此处使用 b 模式（二进制），以提高跨平台兼容性
+            $resource = fopen('php://temp', 'rwb+');
+            if ($resource === false) {
+                throw new RuntimeException('Unable to create stream');
+            }
             fwrite($resource, $body);
             rewind($resource);
             $body = $resource;

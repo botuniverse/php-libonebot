@@ -44,7 +44,7 @@ class Response implements ResponseInterface
             $this->stream = Stream::create($body);
         }
         if (is_string($status)) {
-            $status = intval($status);
+            $status = (int) $status;
         }
         $this->statusCode = $status;
         $this->setHeaders($headers);

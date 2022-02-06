@@ -56,7 +56,7 @@ class WebSocketClient implements WebSocketClientInterface
     public function setCloseCallback(callable $callable): WebSocketClientInterface
     {
         $this->status = $this->connection->getStatus();
-        $this->connection->onClose = function (AsyncTcpConnection $con) use ($callable) {
+        $this->connection->onClose = static function (AsyncTcpConnection $con) use ($callable) {
             $callable($con);
         };
         return $this;

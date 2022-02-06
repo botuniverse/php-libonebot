@@ -42,7 +42,7 @@ class DriverEvent implements Event, StoppableEventInterface
     /**
      * @internal
      */
-    public function setPropagationStopped()
+    public function setPropagationStopped(): void
     {
         $this->propagationStopped = true;
     }

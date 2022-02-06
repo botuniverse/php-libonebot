@@ -15,7 +15,7 @@ class Worker extends \Workerman\Worker
     /**
      * @throws Exception
      */
-    public static function runAll()
+    public static function runAll(): void
     {
         static::checkSapiEnv();
         static::init();
@@ -30,7 +30,7 @@ class Worker extends \Workerman\Worker
         static::monitorWorkers();
     }
 
-    protected static function parseCommand()
+    protected static function parseCommand(): void
     {
         if (static::$_OS !== OS_TYPE_LINUX) {
             return;

@@ -112,7 +112,7 @@ class StreamClient implements ClientInterface
      *
      * @param resource $socket
      */
-    protected function closeSocket($socket)
+    protected function closeSocket($socket): void
     {
         fclose($socket);
     }
@@ -123,7 +123,7 @@ class StreamClient implements ClientInterface
      * @param  resource         $socket
      * @throws NetworkException
      */
-    protected function writeRequest($socket, RequestInterface $request, int $bufferSize = 8192)
+    protected function writeRequest($socket, RequestInterface $request, int $bufferSize = 8192): void
     {
         if ($this->fwrite($socket, $this->transformRequestHeadersToString($request)) === false) {
             throw new NetworkException($request, 'Failed to send request, underlying socket not accessible, (BROKEN EPIPE)');
@@ -140,7 +140,7 @@ class StreamClient implements ClientInterface
      * @param  resource         $socket
      * @throws NetworkException
      */
-    protected function writeBody($socket, RequestInterface $request, int $bufferSize = 8192)
+    protected function writeBody($socket, RequestInterface $request, int $bufferSize = 8192): void
     {
         $body = $request->getBody();
 
@@ -247,9 +247,19 @@ class StreamClient implements ClientInterface
             throw new RequestException($request, 'Remote is not defined and we cannot determine a connection endpoint for this request (no Host header)');
         }
 
+        $endpoint = '';
+
         $host = $request->getUri()->getHost();
-        $port = $request->getUri()->getPort() ?: ($request->getUri()->getScheme() === 'https' ? 443 : 80);
-        $endpoint = sprintf('%s:%s', $host, $port);
+        if (!empty($host)) {
+            $endpoint .= $host;
+            if ($request->getUri()->getPort() !== null) {
+                $endpoint .= ':' . $request->getUri()->getPort();
+            } elseif ($request->getUri()->getScheme() === 'https') {
+                $endpoint .= ':443';
+            } else {
+                $endpoint .= ':80';
+            }
+        }
 
         // If use the host header if present for the endpoint
         if (empty($host) && $request->hasHeader('Host')) {
@@ -270,7 +280,7 @@ class StreamClient implements ClientInterface
      */
     private function fwrite($stream, string $bytes)
     {
-        if (!strlen($bytes)) {
+        if (empty($bytes)) {
             return 0;
         }
         $result = @fwrite($stream, $bytes);

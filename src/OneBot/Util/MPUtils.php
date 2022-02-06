@@ -13,7 +13,7 @@ class MPUtils
      */
     private static $process_id = -1;
 
-    public static function initProcess(int $type, int $id)
+    public static function initProcess(int $type, int $id): void
     {
         self::$process_type = $type;
         self::$process_id = $id;
