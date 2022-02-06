@@ -62,7 +62,7 @@ class OneBotEventListener
     {
         switch ($type) {
             case ONEBOT_JSON:
-                $json = json_decode(strval($raw_data), true);
+                $json = json_decode((string) $raw_data, true);
                 if (!isset($json['action'])) {
                     throw new OneBotFailureException(RetCode::BAD_REQUEST);
                 }

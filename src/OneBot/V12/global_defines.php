@@ -35,8 +35,13 @@ function ob_dump($var, ...$moreVars)
         foreach ($moreVars as $v) {
             Symfony\Component\VarDumper\VarDumper::dump($v);
         }
-    } else {
+    } elseif (PHP_VERSION >= 8.0) {
         var_dump($var, ...$moreVars);
+    } else {
+        var_dump($var);
+        foreach ($moreVars as $v) {
+            var_dump($v);
+        }
     }
     if (1 < func_num_args()) {
         return func_get_args();
