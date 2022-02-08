@@ -17,6 +17,8 @@ class SQLite extends PDO
     public function __construct()
     {
         if (ob_config('lib.db', false)) {
+            // TODO: 基于配置提供的路径创建数据库
+            // TODO: 基于开发者项目路径创建数据库
             parent::__construct('sqlite:' . __DIR__ . '/../../../../cache/db');
         } else {
             throw new OneBotException('数据库支持未启用');

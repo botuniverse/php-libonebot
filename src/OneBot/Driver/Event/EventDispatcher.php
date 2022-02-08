@@ -6,6 +6,7 @@ namespace OneBot\Driver\Event;
 
 use Psr\EventDispatcher\EventDispatcherInterface;
 
+// TODO: 尝试把 EventDispatcher 全局唯一，以避免频繁的 new EventDispatcher
 class EventDispatcher implements EventDispatcherInterface
 {
     /**
@@ -16,6 +17,7 @@ class EventDispatcher implements EventDispatcherInterface
         foreach (EventProvider::getEventListeners($event->getType()) as $listener) {
             try {
                 // TODO: 允许 Listener 修改 $event
+                // TODO: 在调用 listener 前先判断 isPropagationStopped
                 $listener($event);
             } catch (StopException $exception) {
                 ob_logger()->debug('Event ' . $event . ' stopped');

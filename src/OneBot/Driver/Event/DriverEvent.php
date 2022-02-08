@@ -8,17 +8,18 @@ use Psr\EventDispatcher\StoppableEventInterface;
 
 class DriverEvent implements Event, StoppableEventInterface
 {
-    /**
-     * @var bool
-     */
+    /** @var bool 是否停止分发 */
     protected $propagationStopped = false;
 
-    /**
-     * @var string
-     */
+    /** @var string 事件类型 */
     protected $type = Event::EVENT_UNKNOWN;
 
-    public function __construct($type)
+    /**
+     * 创建一个新的驱动事件
+     *
+     * @param string $type 事件类型
+     */
+    public function __construct(string $type)
     {
         $this->type = $type;
     }
@@ -32,6 +33,9 @@ class DriverEvent implements Event, StoppableEventInterface
     }
 
     /**
+     * 停止分发
+     * 通过抛出异常
+     *
      * @throws StopException
      */
     public function stopPropagation(): void
@@ -40,6 +44,8 @@ class DriverEvent implements Event, StoppableEventInterface
     }
 
     /**
+     * 停止分发
+     *
      * @internal
      */
     public function setPropagationStopped(): void

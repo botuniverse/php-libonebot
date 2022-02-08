@@ -57,7 +57,7 @@
             "OneBot\\": "src/OneBot"
         },
         "files": [
-            "src/OneBot/V12/global_defines.php"
+          "src/OneBot/global_defines.php"
         ]
     },
     "scripts": {
