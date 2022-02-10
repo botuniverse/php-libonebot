@@ -49,7 +49,7 @@ class WebSocketMessageEvent extends DriverEvent
         return call_user_func($this->send_callback, $this->fd, $data);
     }
 
-    public function setOriginFrame($frame)
+    public function setOriginFrame($frame): void
     {
         $this->origin_frame = $frame;
     }

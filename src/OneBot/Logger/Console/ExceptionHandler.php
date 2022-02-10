@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace OneBot\Logger\Console;
 
 use OneBot\Util\Singleton;
+use Throwable;
 
 class ExceptionHandler
 {
@@ -34,7 +35,10 @@ class ExceptionHandler
         return $this->whoops;
     }
 
-    public function handle(\Throwable $e): void
+    /**
+     * 处理异常
+     */
+    public function handle(Throwable $e): void
     {
         if (is_null($this->whoops)) {
             ob_logger()->error($e->getMessage());

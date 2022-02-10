@@ -17,19 +17,21 @@ use Throwable;
 
 class OneBotEventListener
 {
-    public static function onHttpRequest(HttpRequestEvent $event)
+    public static function onHttpRequest(HttpRequestEvent $event): void
     {
         try {
             $request = $event->getRequest();
+
             if ($request->getUri() == '/favicon.ico') {
                 $event->withResponse(HttpFactory::getInstance()->createResponse(404));
                 return;
             }
-            if (($request->getHeaderLine('content-type') ?? null) === 'application/json') {
+
+            if ($request->getHeaderLine('content-type') === 'application/json') {
                 $response_obj = self::processHttpRequest($request->getBody());
                 $response = HttpFactory::getInstance()->createResponse(200, null, ['Content-Type' => 'application/json'], json_encode($response_obj, JSON_UNESCAPED_UNICODE));
                 $event->withResponse($response);
-            } elseif (($request->getHeaderLine('content-type') ?? null) === 'application/msgpack') {
+            } elseif ($request->getHeaderLine('content-type') === 'application/msgpack') {
                 $response_obj = self::processHttpRequest($request->getBody());
                 $response = HttpFactory::getInstance()->createResponse(200, null, ['Content-Type' => 'application/msgpack'], MessagePack::pack($response_obj));
                 $event->withResponse($response);
@@ -49,20 +51,20 @@ class OneBotEventListener
         }
     }
 
-    public static function onWebSocketOpen(WebSocketOpenEvent $event)
+    public static function onWebSocketOpen(WebSocketOpenEvent $event): void
     {
         // TODO: Implement onWebSocketOpen() method.
     }
 
     /**
-     * @param $raw_data
+     * @param  mixed                  $raw_data
      * @throws OneBotFailureException
      */
     private static function processHttpRequest($raw_data, int $type = ONEBOT_JSON): ActionResponse
     {
         switch ($type) {
             case ONEBOT_JSON:
-                $json = json_decode(strval($raw_data), true);
+                $json = json_decode((string) $raw_data, true);
                 if (!isset($json['action'])) {
                     throw new OneBotFailureException(RetCode::BAD_REQUEST);
                 }
@@ -82,12 +84,13 @@ class OneBotEventListener
             default:
                 throw new OneBotFailureException(RetCode::INTERNAL_HANDLER_ERROR);
         }
+
         // 解析调用action handler
         $action_handler = OneBot::getInstance()->getActionHandler();
-        $action_call_func = Utils::getActionFuncName($action_handler, $action_obj->action);
-        if ($action_call_func === null) {
-            return ActionResponse::create($action_obj->echo)->fail(RetCode::UNSUPPORTED_ACTION);
+        if ($action_handler === null) {
+            throw new OneBotFailureException(RetCode::INTERNAL_HANDLER_ERROR, $action_obj, '动作处理器不存在');
         }
+        $action_call_func = Utils::getActionFuncName($action_handler, $action_obj->action);
         $response_obj = $action_handler->{$action_call_func}($action_obj);
         return $response_obj instanceof ActionResponse ? $response_obj : ActionResponse::create($action_obj->echo)->fail(RetCode::BAD_HANDLER);
     }

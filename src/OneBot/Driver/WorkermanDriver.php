@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace OneBot\Driver;
 
-use Exception;
-use OneBot\Driver\Event\Event;
 use OneBot\Driver\Event\EventDispatcher;
 use OneBot\Driver\Event\HttpRequestEvent;
 use OneBot\Driver\Workerman\Worker;
@@ -19,8 +17,12 @@ use Workerman\Protocols\Http\Response as WorkermanResponse;
 
 class WorkermanDriver extends Driver
 {
+    /** @var Worker HTTP Worker */
     protected $http_worker;
 
+    /**
+     * {@inheritDoc}
+     */
     public function initDriverProtocols(array $comm): void
     {
         $http_index = null;
@@ -42,16 +44,23 @@ class WorkermanDriver extends Driver
     }
 
     /**
-     * @throws Exception
+     * {@inheritDoc}
      */
-    public function run()
+    public function run(): void
     {
-        Worker::runAll();
+        try {
+            Worker::runAll();
+        } catch (Throwable $e) {
+            ExceptionHandler::getInstance()->handle($e);
+        }
     }
 
-    private function initHttpServer()
+    /**
+     * 初始化 HTTP 服务端
+     */
+    private function initHttpServer(): void
     {
-        $this->http_worker->onMessage = function (TcpConnection $connection, Request $request) {
+        $this->http_worker->onMessage = static function (TcpConnection $connection, Request $request) {
             ob_logger()->debug('Http request: ' . $request->uri());
             $event = new HttpRequestEvent(HttpFactory::getInstance()->createServerRequest(
                 $request->method(),
@@ -61,9 +70,8 @@ class WorkermanDriver extends Driver
             ));
             $response = new WorkermanResponse();
             try {
-                (new EventDispatcher(Event::EVENT_HTTP_REQUEST))->dispatch($event);
-                if ($event->getResponse() !== null) {
-                    $psr_response = $event->getResponse();
+                (new EventDispatcher())->dispatch($event);
+                if (($psr_response = $event->getResponse()) !== null) {
                     $response->withStatus($psr_response->getStatusCode());
                     $response->withHeaders($psr_response->getHeaders());
                     $response->withBody($psr_response->getBody());

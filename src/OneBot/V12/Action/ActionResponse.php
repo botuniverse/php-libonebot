@@ -16,7 +16,7 @@ class ActionResponse
 
     public $message = '';
 
-    public static function create($echo = null)
+    public static function create($echo = null): ActionResponse
     {
         $a = new self();
         if ($echo !== null) {

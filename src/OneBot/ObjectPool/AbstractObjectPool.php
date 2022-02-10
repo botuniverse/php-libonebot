@@ -6,6 +6,7 @@ namespace OneBot\ObjectPool;
 
 use OneBot\Driver\SwooleDriver;
 use OneBot\Driver\WorkermanDriver;
+use RuntimeException;
 use SplQueue;
 use Swoole\Coroutine\Channel;
 
@@ -39,13 +40,13 @@ abstract class AbstractObjectPool
             // 如有可用对象则取用
             try {
                 $object = $this->queue->pop();
-            } catch (\RuntimeException $e) {
+            } catch (RuntimeException $e) {
                 // 此处用以捕获 SplQueue 在对象池空时抛出的异常
-                throw new \RuntimeException('对象池已空，无法取出');
+                throw new RuntimeException('对象池已空，无法取出');
             }
             if (!$object) {
                 // Swoole Channel 在通道关闭时会返回 false
-                throw new \RuntimeException('对象池通道被关闭，无法去除');
+                throw new RuntimeException('对象池通道被关闭，无法去除');
             }
         } else {
             // 没有就整个新的

@@ -84,9 +84,9 @@ abstract class ActionBase
         $list = [];
         foreach ($reflection->getMethods() as $v) {
             $sep = Utils::camelToSeparator($v->getName());
-            if (substr($sep, 0, 3) === 'on_') {
+            if (strpos($sep, 'on_') === 0) {
                 $list[] = substr($sep, 3);
-            } elseif (substr($sep, 0, 4) === 'ext_') {
+            } elseif (strpos($sep, 'ext_') === 0) {
                 $list[] = OneBot::getInstance()->getPlatform() . '.' . substr($sep, 4);
             }
         }
