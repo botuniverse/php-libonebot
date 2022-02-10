@@ -25,6 +25,14 @@ class DriverEvent implements Event, StoppableEventInterface
     }
 
     /**
+     * 获取事件类型
+     */
+    public function getType(): string
+    {
+        return $this->type;
+    }
+
+    /**
      * {@inheritDoc}
      */
     public function isPropagationStopped(): bool
