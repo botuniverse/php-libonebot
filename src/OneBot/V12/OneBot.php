@@ -45,26 +45,18 @@ class OneBot
 
     /**
      * 创建一个 OneBot 实例
-     *
-     * @throws OneBotException
      */
-    public function __construct(ConfigInterface $config)
+    private function __construct(ConfigInterface $config)
     {
-        if (isset(self::$instance)) {
-            throw new OneBotException('只能有一个OneBot实例！');
-        }
-
         $this->config = $config;
         $this->implement_name = $config->get('name');
         $this->self_id = $config->get('self_id');
         $this->platform = $config->get('platform');
 
-        $loggerConfig = $config->get('logger');
-        $this->logger = new $loggerConfig['class']($loggerConfig['level']);
-
-        $driverConfig = $config->get('driver');
-        $this->driver = new $driverConfig['class']();
-        $this->driver->setConfig($config);
+        $this->logger = $config->get('logger');
+        $config->set('logger', null);
+        $this->driver = $config->get('driver');
+        $config->set('driver', null);
 
         self::$instance = $this;
     }
