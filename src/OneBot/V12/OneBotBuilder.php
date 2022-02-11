@@ -63,10 +63,10 @@ class OneBotBuilder
 
     public function build(): OneBot
     {
-        $requiredConfig = ['name', 'platform', 'selfId', 'logger', 'driver', 'communications'];
+        $required_config = ['name', 'platform', 'selfId', 'logger', 'driver', 'communications'];
 
-        if (array_keys($this->components) !== $requiredConfig) {
-            $missing = implode(', ', array_diff($requiredConfig, array_keys($this->components)));
+        if (array_keys($this->components) !== $required_config) {
+            $missing = implode(', ', array_diff($required_config, array_keys($this->components)));
             throw new InvalidArgumentException('Builder must be configured before building, missing: ' . $missing);
         }
 
@@ -107,12 +107,12 @@ class OneBotBuilder
         }
 
         if (is_array($class)) {
-            $classFQN = array_shift($class);
+            $classname = array_shift($class);
             $parameters = array_shift($class);
             if ($parameters) {
-                return new $classFQN($parameters);
+                return new $classname($parameters);
             }
-            return new $classFQN();
+            return new $classname();
         }
 
         throw new InvalidArgumentException("Cannot resolve {$expected}, it must be an instance, a class name or an array containing a class name and an array of parameters");
