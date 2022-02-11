@@ -13,6 +13,7 @@ use OneBot\V12\Config\ConfigInterface;
 use OneBot\V12\Exception\OneBotException;
 use OneBot\V12\Object\Event\OneBotEvent;
 use Psr\Log\LoggerInterface;
+use RuntimeException;
 
 /**
  * OneBot 入口类
@@ -46,8 +47,12 @@ class OneBot
     /**
      * 创建一个 OneBot 实例
      */
-    private function __construct(ConfigInterface $config)
+    public function __construct(ConfigInterface $config)
     {
+        if (isset(self::$instance)) {
+            throw new RuntimeException('只能有一个OneBot实例！');
+        }
+
         $this->config = $config;
         $this->implement_name = $config->get('name');
         $this->self_id = $config->get('self_id');

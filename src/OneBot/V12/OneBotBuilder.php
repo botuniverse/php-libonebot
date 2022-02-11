@@ -79,7 +79,7 @@ class OneBotBuilder
             'communications' => $this->components['communications'],
         ]);
 
-        return OneBot::getInstance($config);
+        return new OneBot($config);
     }
 
     public static function buildFromArray(array $array): OneBot
@@ -93,7 +93,7 @@ class OneBotBuilder
         $config->set('logger', self::resolveClassInstance($config->get('logger'), LoggerInterface::class));
         $config->set('driver', self::resolveClassInstance($config->get('driver'), Driver::class));
 
-        return OneBot::getInstance($config);
+        return new OneBot($config);
     }
 
     private static function resolveClassInstance($class, $expected)
