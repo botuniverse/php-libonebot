@@ -31,9 +31,9 @@ class OneBotBuilder
         return $this;
     }
 
-    public function setSelfId(string $selfId): self
+    public function setSelfId(string $self_id): self
     {
-        $this->components['selfId'] = $selfId;
+        $this->components['self_id'] = $self_id;
         return $this;
     }
 
@@ -63,7 +63,7 @@ class OneBotBuilder
 
     public function build(): OneBot
     {
-        $required_config = ['name', 'platform', 'selfId', 'logger', 'driver', 'communications'];
+        $required_config = ['name', 'platform', 'self_id', 'logger', 'driver', 'communications'];
 
         if (array_keys($this->components) !== $required_config) {
             $missing = implode(', ', array_diff($required_config, array_keys($this->components)));
@@ -73,7 +73,7 @@ class OneBotBuilder
         $config = new Config\Config([
             'name' => $this->components['name'],
             'platform' => $this->components['platform'],
-            'selfId' => $this->components['selfId'],
+            'self_id' => $this->components['self_id'],
             'logger' => $this->components['logger'],
             'driver' => $this->components['driver'],
             'communications' => $this->components['communications'],
