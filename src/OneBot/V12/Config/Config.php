@@ -49,8 +49,60 @@ class Config implements ConfigInterface
     /**
      * {@inheritDoc}
      */
+    public function set(string $key, $value): void
+    {
+        if ($value === null) {
+            $this->delete($key);
+            return;
+        }
+
+        $data = &$this->config;
+
+        // 找到对应的插入位置，并确保前置数组存在
+        foreach (explode('.', $key) as $segment) {
+            if (!isset($data[$segment]) || !is_array($data[$segment])) {
+                $data[$segment] = [];
+            }
+
+            $data = &$data[$segment];
+        }
+
+        $data = $value;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
     public function getEnabledCommunications(): array
     {
         return $this->get('communications', []);
+    }
+
+    /**
+     * 删除指定配置项
+     *
+     * @param string $key 键名，使用.分割多维数组
+     * @internal
+     */
+    private function delete(string $key): void
+    {
+        if (array_key_exists($key, $this->config)) {
+            unset($this->config[$key]);
+            return;
+        }
+
+        $data = &$this->config;
+        $segments = explode('.', $key);
+        $lastSegment = array_pop($segments);
+
+        foreach ($segments as $segment) {
+            if (!isset($data[$segment]) || !is_array($data[$segment])) {
+                return;
+            }
+
+            $data = &$data[$segment];
+        }
+
+        unset($data[$lastSegment]);
     }
 }
