@@ -18,7 +18,7 @@ class EventDispatcher implements EventDispatcherInterface
             try {
                 // TODO: 允许 Listener 修改 $event
                 // TODO: 在调用 listener 前先判断 isPropagationStopped
-                $listener($event);
+                $listener[1]($event);
             } catch (StopException $exception) {
                 ob_logger()->debug('Event ' . $event . ' stopped');
                 if ($event instanceof DriverEvent) {

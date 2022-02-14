@@ -75,7 +75,8 @@ class OneBot
     }
 
     /**
-     * 获取实现名称
+     * 返回 OneBot 实现的名称
+     * @see https://12.onebot.dev/onebotrpc/data-protocol/event/
      */
     public function getImplementName(): string
     {
@@ -83,7 +84,8 @@ class OneBot
     }
 
     /**
-     * 获取实现平台
+     * 返回平台名称
+     * @see https://12.onebot.dev/onebotrpc/data-protocol/event/
      */
     public function getPlatform(): string
     {
@@ -91,7 +93,8 @@ class OneBot
     }
 
     /**
-     * 获取机器人 ID
+     * 返回 OneBot 实现自身的 ID
+     * @see https://12.onebot.dev/onebotrpc/data-protocol/event/
      */
     public function getSelfId(): string
     {
@@ -99,9 +102,9 @@ class OneBot
     }
 
     /**
-     * 获取驱动实例
+     * 获取 Driver
      */
-    public function getDriver(): Driver
+    public function getDriver(): ?Driver
     {
         return $this->driver;
     }
@@ -123,10 +126,8 @@ class OneBot
     }
 
     /**
-     * 设置动作处理器
-     *
-     * @param ActionBase|string $handler 动作处理器
-     *
+     * 设置动作处理器，用于处理 Action 的类（继承自 ActionBase 的类）
+     * @param  ActionBase|string $handler 动作处理器
      * @throws OneBotException
      */
     public function setActionHandler($handler): OneBot
@@ -143,27 +144,32 @@ class OneBot
 
     /**
      * 触发 OneBot 事件
+     * @todo 该做的东西
      */
     public function dispatchEvent(OneBotEvent $event): void
     {
     }
 
     /**
-     * 运行服务
+     * 运行 OneBot 及 Driver 服务
      */
     public function run(): void
     {
         $this->driver->initDriverProtocols($this->config->getEnabledCommunications());
-        $this->registerEventListeners();
+        $this->addOneBotEvent();
+        //Driver::setLogger($this->logger);
         $this->driver->run();
     }
 
     /**
-     * 注册事件监听器
+     * 这里是 OneBot 实现本身添加到 Driver 的事件
+     * 包含 HTTP 服务器接收 Request 和 WebSocket 服务器收到连接的事件
+     * 对应事件 id 为 http.request, websocket.open
+     * 如果你要二次开发或者添加新的事件，可以先继承此类，然后重写此方法
      */
-    private function registerEventListeners(): void
+    protected function addOneBotEvent()
     {
-        EventProvider::addEventListener(Event::EVENT_HTTP_REQUEST, [OneBotEventListener::class, 'onHttpRequest']);
-        EventProvider::addEventListener(Event::EVENT_WEBSOCKET_OPEN, [OneBotEventListener::class, 'onWebSocketOpen']);
+        EventProvider::addEventListener(Event::EVENT_HTTP_REQUEST, [OneBotEventListener::class, 'onHttpRequest'], defined('ONEBOT_EVENT_LEVEL') ? ONEBOT_EVENT_LEVEL : 15);
+        EventProvider::addEventListener(Event::EVENT_WEBSOCKET_OPEN, [OneBotEventListener::class, 'onWebSocketOpen'], defined('ONEBOT_EVENT_LEVEL') ? ONEBOT_EVENT_LEVEL : 15);
     }
 }

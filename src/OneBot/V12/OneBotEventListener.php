@@ -7,7 +7,7 @@ namespace OneBot\V12;
 use MessagePack\Exception\UnpackingFailedException;
 use MessagePack\MessagePack;
 use OneBot\Driver\Event\HttpRequestEvent;
-use OneBot\Driver\Event\WebSocketOpenEvent;
+use OneBot\Driver\Event\WebSocket\WebSocketOpenEvent;
 use OneBot\Http\HttpFactory;
 use OneBot\Util\Utils;
 use OneBot\V12\Action\ActionResponse;
