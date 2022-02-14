@@ -5,13 +5,12 @@ declare(strict_types=1);
 namespace OneBot\Driver;
 
 use OneBot\Driver\Event\DriverInitEvent;
-use OneBot\Driver\Event\Event;
 use OneBot\Driver\Event\EventDispatcher;
 use OneBot\Driver\Event\EventProvider;
-use OneBot\Driver\Event\HttpRequestEvent;
-use OneBot\Driver\Event\UserProcessStartEvent;
-use OneBot\Driver\Event\WorkerStartEvent;
-use OneBot\Driver\Event\WorkerStopEvent;
+use OneBot\Driver\Event\Http\HttpRequestEvent;
+use OneBot\Driver\Event\Process\UserProcessStartEvent;
+use OneBot\Driver\Event\Process\WorkerStartEvent;
+use OneBot\Driver\Event\Process\WorkerStopEvent;
 use OneBot\Driver\Interfaces\WebSocketClientInterface;
 use OneBot\Driver\Workerman\UserProcess;
 use OneBot\Driver\Workerman\Worker;
@@ -114,7 +113,7 @@ class WorkermanDriver extends Driver
                         (new EventDispatcher())->dispatch($event);
                         break;
                     case DriverInitPolicy::MULTI_PROCESS_INIT_IN_USER_PROCESS:
-                        EventProvider::addEventListener(Event::EVENT_USER_PROCESS_START, function () {
+                        EventProvider::addEventListener(UserProcessStartEvent::getName(), function () {
                             $event = new DriverInitEvent($this);
                             (new EventDispatcher())->dispatch($event);
                         }, 1);
@@ -122,7 +121,7 @@ class WorkermanDriver extends Driver
                 }
             }
             // 添加插入用户进程的启动仪式
-            if (!empty(EventProvider::getEventListeners(Event::EVENT_USER_PROCESS_START))) {
+            if (!empty(EventProvider::getEventListeners(UserProcessStartEvent::getName()))) {
                 Worker::$user_process = new UserProcess(function () {
                     ob_logger()->debug('新建UserProcess');
                     try {

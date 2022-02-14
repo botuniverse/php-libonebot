@@ -7,11 +7,11 @@ declare(strict_types=1);
 namespace OneBot\Driver;
 
 use OneBot\Driver\Event\EventDispatcher;
-use OneBot\Driver\Event\HttpRequestEvent;
+use OneBot\Driver\Event\Http\HttpRequestEvent;
+use OneBot\Driver\Event\Process\WorkerStartEvent;
 use OneBot\Driver\Event\WebSocket\WebSocketCloseEvent;
 use OneBot\Driver\Event\WebSocket\WebSocketMessageEvent;
 use OneBot\Driver\Event\WebSocket\WebSocketOpenEvent;
-use OneBot\Driver\Event\WorkerStartEvent;
 use OneBot\Driver\Interfaces\WebSocketClientInterface;
 use OneBot\Http\HttpFactory;
 use Swoole\Http\Request;

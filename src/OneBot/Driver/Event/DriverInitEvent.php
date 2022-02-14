@@ -13,7 +13,6 @@ class DriverInitEvent extends DriverEvent
 
     public function __construct(Driver $driver)
     {
-        parent::__construct(Event::EVENT_DRIVER_INIT);
         $this->driver = $driver;
     }
 

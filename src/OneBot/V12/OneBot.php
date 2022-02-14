@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace OneBot\V12;
 
 use OneBot\Driver\Driver;
-use OneBot\Driver\Event\Event;
 use OneBot\Driver\Event\EventProvider;
+use OneBot\Driver\Event\Http\HttpRequestEvent;
 use OneBot\Util\Singleton;
 use OneBot\V12\Action\ActionBase;
 use OneBot\V12\Config\ConfigInterface;
@@ -169,7 +169,7 @@ class OneBot
      */
     protected function addOneBotEvent()
     {
-        EventProvider::addEventListener(Event::EVENT_HTTP_REQUEST, [OneBotEventListener::class, 'onHttpRequest'], defined('ONEBOT_EVENT_LEVEL') ? ONEBOT_EVENT_LEVEL : 15);
-        EventProvider::addEventListener(Event::EVENT_WEBSOCKET_OPEN, [OneBotEventListener::class, 'onWebSocketOpen'], defined('ONEBOT_EVENT_LEVEL') ? ONEBOT_EVENT_LEVEL : 15);
+        EventProvider::addEventListener(HttpRequestEvent::getName(), [OneBotEventListener::class, 'onHttpRequest'], defined('ONEBOT_EVENT_LEVEL') ? ONEBOT_EVENT_LEVEL : 15);
+        EventProvider::addEventListener(HttpRequestEvent::getName(), [OneBotEventListener::class, 'onWebSocketOpen'], defined('ONEBOT_EVENT_LEVEL') ? ONEBOT_EVENT_LEVEL : 15);
     }
 }

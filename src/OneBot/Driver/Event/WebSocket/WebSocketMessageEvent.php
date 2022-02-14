@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace OneBot\Driver\Event\WebSocket;
 
 use OneBot\Driver\Event\DriverEvent;
-use OneBot\Driver\Event\Event;
 
 class WebSocketMessageEvent extends DriverEvent
 {
@@ -31,7 +30,6 @@ class WebSocketMessageEvent extends DriverEvent
 
     public function __construct(int $fd, string $data, callable $send_callback)
     {
-        parent::__construct(Event::EVENT_WEBSOCKET_MESSAGE);
         $this->fd = $fd;
         $this->data = $data;
         $this->send_callback = $send_callback;

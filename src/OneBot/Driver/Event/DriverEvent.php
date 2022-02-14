@@ -11,25 +11,15 @@ abstract class DriverEvent implements Event, StoppableEventInterface
     /** @var bool 是否停止分发 */
     protected $propagationStopped = false;
 
-    /** @var string 事件类型 */
-    protected $type = Event::EVENT_UNKNOWN;
-
-    /**
-     * 创建一个新的驱动事件
-     *
-     * @param string $type 事件类型
-     */
-    public function __construct(string $type)
-    {
-        $this->type = $type;
-    }
+    /** @var null|string 事件自定义名称 */
+    protected static $custom_name;
 
     /**
      * 获取事件类型
      */
-    public function getType(): string
+    public static function getName(): string
     {
-        return $this->type;
+        return static::$custom_name ?? static::class;
     }
 
     /**
