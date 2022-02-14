@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace OneBot\Driver\Swoole;
 
-use OneBot\Driver\WebSocketClientInterface;
+use OneBot\Driver\Interfaces\WebSocketClientInterface;
 use OneBot\Http\Client\Exception\ClientException;
 use OneBot\Http\Client\Exception\NetworkException;
 use OneBot\Http\Client\SwooleClient;
@@ -87,13 +87,13 @@ class WebSocketClient implements WebSocketClientInterface
                         if ($this->client->connected === false) {
                             $this->status = self::STATUS_CLOSED;
                             go(function () {
-                                call_user_func($this->close_func, $this->client);
+                                call_user_func($this->close_func, $this);
                             });
                             break;
                         }
                     } elseif ($result instanceof Frame) {
                         go(function () use ($result) {
-                            call_user_func($this->message_func, $result, $this->client);
+                            call_user_func($this->message_func, $result, $this);
                         });
                     }
                 }

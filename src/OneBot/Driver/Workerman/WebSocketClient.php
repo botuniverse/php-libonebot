@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace OneBot\Driver\Workerman;
 
 use Exception;
-use OneBot\Driver\WebSocketClientInterface;
+use OneBot\Driver\Interfaces\WebSocketClientInterface;
 use Psr\Http\Message\RequestInterface;
 use Workerman\Connection\AsyncTcpConnection;
 
