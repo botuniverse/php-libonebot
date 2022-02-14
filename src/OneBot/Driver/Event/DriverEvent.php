@@ -6,7 +6,7 @@ namespace OneBot\Driver\Event;
 
 use Psr\EventDispatcher\StoppableEventInterface;
 
-class DriverEvent implements Event, StoppableEventInterface
+abstract class DriverEvent implements Event, StoppableEventInterface
 {
     /** @var bool 是否停止分发 */
     protected $propagationStopped = false;
