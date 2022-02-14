@@ -22,5 +22,9 @@ interface Event
 
     public const EVENT_MANAGER_START = 'manager.start';
 
+    public const EVENT_USER_PROCESS_START = 'user.process.start';
+
+    public const EVENT_DRIVER_INIT = 'driver.init';
+
     public const EVENT_UNKNOWN = 'unknown';
 }

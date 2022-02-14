@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace OneBot\Driver;
 
+use OneBot\Driver\Interfaces\WebSocketClientInterface;
 use OneBot\Http\Client\StreamClient;
 use OneBot\Http\Client\SwooleClient;
 use OneBot\Util\Utils;
@@ -24,6 +25,13 @@ abstract class Driver
     protected $_events = [];
 
     /**
+     * @var string
+     */
+    private static $active_driver_class;
+
+    private $driver_init_policy = DriverInitPolicy::MULTI_PROCESS_INIT_IN_FIRST_WORKER;
+
+    /**
      * 创建新的驱动实例
      *
      * @param string $default_client_class 默认客户端类
@@ -33,6 +41,12 @@ abstract class Driver
     {
         $this->default_client_class = $default_client_class;
         $this->alt_client_class = $alt_client_class;
+        self::$active_driver_class = static::class;
+    }
+
+    public static function getActiveDriverClass(): string
+    {
+        return self::$active_driver_class;
     }
 
     /**
@@ -61,6 +75,17 @@ abstract class Driver
         return $this->config;
     }
 
+    public function setDriverInitPolicy(int $policy): Driver
+    {
+        $this->driver_init_policy = $policy;
+        return $this;
+    }
+
+    public function getDriverInitPolicy(): int
+    {
+        return $this->driver_init_policy;
+    }
+
     /**
      * 初始化通讯
      *
@@ -72,4 +97,8 @@ abstract class Driver
      * 运行驱动
      */
     abstract public function run(): void;
+
+    abstract public function getHttpWebhookUrl(): string;
+
+    abstract public function getWSReverseClient(): ?WebSocketClientInterface;
 }
