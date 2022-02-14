@@ -27,7 +27,7 @@ abstract class Driver
     /**
      * @var string
      */
-    private static $active_driver_class;
+    private static $active_driver_class = WorkermanDriver::class;
 
     private $driver_init_policy = DriverInitPolicy::MULTI_PROCESS_INIT_IN_FIRST_WORKER;
 

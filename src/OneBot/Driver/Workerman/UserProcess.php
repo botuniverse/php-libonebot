@@ -28,6 +28,7 @@ class UserProcess implements ProcessInterface
     /**
      * @param  mixed     $callable
      * @throws Exception
+     * @internal
      */
     public function __construct($callable)
     {
@@ -50,6 +51,7 @@ class UserProcess implements ProcessInterface
             throw new Exception('The process is already running');
         }
         $this->rerun();
+        Worker::$user_process_pid = $this->pid;
     }
 
     /**

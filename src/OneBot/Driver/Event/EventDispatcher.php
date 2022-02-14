@@ -14,7 +14,7 @@ class EventDispatcher implements EventDispatcherInterface
      */
     public function dispatch(object $event): object
     {
-        foreach (EventProvider::getEventListeners($event->getType()) as $listener) {
+        foreach (EventProvider::getEventListeners($event->getName()) as $listener) {
             try {
                 // TODO: 允许 Listener 修改 $event
                 // TODO: 在调用 listener 前先判断 isPropagationStopped

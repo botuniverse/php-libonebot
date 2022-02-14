@@ -119,20 +119,19 @@ class WorkermanDriver extends Driver
                         }, 1);
                         break;
                 }
-            }
-            // 添加插入用户进程的启动仪式
-            if (!empty(EventProvider::getEventListeners(UserProcessStartEvent::getName()))) {
-                Worker::$user_process = new UserProcess(function () {
-                    ob_logger()->debug('新建UserProcess');
-                    try {
-                        $event = new UserProcessStartEvent();
-                        (new EventDispatcher())->dispatch($event);
-                    } catch (Throwable $e) {
-                        ExceptionHandler::getInstance()->handle($e);
-                    }
-                });
-                Worker::$user_process->run();
-                Worker::$user_process_pid = Worker::$user_process->getPid();
+                // 添加插入用户进程的启动仪式
+                if (!empty(EventProvider::getEventListeners(UserProcessStartEvent::getName()))) {
+                    Worker::$user_process = new UserProcess(function () {
+                        ob_logger()->debug('新建UserProcess');
+                        try {
+                            $event = new UserProcessStartEvent();
+                            (new EventDispatcher())->dispatch($event);
+                        } catch (Throwable $e) {
+                            ExceptionHandler::getInstance()->handle($e);
+                        }
+                    });
+                    Worker::$user_process->run();
+                }
             }
             // 启动 Workerman 下的 Worker 们
             Worker::runAll();

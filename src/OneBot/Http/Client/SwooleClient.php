@@ -15,7 +15,6 @@ use Swoole\Coroutine\Http\Client;
 
 /**
  * Swoole HTTP Client based on PSR-18.
- * TODO: 错误处理
  */
 class SwooleClient implements ClientInterface
 {

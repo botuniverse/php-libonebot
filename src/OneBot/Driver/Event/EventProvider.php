@@ -52,7 +52,7 @@ class EventProvider implements ListenerProviderInterface
      */
     public function getListenersForEvent(object $event): iterable
     {
-        return self::getEventListeners($event->getType());
+        return self::getEventListeners($event->getName());
     }
 
     private static function sortEvents($name)
