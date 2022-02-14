@@ -2,7 +2,10 @@
 
 declare(strict_types=1);
 
-namespace OneBot\Driver\Event;
+namespace OneBot\Driver\Event\WebSocket;
+
+use OneBot\Driver\Event\DriverEvent;
+use OneBot\Driver\Event\Event;
 
 class WebSocketMessageEvent extends DriverEvent
 {
