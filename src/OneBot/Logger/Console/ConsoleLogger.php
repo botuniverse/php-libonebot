@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace OneBot\Logger\Console;
 
-use OneBot\Util\MPUtils;
+use OneBot\Driver\ProcessManager;
 use Psr\Log\AbstractLogger;
 use Psr\Log\InvalidArgumentException;
 use Psr\Log\LogLevel;
@@ -47,7 +47,7 @@ class ConsoleLogger extends AbstractLogger
     public function __construct($logLevel = LogLevel::INFO)
     {
         self::$logLevel = array_flip(self::$levels)[$logLevel];
-        ExceptionHandler::getInstance();
+        //ExceptionHandler::getInstance();
     }
 
     public function colorize($string, $level): string
@@ -107,7 +107,7 @@ class ConsoleLogger extends AbstractLogger
 
         $output = str_replace(
             ['%date%', '%level%', '%body%', '%process%'],
-            [date(self::$date_format), strtoupper(substr($level, 0, 4)), $message, MPUtils::getProcessLogName()],
+            [date(self::$date_format), strtoupper(substr($level, 0, 4)), $message, ProcessManager::getProcessLogName()],
             self::$format
         );
         $output = $this->interpolate($output, $context);
