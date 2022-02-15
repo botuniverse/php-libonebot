@@ -73,17 +73,17 @@ class SwooleDriver extends Driver
             $this->server = new SwooleHttpServer($comm[$http_index]['host'], $comm[$http_index]['port']);
             $this->initHttpServer();
         }
-        if ($has_http_webhook !== false) {
+        if ($has_http_webhook !== null) {
             $this->http_webhook_url = $comm[$has_http_webhook]['url'];
         }
 
         $process = new Process(function () {
-            while (true) {
-                /* @noinspection PhpComposerExtensionStubsInspection */
-                echo date('H:i:s') . ' 开启个人进程[' . posix_getpid() . ']！' . $this->server->worker_id . PHP_EOL;
+            //while (true) {
+            /* @noinspection PhpComposerExtensionStubsInspection */
+            echo date('H:i:s') . ' 开启个人进程[' . posix_getpid() . ']！' . $this->server->worker_id . PHP_EOL;
 
-                sleep(5);
-            }
+            sleep(2);
+        //}
         }, false);
         echo '牛逼' . PHP_EOL;
         $this->server->addProcess($process);

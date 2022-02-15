@@ -72,7 +72,7 @@ class WorkermanDriver extends Driver
         foreach ($comm as $k => $v) {
             if ($v['type'] === 'http') {
                 $http_index = $k;
-            } elseif ($v['type'] == 'ws') {
+            } elseif ($v['type'] == 'websocket') {
                 $ws_index = $k;
             }
         }
@@ -83,11 +83,13 @@ class WorkermanDriver extends Driver
             $this->initWebSocketServer();
             $this->ws_worker->onWorkerStart = [$this, 'onWorkerStart'];
             $this->ws_worker->onWorkerStop = [$this, 'onWorkerStop'];
-        }
-        if ($http_index !== null) {
+            if ($http_index !== null) {
+                ob_logger()->warning('在 Workerman 驱动下不可以同时开启 http 和 websocket 模式，将优先开启 websocket');
+            }
+        } elseif ($http_index !== null) {
             // 定义 Workerman 的 worker 和相关回调
             $this->http_worker = new Worker('http://' . $comm[$http_index]['host'] . ':' . $comm[$http_index]['port']);
-            $this->http_worker->count = $comm[$http_index]['worker_count'] ?? 4;
+            //$this->http_worker->count = $comm[$http_index]['worker_count'] ?? 4;
             Worker::$internal_running = true; // 加上这句就可以不需要必须输 start 命令才能启动了，直接启动
             $this->initHttpServer();
             $this->http_worker->onWorkerStart = [$this, 'onWorkerStart'];
@@ -116,6 +118,11 @@ class WorkermanDriver extends Driver
                         EventProvider::addEventListener(UserProcessStartEvent::getName(), function () {
                             $event = new DriverInitEvent($this);
                             (new EventDispatcher())->dispatch($event);
+                            if ($this->getParam('init_in_user_process_block', true) === true) {
+                                while (true) {
+                                    sleep(100000);
+                                }
+                            }
                         }, 1);
                         break;
                 }

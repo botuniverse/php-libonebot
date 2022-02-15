@@ -29,7 +29,10 @@ abstract class Driver
      */
     private static $active_driver_class = WorkermanDriver::class;
 
-    private $driver_init_policy = DriverInitPolicy::MULTI_PROCESS_INIT_IN_FIRST_WORKER;
+    /**
+     * @var array
+     */
+    private $params;
 
     /**
      * 创建新的驱动实例
@@ -37,8 +40,9 @@ abstract class Driver
      * @param string $default_client_class 默认客户端类
      * @param string $alt_client_class     替代客户端类
      */
-    public function __construct(string $default_client_class = SwooleClient::class, string $alt_client_class = StreamClient::class)
+    public function __construct(array $params = [], string $default_client_class = SwooleClient::class, string $alt_client_class = StreamClient::class)
     {
+        $this->params = $params;
         $this->default_client_class = $default_client_class;
         $this->alt_client_class = $alt_client_class;
         self::$active_driver_class = static::class;
@@ -75,15 +79,9 @@ abstract class Driver
         return $this->config;
     }
 
-    public function setDriverInitPolicy(int $policy): Driver
-    {
-        $this->driver_init_policy = $policy;
-        return $this;
-    }
-
     public function getDriverInitPolicy(): int
     {
-        return $this->driver_init_policy;
+        return $this->getParam('driver_init_policy', DriverInitPolicy::MULTI_PROCESS_INIT_IN_FIRST_WORKER);
     }
 
     /**
@@ -101,4 +99,14 @@ abstract class Driver
     abstract public function getHttpWebhookUrl(): string;
 
     abstract public function getWSReverseClient(): ?WebSocketClientInterface;
+
+    public function getParams(): array
+    {
+        return $this->params;
+    }
+
+    public function getParam($key, $default)
+    {
+        return $this->params[$key] ?? $default;
+    }
 }
