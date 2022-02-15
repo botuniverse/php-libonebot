@@ -133,7 +133,7 @@ class SwooleDriver extends Driver
                 $request->server['request_uri'],
                 $request->header,
                 $content
-            ));
+            ), $request->fd);
             try {
                 (new EventDispatcher())->dispatch($event);
             } catch (Throwable $e) {

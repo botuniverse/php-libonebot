@@ -169,7 +169,9 @@ class OneBot
      */
     protected function addOneBotEvent()
     {
-        EventProvider::addEventListener(HttpRequestEvent::getName(), [OneBotEventListener::class, 'onHttpRequest'], defined('ONEBOT_EVENT_LEVEL') ? ONEBOT_EVENT_LEVEL : 15);
-        EventProvider::addEventListener(HttpRequestEvent::getName(), [OneBotEventListener::class, 'onWebSocketOpen'], defined('ONEBOT_EVENT_LEVEL') ? ONEBOT_EVENT_LEVEL : 15);
+        // 监听 HTTP 请求事件给驱动
+        EventProvider::addEventListener(HttpRequestEvent::getName(), [OneBotEventListener::getInstance(), 'onHttpRequest'], defined('ONEBOT_EVENT_LEVEL') ? ONEBOT_EVENT_LEVEL : 15);
+        // 监听 WS 服务器接入事件给驱动
+        EventProvider::addEventListener(HttpRequestEvent::getName(), [OneBotEventListener::getInstance(), 'onWebSocketOpen'], defined('ONEBOT_EVENT_LEVEL') ? ONEBOT_EVENT_LEVEL : 15);
     }
 }

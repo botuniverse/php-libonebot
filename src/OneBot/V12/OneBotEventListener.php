@@ -9,6 +9,7 @@ use MessagePack\MessagePack;
 use OneBot\Driver\Event\Http\HttpRequestEvent;
 use OneBot\Driver\Event\WebSocket\WebSocketOpenEvent;
 use OneBot\Http\HttpFactory;
+use OneBot\Util\Singleton;
 use OneBot\Util\Utils;
 use OneBot\V12\Action\ActionResponse;
 use OneBot\V12\Exception\OneBotFailureException;
@@ -17,7 +18,9 @@ use Throwable;
 
 class OneBotEventListener
 {
-    public static function onHttpRequest(HttpRequestEvent $event): void
+    use Singleton;
+
+    public function onHttpRequest(HttpRequestEvent $event): void
     {
         try {
             $request = $event->getRequest();
@@ -51,16 +54,15 @@ class OneBotEventListener
         }
     }
 
-    public static function onWebSocketOpen(WebSocketOpenEvent $event): void
+    public function onWebSocketOpen(WebSocketOpenEvent $event): void
     {
-        // TODO: Implement onWebSocketOpen() method.
     }
 
     /**
      * @param  mixed                  $raw_data
      * @throws OneBotFailureException
      */
-    private static function processHttpRequest($raw_data, int $type = ONEBOT_JSON): ActionResponse
+    private function processHttpRequest($raw_data, int $type = ONEBOT_JSON): ActionResponse
     {
         switch ($type) {
             case ONEBOT_JSON:

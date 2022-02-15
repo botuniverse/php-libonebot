@@ -14,4 +14,9 @@ class WebSocketCloseEvent extends DriverEvent
     {
         $this->fd = $fd;
     }
+
+    public function getFd(): int
+    {
+        return $this->fd;
+    }
 }

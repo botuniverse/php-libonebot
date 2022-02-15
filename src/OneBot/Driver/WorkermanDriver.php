@@ -11,6 +11,9 @@ use OneBot\Driver\Event\Http\HttpRequestEvent;
 use OneBot\Driver\Event\Process\UserProcessStartEvent;
 use OneBot\Driver\Event\Process\WorkerStartEvent;
 use OneBot\Driver\Event\Process\WorkerStopEvent;
+use OneBot\Driver\Event\WebSocket\WebSocketCloseEvent;
+use OneBot\Driver\Event\WebSocket\WebSocketMessageEvent;
+use OneBot\Driver\Event\WebSocket\WebSocketOpenEvent;
 use OneBot\Driver\Interfaces\WebSocketClientInterface;
 use OneBot\Driver\Workerman\UserProcess;
 use OneBot\Driver\Workerman\Worker;
@@ -25,6 +28,7 @@ class WorkermanDriver extends Driver
     /** @var Worker HTTP Worker */
     protected $http_worker;
 
+    /** @var Worker WS Worker */
     protected $ws_worker;
 
     public function onWorkerStart(Worker $worker)
@@ -89,7 +93,7 @@ class WorkermanDriver extends Driver
         } elseif ($http_index !== null) {
             // 定义 Workerman 的 worker 和相关回调
             $this->http_worker = new Worker('http://' . $comm[$http_index]['host'] . ':' . $comm[$http_index]['port']);
-            //$this->http_worker->count = $comm[$http_index]['worker_count'] ?? 4;
+            $this->http_worker->count = $comm[$http_index]['worker_count'] ?? 4;
             Worker::$internal_running = true; // 加上这句就可以不需要必须输 start 命令才能启动了，直接启动
             $this->initHttpServer();
             $this->http_worker->onWorkerStart = [$this, 'onWorkerStart'];
@@ -194,8 +198,54 @@ class WorkermanDriver extends Driver
 
     private function initWebSocketServer()
     {
-        $this->ws_worker->onMessage = function (TcpConnection $connection, $data) {
-            ob_dump($data);
+        // WebSocket 隐藏特性： _SERVER 全局变量会在 onWebSocketConnect 中被替换为当前连接的 Header 相关信息
+        $this->ws_worker->onWebSocketConnect = function (TcpConnection $connection, $data) {
+            try {
+                global $_SERVER;
+                $headers = $this->convertHeaderFromGlobal($_SERVER);
+                $server_request = HttpFactory::getInstance()->createServerRequest(
+                    $_SERVER['REQUEST_METHOD'],
+                    'http://' . $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI'],
+                    $headers
+                );
+                $event = new WebSocketOpenEvent($server_request, $connection->id);
+                (new EventDispatcher())->dispatch($event);
+                if (is_object($event->getResponse()) && method_exists($event->getResponse(), '__toString')) {
+                    $connection->close((string) $event->getResponse());
+                }
+            } catch (Throwable $e) {
+                ExceptionHandler::getInstance()->handle($e);
+            }
         };
+        $this->ws_worker->onClose = function (TcpConnection $connection) {
+            $event = new WebSocketCloseEvent($connection->id);
+            (new EventDispatcher())->dispatch($event);
+        };
+        $this->ws_worker->onMessage = function (TcpConnection $connection, $data) {
+            try {
+                ob_logger()->debug('WebSocket message from: ' . $connection->id);
+                $event = new WebSocketMessageEvent($connection->id, $data, function (int $fd, string $data) use ($connection) {
+                    return $connection->send($data);
+                });
+                (new EventDispatcher())->dispatch($event);
+            } catch (Throwable $e) {
+                ExceptionHandler::getInstance()->handle($e);
+            }
+        };
+    }
+
+    private function convertHeaderFromGlobal(array $server): array
+    {
+        $headers = [];
+        foreach ($server as $header => $value) {
+            $header = strtolower($header);
+            if (strpos($header, 'http_') === 0) {
+                $string = '_' . str_replace('_', ' ', strtolower($header));
+                $header = ltrim(str_replace(' ', '-', ucwords($string)), '_');
+                $header = substr($header, 5);
+                $headers[$header] = $value;
+            }
+        }
+        return $headers;
     }
 }
