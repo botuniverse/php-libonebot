@@ -7,6 +7,7 @@ namespace OneBot\V12;
 use MessagePack\Exception\UnpackingFailedException;
 use MessagePack\MessagePack;
 use OneBot\Driver\Event\Http\HttpRequestEvent;
+use OneBot\Driver\Event\WebSocket\WebSocketMessageEvent;
 use OneBot\Driver\Event\WebSocket\WebSocketOpenEvent;
 use OneBot\Http\HttpFactory;
 use OneBot\Util\Singleton;
@@ -56,6 +57,24 @@ class OneBotEventListener
 
     public function onWebSocketOpen(WebSocketOpenEvent $event): void
     {
+        // TODO: WebSocket 接入后的认证操作
+    }
+
+    public function onWebSocketMessage(WebSocketMessageEvent $event): void
+    {
+        // TODO: WebSocket 接入后的消息处理
+        try {
+            $response_obj = ActionResponse::create()->ok();
+            $event->send(json_encode($response_obj));
+        } catch (OneBotFailureException $e) {
+            $response_obj = ActionResponse::create($e->getActionObject()->echo ?? null)->fail($e->getRetCode());
+            $event->send(json_encode($response_obj));
+            ob_logger()->warning('OneBot Failure: ' . RetCode::getMessage($e->getRetCode()) . '(' . $e->getRetCode() . ') at ' . $e->getFile() . ':' . $e->getLine());
+        } catch (Throwable $e) {
+            $response_obj = ActionResponse::create($action_obj->echo ?? null)->fail(RetCode::INTERNAL_HANDLER_ERROR);
+            $event->send(json_encode($response_obj));
+            ob_logger()->error('Unhandled ' . get_class($e) . ': ' . $e->getMessage() . "\nStack trace:\n" . $e->getTraceAsString());
+        }
     }
 
     /**

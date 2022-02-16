@@ -7,6 +7,8 @@ namespace OneBot\V12;
 use OneBot\Driver\Driver;
 use OneBot\Driver\Event\EventProvider;
 use OneBot\Driver\Event\Http\HttpRequestEvent;
+use OneBot\Driver\Event\WebSocket\WebSocketMessageEvent;
+use OneBot\Driver\Event\WebSocket\WebSocketOpenEvent;
 use OneBot\Util\Singleton;
 use OneBot\V12\Action\ActionBase;
 use OneBot\V12\Config\ConfigInterface;
@@ -172,6 +174,8 @@ class OneBot
         // 监听 HTTP 请求事件给驱动
         EventProvider::addEventListener(HttpRequestEvent::getName(), [OneBotEventListener::getInstance(), 'onHttpRequest'], defined('ONEBOT_EVENT_LEVEL') ? ONEBOT_EVENT_LEVEL : 15);
         // 监听 WS 服务器接入事件给驱动
-        EventProvider::addEventListener(HttpRequestEvent::getName(), [OneBotEventListener::getInstance(), 'onWebSocketOpen'], defined('ONEBOT_EVENT_LEVEL') ? ONEBOT_EVENT_LEVEL : 15);
+        EventProvider::addEventListener(WebSocketOpenEvent::getName(), [OneBotEventListener::getInstance(), 'onWebSocketOpen'], defined('ONEBOT_EVENT_LEVEL') ? ONEBOT_EVENT_LEVEL : 15);
+
+        EventProvider::addEventListener(WebSocketMessageEvent::getName(), [OneBotEventListener::getInstance(), 'onWebSocketMessage'], defined('ONEBOT_EVENT_LEVEL') ? ONEBOT_EVENT_LEVEL : 15);
     }
 }
