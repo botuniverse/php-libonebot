@@ -31,11 +31,11 @@ class OneBotEventListener
             }
 
             if ($request->getHeaderLine('content-type') === 'application/json') {
-                $response_obj = self::processHttpRequest($request->getBody());
+                $response_obj = $this->processHttpRequest($request->getBody());
                 $response = HttpFactory::getInstance()->createResponse(200, null, ['Content-Type' => 'application/json'], json_encode($response_obj, JSON_UNESCAPED_UNICODE));
                 $event->withResponse($response);
             } elseif ($request->getHeaderLine('content-type') === 'application/msgpack') {
-                $response_obj = self::processHttpRequest($request->getBody());
+                $response_obj = $this->processHttpRequest($request->getBody());
                 $response = HttpFactory::getInstance()->createResponse(200, null, ['Content-Type' => 'application/msgpack'], MessagePack::pack($response_obj));
                 $event->withResponse($response);
             } else {

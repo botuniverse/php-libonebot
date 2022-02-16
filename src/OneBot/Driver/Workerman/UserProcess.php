@@ -73,7 +73,7 @@ class UserProcess implements ProcessInterface
             } catch (Throwable $e) {
                 $exit_code = 255;
             }
-            exit(intval($exit_code));
+            exit((int) $exit_code);
         }
     }
 

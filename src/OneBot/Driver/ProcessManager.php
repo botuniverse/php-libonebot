@@ -63,7 +63,7 @@ class ProcessManager
      */
     public static function isSupportedMultiProcess(): bool
     {
-        if (Driver::getActiveDriverClass() === WorkermanDriver::class && DIRECTORY_SEPARATOR === '\\') {
+        if (DIRECTORY_SEPARATOR === '\\' && Driver::getActiveDriverClass() === WorkermanDriver::class) {
             // 判断是不是 Windows 下运行的，如果是 Windows 下，则不支持
             return false;
         }

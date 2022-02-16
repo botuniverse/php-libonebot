@@ -20,7 +20,7 @@ class EventProvider implements ListenerProviderInterface
      * @param callable $callback 事件回调
      * @param int      $level    事件等级
      */
-    public static function addEventListener(string $name, $callback, int $level = 20)
+    public static function addEventListener(string $name, callable $callback, int $level = 20)
     {
         /*
          * TODO: 尝试同时支持类名和自定义名称作为事件名
