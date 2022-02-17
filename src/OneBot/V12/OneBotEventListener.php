@@ -32,11 +32,11 @@ class OneBotEventListener
             }
 
             if ($request->getHeaderLine('content-type') === 'application/json') {
-                $response_obj = $this->processHttpRequest($request->getBody());
+                $response_obj = $this->processActionRequest($request->getBody());
                 $response = HttpFactory::getInstance()->createResponse(200, null, ['Content-Type' => 'application/json'], json_encode($response_obj, JSON_UNESCAPED_UNICODE));
                 $event->withResponse($response);
             } elseif ($request->getHeaderLine('content-type') === 'application/msgpack') {
-                $response_obj = $this->processHttpRequest($request->getBody());
+                $response_obj = $this->processActionRequest($request->getBody());
                 $response = HttpFactory::getInstance()->createResponse(200, null, ['Content-Type' => 'application/msgpack'], MessagePack::pack($response_obj));
                 $event->withResponse($response);
             } else {
@@ -62,9 +62,8 @@ class OneBotEventListener
 
     public function onWebSocketMessage(WebSocketMessageEvent $event): void
     {
-        // TODO: WebSocket 接入后的消息处理
         try {
-            $response_obj = ActionResponse::create()->ok();
+            $response_obj = $this->processActionRequest($event->getData());
             $event->send(json_encode($response_obj));
         } catch (OneBotFailureException $e) {
             $response_obj = ActionResponse::create($e->getActionObject()->echo ?? null)->fail($e->getRetCode());
@@ -81,7 +80,7 @@ class OneBotEventListener
      * @param  mixed                  $raw_data
      * @throws OneBotFailureException
      */
-    private function processHttpRequest($raw_data, int $type = ONEBOT_JSON): ActionResponse
+    private function processActionRequest($raw_data, int $type = ONEBOT_JSON): ActionResponse
     {
         switch ($type) {
             case ONEBOT_JSON:
