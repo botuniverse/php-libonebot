@@ -9,6 +9,7 @@ namespace OneBot\Driver;
 use OneBot\Driver\Event\EventDispatcher;
 use OneBot\Driver\Event\Http\HttpRequestEvent;
 use OneBot\Driver\Event\Process\WorkerStartEvent;
+use OneBot\Driver\Event\Process\WorkerStopEvent;
 use OneBot\Driver\Event\WebSocket\WebSocketCloseEvent;
 use OneBot\Driver\Event\WebSocket\WebSocketMessageEvent;
 use OneBot\Driver\Event\WebSocket\WebSocketOpenEvent;
@@ -72,6 +73,7 @@ class SwooleDriver extends Driver
             //echo "新建http服务器.\n";
             $this->server = new SwooleHttpServer($comm[$http_index]['host'], $comm[$http_index]['port']);
             $this->initHttpServer();
+            $this->initServer();
         }
         if ($has_http_webhook !== null) {
             $this->http_webhook_url = $comm[$has_http_webhook]['url'];
@@ -178,6 +180,14 @@ class SwooleDriver extends Driver
             ProcessManager::initProcess(ONEBOT_PROCESS_WORKER, $server->worker_id);
             try {
                 $event = new WorkerStartEvent();
+                (new EventDispatcher())->dispatch($event);
+            } catch (Throwable $e) {
+                ExceptionHandler::getInstance()->handle($e);
+            }
+        });
+        $this->server->on('workerstop', function () {
+            try {
+                $event = new WorkerStopEvent();
                 (new EventDispatcher())->dispatch($event);
             } catch (Throwable $e) {
                 ExceptionHandler::getInstance()->handle($e);

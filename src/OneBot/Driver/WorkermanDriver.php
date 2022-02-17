@@ -83,7 +83,7 @@ class WorkermanDriver extends Driver
         if ($ws_index !== null) {
             $this->ws_worker = new Worker('websocket://' . $comm[$ws_index]['host'] . ':' . $comm[$ws_index]['port']);
             $this->ws_worker->count = $comm[$ws_index]['worker_count'] ?? 4;
-            Worker::$internal_running = true;
+            Worker::$internal_running = true;  //不可以删除这句话哦
             $this->initWebSocketServer();
             $this->ws_worker->onWorkerStart = [$this, 'onWorkerStart'];
             $this->ws_worker->onWorkerStop = [$this, 'onWorkerStop'];
@@ -108,9 +108,7 @@ class WorkermanDriver extends Driver
     {
         try {
             // 如果是 POSIX 环境并且初始化策略为MASTER进程下或者初始化策略为ALL，则调用初始化方法
-            if (
-                ProcessManager::isSupportedMultiProcess()
-            ) {
+            if (ProcessManager::isSupportedMultiProcess()) {
                 switch ($this->getDriverInitPolicy()) {
                     case DriverInitPolicy::MULTI_PROCESS_INIT_IN_MASTER:
                     case DriverInitPolicy::MULTI_PROCESS_INIT_IN_MANAGER:
@@ -133,6 +131,7 @@ class WorkermanDriver extends Driver
                 // 添加插入用户进程的启动仪式
                 if (!empty(EventProvider::getEventListeners(UserProcessStartEvent::getName()))) {
                     Worker::$user_process = new UserProcess(function () {
+                        ProcessManager::initProcess(ONEBOT_PROCESS_USER, 0);
                         ob_logger()->debug('新建UserProcess');
                         try {
                             $event = new UserProcessStartEvent();
@@ -234,6 +233,9 @@ class WorkermanDriver extends Driver
         };
     }
 
+    /**
+     * 将 $_SERVER 变量中的 Header 提取出来转换为数组 K-V 形式
+     */
     private function convertHeaderFromGlobal(array $server): array
     {
         $headers = [];
