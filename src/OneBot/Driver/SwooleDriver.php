@@ -8,6 +8,8 @@ namespace OneBot\Driver;
 
 use OneBot\Driver\Event\EventDispatcher;
 use OneBot\Driver\Event\Http\HttpRequestEvent;
+use OneBot\Driver\Event\Process\ManagerStartEvent;
+use OneBot\Driver\Event\Process\ManagerStopEvent;
 use OneBot\Driver\Event\Process\WorkerStartEvent;
 use OneBot\Driver\Event\Process\WorkerStopEvent;
 use OneBot\Driver\Event\WebSocket\WebSocketCloseEvent;
@@ -180,6 +182,23 @@ class SwooleDriver extends Driver
             ProcessManager::initProcess(ONEBOT_PROCESS_WORKER, $server->worker_id);
             try {
                 $event = new WorkerStartEvent();
+                (new EventDispatcher())->dispatch($event);
+            } catch (Throwable $e) {
+                ExceptionHandler::getInstance()->handle($e);
+            }
+        });
+        $this->server->on('managerstart', function () {
+            ProcessManager::initProcess(ONEBOT_PROCESS_MANAGER, -1);
+            try {
+                $event = new ManagerStartEvent();
+                (new EventDispatcher())->dispatch($event);
+            } catch (Throwable $e) {
+                ExceptionHandler::getInstance()->handle($e);
+            }
+        });
+        $this->server->on('managerstop', function () {
+            try {
+                $event = new ManagerStopEvent();
                 (new EventDispatcher())->dispatch($event);
             } catch (Throwable $e) {
                 ExceptionHandler::getInstance()->handle($e);

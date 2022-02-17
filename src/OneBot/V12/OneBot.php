@@ -7,6 +7,10 @@ namespace OneBot\V12;
 use OneBot\Driver\Driver;
 use OneBot\Driver\Event\EventProvider;
 use OneBot\Driver\Event\Http\HttpRequestEvent;
+use OneBot\Driver\Event\Process\ManagerStartEvent;
+use OneBot\Driver\Event\Process\ManagerStopEvent;
+use OneBot\Driver\Event\Process\WorkerStartEvent;
+use OneBot\Driver\Event\Process\WorkerStopEvent;
 use OneBot\Driver\Event\WebSocket\WebSocketMessageEvent;
 use OneBot\Driver\Event\WebSocket\WebSocketOpenEvent;
 use OneBot\Util\Singleton;
@@ -171,11 +175,19 @@ class OneBot
      */
     protected function addOneBotEvent()
     {
-        // 监听 HTTP 请求事件给驱动
-        EventProvider::addEventListener(HttpRequestEvent::getName(), [OneBotEventListener::getInstance(), 'onHttpRequest'], defined('ONEBOT_EVENT_LEVEL') ? ONEBOT_EVENT_LEVEL : 15);
-        // 监听 WS 服务器接入事件给驱动
-        EventProvider::addEventListener(WebSocketOpenEvent::getName(), [OneBotEventListener::getInstance(), 'onWebSocketOpen'], defined('ONEBOT_EVENT_LEVEL') ? ONEBOT_EVENT_LEVEL : 15);
-        // 监听 WS 服务器消息事件给驱动
-        EventProvider::addEventListener(WebSocketMessageEvent::getName(), [OneBotEventListener::getInstance(), 'onWebSocketMessage'], defined('ONEBOT_EVENT_LEVEL') ? ONEBOT_EVENT_LEVEL : 15);
+        if (!defined('ONEBOT_EVENT_LEVEL')) {
+            define('ONEBOT_EVENT_LEVEL', 15);
+        }
+        // 监听 HTTP 服务器收到的请求事件
+        EventProvider::addEventListener(HttpRequestEvent::getName(), [OneBotEventListener::getInstance(), 'onHttpRequest'], ONEBOT_EVENT_LEVEL);
+        // 监听 WS 服务器相关事件
+        EventProvider::addEventListener(WebSocketOpenEvent::getName(), [OneBotEventListener::getInstance(), 'onWebSocketOpen'], ONEBOT_EVENT_LEVEL);
+        EventProvider::addEventListener(WebSocketMessageEvent::getName(), [OneBotEventListener::getInstance(), 'onWebSocketMessage'], ONEBOT_EVENT_LEVEL);
+        // 监听 Worker 进程退出或启动的事件
+        EventProvider::addEventListener(WorkerStartEvent::getName(), [OneBotEventListener::getInstance(), 'onWorkerStart'], ONEBOT_EVENT_LEVEL);
+        EventProvider::addEventListener(WorkerStopEvent::getName(), [OneBotEventListener::getInstance(), 'onWorkerStop'], ONEBOT_EVENT_LEVEL);
+        // 监听 Manager 进程退出或启动事件（仅限 Swoole 驱动下的 SWOOLE_PROCESS 模式才能触发）
+        EventProvider::addEventListener(ManagerStartEvent::getName(), [OneBotEventListener::getInstance(), 'onManagerStart'], ONEBOT_EVENT_LEVEL);
+        EventProvider::addEventListener(ManagerStopEvent::getName(), [OneBotEventListener::getInstance(), 'onManagerStop'], ONEBOT_EVENT_LEVEL);
     }
 }

@@ -9,6 +9,7 @@ use MessagePack\MessagePack;
 use OneBot\Driver\Event\Http\HttpRequestEvent;
 use OneBot\Driver\Event\WebSocket\WebSocketMessageEvent;
 use OneBot\Driver\Event\WebSocket\WebSocketOpenEvent;
+use OneBot\Driver\ProcessManager;
 use OneBot\Http\HttpFactory;
 use OneBot\Util\Singleton;
 use OneBot\Util\Utils;
@@ -21,16 +22,18 @@ class OneBotEventListener
 {
     use Singleton;
 
+    /**
+     * OneBot 相关的 HTTP 请求处理
+     */
     public function onHttpRequest(HttpRequestEvent $event): void
     {
         try {
             $request = $event->getRequest();
-
+            // 排除掉 Chrome 浏览器的多余请求
             if ($request->getUri() == '/favicon.ico') {
                 $event->withResponse(HttpFactory::getInstance()->createResponse(404));
                 return;
             }
-
             if ($request->getHeaderLine('content-type') === 'application/json') {
                 $response_obj = $this->processActionRequest($request->getBody());
                 $response = HttpFactory::getInstance()->createResponse(200, null, ['Content-Type' => 'application/json'], json_encode($response_obj, JSON_UNESCAPED_UNICODE));
@@ -55,11 +58,17 @@ class OneBotEventListener
         }
     }
 
+    /**
+     * OneBot 相关的 WebSocket 连接处理
+     */
     public function onWebSocketOpen(WebSocketOpenEvent $event): void
     {
         // TODO: WebSocket 接入后的认证操作
     }
 
+    /**
+     * OneBot 相关的 WebSocket 消息处理
+     */
     public function onWebSocketMessage(WebSocketMessageEvent $event): void
     {
         try {
@@ -74,6 +83,38 @@ class OneBotEventListener
             $event->send(json_encode($response_obj));
             ob_logger()->error('Unhandled ' . get_class($e) . ': ' . $e->getMessage() . "\nStack trace:\n" . $e->getTraceAsString());
         }
+    }
+
+    /**
+     * OneBot 相关的 Worker 进程启动后逻辑的处理
+     */
+    public function onWorkerStart(): void
+    {
+        ob_logger()->debug('Worker #' . ProcessManager::getProcessId() . ' started');
+    }
+
+    /**
+     * OneBot 相关的 Worker 进程退出后逻辑的处理
+     */
+    public function onWorkerStop(): void
+    {
+        ob_logger()->debug('Worker #' . ProcessManager::getProcessId() . ' stopped');
+    }
+
+    /**
+     * OneBot 相关的 Manager 进程启动后的逻辑处理
+     */
+    public function onManagerStart(): void
+    {
+        ob_logger()->debug('Manager started');
+    }
+
+    /**
+     * OneBot 相关的 Manager 进程退出后的逻辑处理
+     */
+    public function onManagerStop(): void
+    {
+        ob_logger()->debug('Manager stopped');
     }
 
     /**

@@ -49,7 +49,6 @@ class WorkermanDriver extends Driver
                     break;
             }
             $event = new WorkerStartEvent();
-            ob_logger()->debug('新建Worker' . $worker->id);
             (new EventDispatcher())->dispatch($event);
         } catch (Throwable $e) {
             ExceptionHandler::getInstance()->handle($e);
