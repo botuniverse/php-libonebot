@@ -21,6 +21,7 @@ use OneBot\Driver\Event\WebSocket\WebSocketOpenEvent;
 use OneBot\Driver\Interfaces\WebSocketClientInterface;
 use OneBot\Driver\Swoole\UserProcess;
 use OneBot\Http\HttpFactory;
+use Swoole\Event;
 use Swoole\Http\Request;
 use Swoole\Http\Response;
 use Swoole\Http\Server as SwooleHttpServer;
@@ -31,18 +32,13 @@ use Throwable;
 
 class SwooleDriver extends Driver
 {
-    /** @var SwooleHttpServer|SwooleWebSocketServer 服务端实例 */
-    protected $server;
-
-    /**
-     * @var WebSocketClientInterface
-     */
-    private $ws_reverse_client;
-
     /**
      * @var string
      */
-    private $http_webhook_url;
+    public $http_webhook_url;
+
+    /** @var SwooleHttpServer|SwooleWebSocketServer 服务端实例 */
+    protected $server;
 
     public function initDriverProtocols(array $comm): void
     {
@@ -83,38 +79,43 @@ class SwooleDriver extends Driver
         if ($has_http_webhook !== null) {
             $this->http_webhook_url = $comm[$has_http_webhook]['url'];
         }
+        if ($has_ws_reverse !== null) {
+            $this->ws_reverse_client_params = $comm[$has_ws_reverse];
+        }
 
-        switch ($this->getDriverInitPolicy()) {
-            case DriverInitPolicy::MULTI_PROCESS_INIT_IN_MASTER:
-            case DriverInitPolicy::MULTI_PROCESS_INIT_IN_ALL_PROCESSES:
-                $event = new DriverInitEvent($this);
-                (new EventDispatcher())->dispatch($event);
-                break;
-            case DriverInitPolicy::MULTI_PROCESS_INIT_IN_USER_PROCESS:
-                EventProvider::addEventListener(UserProcessStartEvent::getName(), function () {
+        if ($this->server !== null) {
+            switch ($this->getDriverInitPolicy()) {
+                case DriverInitPolicy::MULTI_PROCESS_INIT_IN_MASTER:
+                case DriverInitPolicy::MULTI_PROCESS_INIT_IN_ALL_PROCESSES:
                     $event = new DriverInitEvent($this);
                     (new EventDispatcher())->dispatch($event);
-                    if ($this->getParam('init_in_user_process_block', true) === true) {
-                        while (true) {
-                            sleep(100000);
+                    break;
+                case DriverInitPolicy::MULTI_PROCESS_INIT_IN_USER_PROCESS:
+                    EventProvider::addEventListener(UserProcessStartEvent::getName(), function () {
+                        $event = new DriverInitEvent($this);
+                        (new EventDispatcher())->dispatch($event);
+                        if ($this->getParam('init_in_user_process_block', true) === true) {
+                            while (true) {
+                                sleep(100000);
+                            }
                         }
+                    }, 1);
+                    break;
+            }
+            // 添加插入用户进程的启动仪式
+            if (!empty(EventProvider::getEventListeners(UserProcessStartEvent::getName()))) {
+                $process = new UserProcess(function () {
+                    ProcessManager::initProcess(ONEBOT_PROCESS_USER, 0);
+                    ob_logger()->debug('新建UserProcess');
+                    try {
+                        $event = new UserProcessStartEvent();
+                        (new EventDispatcher())->dispatch($event);
+                    } catch (Throwable $e) {
+                        ExceptionHandler::getInstance()->handle($e);
                     }
-                }, 1);
-                break;
-        }
-        // 添加插入用户进程的启动仪式
-        if (!empty(EventProvider::getEventListeners(UserProcessStartEvent::getName()))) {
-            $process = new UserProcess(function () {
-                ProcessManager::initProcess(ONEBOT_PROCESS_USER, 0);
-                ob_logger()->debug('新建UserProcess');
-                try {
-                    $event = new UserProcessStartEvent();
-                    (new EventDispatcher())->dispatch($event);
-                } catch (Throwable $e) {
-                    ExceptionHandler::getInstance()->handle($e);
-                }
-            }, false);
-            $this->server->addProcess($process);
+                }, false);
+                $this->server->addProcess($process);
+            }
         }
     }
 
@@ -123,14 +124,17 @@ class SwooleDriver extends Driver
      */
     public function run(): void
     {
-        if ($this->ws_reverse_client !== null) {
-            $this->ws_reverse_client->connect();
-        }
         if ($this->server !== null) {
             echo '启动！' . PHP_EOL;
             $this->server->start();
         } else {
-            \Swoole\Event::wait();
+            $event = new DriverInitEvent($this, self::SINGLE_PROCESS);
+            try {
+                (new EventDispatcher())->dispatch($event);
+            } catch (Throwable $e) {
+                ExceptionHandler::getInstance()->handle($e);
+            }
+            Event::wait();
         }
     }
 

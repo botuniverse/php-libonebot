@@ -5,21 +5,25 @@ declare(strict_types=1);
 namespace OneBot\Driver;
 
 use OneBot\Driver\Interfaces\WebSocketClientInterface;
-use OneBot\Http\Client\StreamClient;
-use OneBot\Http\Client\SwooleClient;
 use OneBot\Util\Utils;
 use OneBot\V12\Config\ConfigInterface;
 
 abstract class Driver
 {
+    public const SINGLE_PROCESS = 0;
+
+    public const MULTI_PROCESS = 1;
+
+    /**
+     * @var WebSocketClientInterface
+     */
+    public $ws_reverse_client;
+
+    /** @var array */
+    public $ws_reverse_client_params;
+
     /** @var ConfigInterface 配置实例 */
     protected $config;
-
-    /** @var string 默认客户端类 */
-    protected $default_client_class;
-
-    /** @var string 替代客户端类 */
-    protected $alt_client_class;
 
     /** @var array 事件 */
     protected $_events = [];
@@ -36,15 +40,10 @@ abstract class Driver
 
     /**
      * 创建新的驱动实例
-     *
-     * @param string $default_client_class 默认客户端类
-     * @param string $alt_client_class     替代客户端类
      */
-    public function __construct(array $params = [], string $default_client_class = SwooleClient::class, string $alt_client_class = StreamClient::class)
+    public function __construct(array $params = [])
     {
         $this->params = $params;
-        $this->default_client_class = $default_client_class;
-        $this->alt_client_class = $alt_client_class;
         self::$active_driver_class = static::class;
     }
 

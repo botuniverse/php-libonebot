@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace OneBot\V12;
 
 use OneBot\Driver\Driver;
+use OneBot\Driver\Event\DriverInitEvent;
 use OneBot\Driver\Event\EventProvider;
 use OneBot\Driver\Event\Http\HttpRequestEvent;
 use OneBot\Driver\Event\Process\ManagerStartEvent;
@@ -189,5 +190,7 @@ class OneBot
         // 监听 Manager 进程退出或启动事件（仅限 Swoole 驱动下的 SWOOLE_PROCESS 模式才能触发）
         EventProvider::addEventListener(ManagerStartEvent::getName(), [OneBotEventListener::getInstance(), 'onManagerStart'], ONEBOT_EVENT_LEVEL);
         EventProvider::addEventListener(ManagerStopEvent::getName(), [OneBotEventListener::getInstance(), 'onManagerStop'], ONEBOT_EVENT_LEVEL);
+        // 监听单进程无 Server 模式的相关事件（如纯 Client 情况下的启动模式）
+        EventProvider::addEventListener(DriverInitEvent::getName(), [OneBotEventListener::getInstance(), 'onDriverInit'], ONEBOT_EVENT_LEVEL);
     }
 }

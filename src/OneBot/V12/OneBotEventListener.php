@@ -6,10 +6,14 @@ namespace OneBot\V12;
 
 use MessagePack\Exception\UnpackingFailedException;
 use MessagePack\MessagePack;
+use OneBot\Driver\Driver;
+use OneBot\Driver\Event\DriverInitEvent;
 use OneBot\Driver\Event\Http\HttpRequestEvent;
 use OneBot\Driver\Event\WebSocket\WebSocketMessageEvent;
 use OneBot\Driver\Event\WebSocket\WebSocketOpenEvent;
 use OneBot\Driver\ProcessManager;
+use OneBot\Driver\Swoole\WebSocketClient;
+use OneBot\Http\Client\Exception\NetworkException;
 use OneBot\Http\HttpFactory;
 use OneBot\Util\Singleton;
 use OneBot\Util\Utils;
@@ -115,6 +119,28 @@ class OneBotEventListener
     public function onManagerStop(): void
     {
         ob_logger()->debug('Manager stopped');
+    }
+
+    public function onDriverInit(DriverInitEvent $event)
+    {
+        if ($event->getDriverMode() === Driver::SINGLE_PROCESS) {
+            if (!empty($event->getDriver()->ws_reverse_client_params)) {
+                $run = function () use ($event) {
+                    try {
+                        $event->getDriver()->ws_reverse_client = WebSocketClient::createFromAddress(
+                            $event->getDriver()->ws_reverse_client['url'],
+                            $event->getDriver()->ws_reverse_client['custom_header'] ?? [],
+                            $event->getDriver()->getParam('swoole_ws_client_set', ['websocket_mask' => true])
+                        );
+                        ob_logger()->debug('启动ws_reverse_client');
+                        $event->getDriver()->ws_reverse_client->connect();
+                    } catch (NetworkException $e) {
+                        ob_logger()->error('ws_reverse_client连接失败：' . $e->getMessage());
+                        sleep(2);
+                    }
+                };
+            }
+        }
     }
 
     /**
