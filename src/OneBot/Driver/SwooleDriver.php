@@ -21,6 +21,7 @@ use OneBot\Driver\Event\WebSocket\WebSocketOpenEvent;
 use OneBot\Driver\Interfaces\WebSocketClientInterface;
 use OneBot\Driver\Swoole\UserProcess;
 use OneBot\Http\HttpFactory;
+use Psr\Http\Message\ResponseInterface;
 use Swoole\Event;
 use Swoole\Http\Request;
 use Swoole\Http\Response;
@@ -125,7 +126,7 @@ class SwooleDriver extends Driver
     public function run(): void
     {
         if ($this->server !== null) {
-            echo '启动！' . PHP_EOL;
+            // 含Server的Swoole多进程模式，直接启动Swoole start
             $this->server->start();
         } else {
             $event = new DriverInitEvent($this, self::SINGLE_PROCESS);
@@ -275,6 +276,19 @@ class SwooleDriver extends Driver
                 }
             } catch (Throwable $e) {
                 ExceptionHandler::getInstance()->handle($e);
+                if (is_callable($event->getErrorHandler())) {
+                    $err_response = call_user_func($event->getErrorHandler(), $e, $event);
+                    if ($err_response instanceof ResponseInterface) {
+                        foreach ($err_response->getHeaders() as $header => $value) {
+                            if (is_array($value)) {
+                                $response->setHeader($header, implode(';', $value));
+                            }
+                        }
+                        $response->setStatusCode($err_response->getStatusCode());
+                        $response->end($err_response->getBody());
+                        return;
+                    }
+                }
                 $response->status(500);
                 $response->end('Internal Server Error');
             }
