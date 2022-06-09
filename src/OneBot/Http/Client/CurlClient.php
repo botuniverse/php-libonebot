@@ -43,9 +43,9 @@ class CurlClient implements ClientInterface
 
     /**
      * @throws ClientException
-     * @return \CurlHandle|resource
+     * @return \CurlHandle|false|resource
      */
-    private function createHandle(RequestInterface $request)
+    private function createHandle(RequestInterface $request) /* @phpstan-ignore-line */
     {
         $this->curl_options[CURLOPT_RETURNTRANSFER] = true; // 返回的内容作为变量储存，而不是直接输出
         $this->curl_options[CURLOPT_HEADER] = true; // 获取结果返回时包含Header数据
@@ -60,7 +60,7 @@ class CurlClient implements ClientInterface
         }
 
         /** @var \CurlHandle|false|resource $curl_handle */
-        $curl_handle = curl_init();
+        $curl_handle = curl_init(); /* @phpstan-ignore-line */
         if ($curl_handle === false) {
             throw new ClientException('Unable to initialize a cURL handle');
         }
@@ -76,12 +76,13 @@ class CurlClient implements ClientInterface
     /**
      * @param \CurlHandle|int|resource $handle
      */
-    private function createResponse($handle): ResponseInterface
+    private function createResponse($handle): ResponseInterface /* @phpstan-ignore-line */
     {
         $status_code = curl_getinfo($handle, CURLINFO_RESPONSE_CODE);
         $response = HttpFactory::getInstance()->createResponse($status_code);
 
-        $message = curl_multi_getcontent($handle);
+        /** @var null|string $message */
+        $message = curl_multi_getcontent($handle); /* @phpstan-ignore-line */
         if ($message === null) {
             return $response;
         }
