@@ -25,6 +25,11 @@ class HttpRequestEvent extends DriverEvent
      */
     protected $response;
 
+    /**
+     * @var null|callable
+     */
+    protected $error_handler;
+
     public function __construct(ServerRequestInterface $request, $origin_request = null)
     {
         $this->request = $request;
@@ -45,5 +50,15 @@ class HttpRequestEvent extends DriverEvent
     public function getResponse(): ?ResponseInterface
     {
         return $this->response;
+    }
+
+    public function setErrorHandler(callable $callable)
+    {
+        $this->error_handler = $callable;
+    }
+
+    public function getErrorHandler(): callable
+    {
+        return $this->error_handler;
     }
 }
