@@ -43,7 +43,7 @@ $ob->setDriver(
     new \OneBot\Driver\WorkermanDriver(), 
     new \OneBot\V12\Config\Config('demo.json')
 );
-$ob->setActionHandler(\OneBot\V12\Action\ReplAction::class);
+$ob->setActionHandlerClass(\OneBot\V12\Action\ReplAction::class);
 $ob->run();
 ```
 
