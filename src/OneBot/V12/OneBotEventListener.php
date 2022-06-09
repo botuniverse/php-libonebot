@@ -18,9 +18,11 @@ use OneBot\Http\Client\Exception\NetworkException;
 use OneBot\Http\HttpFactory;
 use OneBot\Http\WebSocket\CloseFrameInterface;
 use OneBot\Http\WebSocket\FrameInterface;
+use OneBot\Http\WebSocket\Opcode;
 use OneBot\Util\Singleton;
 use OneBot\Util\Utils;
 use OneBot\V12\Action\ActionResponse;
+use OneBot\V12\Action\DefaultActionHandler;
 use OneBot\V12\Exception\OneBotFailureException;
 use OneBot\V12\Object\ActionObject;
 use Throwable;
@@ -52,8 +54,8 @@ class OneBotEventListener
                 $response = HttpFactory::getInstance()->createResponse(200, null, ['Content-Type' => 'application/json'], json_encode($response_obj, JSON_UNESCAPED_UNICODE));
                 $event->withResponse($response);
             } elseif ($request->getHeaderLine('content-type') === 'application/msgpack') {
-                $response_obj = $this->processActionRequest($request->getBody());
-                $response = HttpFactory::getInstance()->createResponse(200, null, ['Content-Type' => 'application/msgpack'], MessagePack::pack($response_obj));
+                $response_obj = $this->processActionRequest($request->getBody()->getContents(), ONEBOT_MSGPACK);
+                $response = HttpFactory::getInstance()->createResponse(200, null, ['Content-Type' => 'application/msgpack'], MessagePack::pack((array) $response_obj));
                 $event->withResponse($response);
             } else {
                 throw new OneBotFailureException(RetCode::BAD_REQUEST);
@@ -85,7 +87,8 @@ class OneBotEventListener
     public function onWebSocketMessage(WebSocketMessageEvent $event): void
     {
         try {
-            $response_obj = $this->processActionRequest($event->getFrame()->getData());
+            // 通过对 Frame 的 Opcode 进行判断，是否为 msgpack 数据，如果是文本的话，一律当 JSON 解析，如果是二进制，一律当 msgpack 解析
+            $response_obj = $this->processActionRequest($event->getFrame()->getData(), $event->getFrame()->getOpcode() === Opcode::BINARY ? ONEBOT_MSGPACK : ONEBOT_JSON);
             $event->send(json_encode($response_obj));
         } catch (OneBotFailureException $e) {
             $response_obj = ActionResponse::create($e->getActionObject()->echo ?? null)->fail($e->getRetCode());
@@ -177,8 +180,8 @@ class OneBotEventListener
     /**
      * 调用 ActionHandler 已经实现了的动作，并将返回值返回到上层
      *
-     * @param  mixed|string           $raw_data 传入的实际数据包，这里还是仅可传入 json 或 msgpack
-     * @throws OneBotFailureException 抛出 OneBot 异常，统一异常的 JSON 回复
+     * @param  mixed|string                                     $raw_data 传入的实际数据包，这里还是仅可传入 json 或 msgpack
+     * @throws Exception\OneBotException|OneBotFailureException 抛出 OneBot 异常，统一异常的 JSON 回复
      */
     private function processActionRequest($raw_data, int $type = ONEBOT_JSON): ActionResponse
     {
@@ -196,7 +199,7 @@ class OneBotEventListener
                     if (!isset($msgpack['action'])) {
                         throw new OneBotFailureException(RetCode::BAD_REQUEST);
                     }
-                    $action_obj = $msgpack;
+                    $action_obj = ActionObject::fromArray($msgpack);
                 } catch (UnpackingFailedException $e) {
                     throw new OneBotFailureException(RetCode::BAD_REQUEST);
                 }
@@ -205,13 +208,17 @@ class OneBotEventListener
                 throw new OneBotFailureException(RetCode::INTERNAL_HANDLER_ERROR);
         }
 
-        // 解析调用action handler
-        $action_handler = OneBot::getInstance()->getActionHandler();
-        if ($action_handler === null) {
-            throw new OneBotFailureException(RetCode::INTERNAL_HANDLER_ERROR, $action_obj, '动作处理器不存在');
+        if (($handler = OneBot::getInstance()->getActionHandler($action_obj->action)) !== null) {
+            $response_obj = call_user_func($handler[0], $action_obj);
+        } else {
+            // 解析调用action handler
+            $base_handler = OneBot::getInstance()->getBaseActionHandler();
+            if ($base_handler === null) {
+                $base_handler = OneBot::getInstance()->setActionHandlerClass(DefaultActionHandler::class)->getBaseActionHandler();
+            }
+            $action_call_func = Utils::getActionFuncName($base_handler, $action_obj->action);
+            $response_obj = $base_handler->{$action_call_func}($action_obj);
         }
-        $action_call_func = Utils::getActionFuncName($action_handler, $action_obj->action);
-        $response_obj = $action_handler->{$action_call_func}($action_obj);
         return $response_obj instanceof ActionResponse ? $response_obj : ActionResponse::create($action_obj->echo)->fail(RetCode::BAD_HANDLER);
     }
 

@@ -50,7 +50,10 @@ class OneBot
     private $driver;
 
     /** @var null|ActionBase 动作处理器 */
-    private $action_handler;
+    private $base_action_handler;
+
+    /** @var array 动作处理回调们 */
+    private $action_handlers = [];
 
     /**
      * 创建一个 OneBot 实例
@@ -128,26 +131,56 @@ class OneBot
     /**
      * 获取动作处理器实例
      */
-    public function getActionHandler(): ?ActionBase
+    public function getBaseActionHandler(): ?ActionBase
     {
-        return $this->action_handler;
+        return $this->base_action_handler;
     }
 
     /**
      * 设置动作处理器，用于处理 Action 的类（继承自 ActionBase 的类）
+     *
      * @param  ActionBase|string $handler 动作处理器
      * @throws OneBotException
      */
-    public function setActionHandler($handler): OneBot
+    public function setActionHandlerClass($handler): OneBot
     {
         if (is_string($handler) && is_a($handler, ActionBase::class, true)) {
-            $this->action_handler = new $handler();
+            $this->base_action_handler = new $handler();
         } elseif ($handler instanceof ActionBase) {
-            $this->action_handler = $handler;
+            $this->base_action_handler = $handler;
         } else {
             throw new OneBotException('CoreActionHandler必须extends ' . ActionBase::class);
         }
         return $this;
+    }
+
+    /**
+     * 动态插入动作处理器
+     *
+     * @return $this
+     */
+    public function addActionHandler(string $action, callable $handler, array $options = []): OneBot
+    {
+        $this->action_handlers[$action] = [$handler, $options];
+        return $this;
+    }
+
+    /**
+     * 获取动态插入的动作处理器
+     *
+     * @return null|mixed
+     */
+    public function getActionHandler(string $action)
+    {
+        return $this->action_handlers[$action] ?? null;
+    }
+
+    /**
+     * 获取所有动态插入的动作处理器
+     */
+    public function getActionHandlers(): array
+    {
+        return $this->action_handlers;
     }
 
     /**

@@ -72,5 +72,8 @@ $config = [
 // OneBotBuilder::buildFromConfig(new Config($config));
 
 $ob = OneBotBuilder::buildFromArray($config);
-$ob->setActionHandler(\OneBot\V12\Action\ReplAction::class);
+$ob->setActionHandlerClass(\OneBot\V12\Action\ReplAction::class);
+$ob->addActionHandler('my_action', function (OneBot\V12\Object\ActionObject $obj) {
+    return \OneBot\V12\Action\ActionResponse::create($obj->echo)->ok(['hello' => 'world']);
+});
 $ob->run();
