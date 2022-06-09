@@ -18,6 +18,7 @@ use OneBot\Driver\ProcessManager;
 use OneBot\Http\HttpFactory;
 use OneBot\Http\WebSocket\FrameInterface;
 use OneBot\Util\Singleton;
+use Psr\Http\Message\ResponseInterface;
 use Swoole\Http\Request;
 use Swoole\Http\Response;
 use Swoole\Server;
@@ -94,6 +95,19 @@ class TopEventListener
             }
         } catch (Throwable $e) {
             ExceptionHandler::getInstance()->handle($e);
+            if (is_callable($event->getErrorHandler())) {
+                $err_response = call_user_func($event->getErrorHandler(), $e, $event);
+                if ($err_response instanceof ResponseInterface) {
+                    foreach ($err_response->getHeaders() as $header => $value) {
+                        if (is_array($value)) {
+                            $response->setHeader($header, implode(';', $value));
+                        }
+                    }
+                    $response->setStatusCode($err_response->getStatusCode());
+                    $response->end($err_response->getBody());
+                    return;
+                }
+            }
             $response->status(500);
             $response->end('Internal Server Error');
         }
