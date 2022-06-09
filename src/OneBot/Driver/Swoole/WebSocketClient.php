@@ -9,7 +9,9 @@ use OneBot\Http\Client\Exception\ClientException;
 use OneBot\Http\Client\Exception\NetworkException;
 use OneBot\Http\Client\SwooleClient;
 use OneBot\Http\HttpFactory;
+use OneBot\Http\WebSocket\FrameFactory;
 use Psr\Http\Message\RequestInterface;
+use Psr\Http\Message\UriInterface;
 use Swoole\Coroutine\Http\Client;
 use Swoole\WebSocket\Frame;
 
@@ -17,6 +19,11 @@ class WebSocketClient implements WebSocketClientInterface
 {
     /** @var int */
     public $status = self::STATUS_INITIAL;
+
+    private static $id_counter = 0;
+
+    /** @var int */
+    private $fd;
 
     private $set;
 
@@ -38,7 +45,11 @@ class WebSocketClient implements WebSocketClientInterface
     }
 
     /**
-     * @param  mixed           $address
+     * 通过地址来创建一个 WebSocket 连接
+     *
+     * 支持 UriInterface 接口的 PSR 对象，也支持直接传入一个带 Scheme 的
+     *
+     * @param  string|UriInterface $address
      * @throws ClientException
      */
     public static function createFromAddress($address, array $header = [], array $set = ['websocket_mask' => true]): WebSocketClientInterface
@@ -53,6 +64,7 @@ class WebSocketClient implements WebSocketClientInterface
     {
         $this->request = $request;
         $this->client = (new SwooleClient($this->set))->buildBaseClient($request);
+        $this->fd = ++self::$id_counter;
         return $this;
     }
 
@@ -87,13 +99,15 @@ class WebSocketClient implements WebSocketClientInterface
                         if ($this->client->connected === false) {
                             $this->status = self::STATUS_CLOSED;
                             go(function () {
-                                call_user_func($this->close_func, $this);
+                                $frame = FrameFactory::createCloseFrame($this->client->statusCode, '');
+                                call_user_func($this->close_func, $frame, $this);
                             });
                             break;
                         }
                     } elseif ($result instanceof Frame) {
                         go(function () use ($result) {
-                            call_user_func($this->message_func, $result, $this);
+                            $frame = new \OneBot\Http\WebSocket\Frame($result->data, $result->opcode, true);
+                            call_user_func($this->message_func, $frame, $this);
                         });
                     }
                 }
@@ -123,5 +137,10 @@ class WebSocketClient implements WebSocketClientInterface
     public function push($data): bool
     {
         return $this->send($data);
+    }
+
+    public function getFd(): int
+    {
+        return $this->fd;
     }
 }

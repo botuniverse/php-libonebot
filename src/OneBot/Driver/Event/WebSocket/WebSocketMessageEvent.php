@@ -5,13 +5,14 @@ declare(strict_types=1);
 namespace OneBot\Driver\Event\WebSocket;
 
 use OneBot\Driver\Event\DriverEvent;
+use OneBot\Http\WebSocket\FrameInterface;
 
 class WebSocketMessageEvent extends DriverEvent
 {
     /**
-     * @var string
+     * @var FrameInterface
      */
-    private $data;
+    private $frame;
 
     /**
      * @var int
@@ -28,16 +29,16 @@ class WebSocketMessageEvent extends DriverEvent
      */
     private $send_callback;
 
-    public function __construct(int $fd, string $data, callable $send_callback)
+    public function __construct(int $fd, FrameInterface $frame, callable $send_callback)
     {
         $this->fd = $fd;
-        $this->data = $data;
+        $this->frame = $frame;
         $this->send_callback = $send_callback;
     }
 
-    public function getData(): string
+    public function getFrame(): FrameInterface
     {
-        return $this->data;
+        return $this->frame;
     }
 
     public function getFd(): int

@@ -9,19 +9,21 @@ use OneBot\Driver\Event\EventDispatcher;
 use OneBot\Driver\Event\EventProvider;
 use OneBot\Driver\Event\Http\HttpRequestEvent;
 use OneBot\Driver\Event\Process\UserProcessStartEvent;
-use OneBot\Driver\Event\Process\WorkerStartEvent;
-use OneBot\Driver\Event\Process\WorkerStopEvent;
 use OneBot\Driver\Event\WebSocket\WebSocketCloseEvent;
 use OneBot\Driver\Event\WebSocket\WebSocketMessageEvent;
 use OneBot\Driver\Event\WebSocket\WebSocketOpenEvent;
-use OneBot\Driver\Interfaces\WebSocketClientInterface;
+use OneBot\Driver\Workerman\TopEventListener;
 use OneBot\Driver\Workerman\UserProcess;
 use OneBot\Driver\Workerman\Worker;
 use OneBot\Http\HttpFactory;
+use OneBot\Http\WebSocket\FrameFactory;
+use OneBot\Http\WebSocket\FrameInterface;
+use OneBot\Http\WebSocket\Opcode;
 use Throwable;
 use Workerman\Connection\TcpConnection;
 use Workerman\Protocols\Http\Request;
 use Workerman\Protocols\Http\Response as WorkermanResponse;
+use Workerman\Timer;
 
 class WorkermanDriver extends Driver
 {
@@ -31,72 +33,33 @@ class WorkermanDriver extends Driver
     /** @var Worker WS Worker */
     protected $ws_worker;
 
-    public function onWorkerStart(Worker $worker)
-    {
-        ProcessManager::initProcess(ONEBOT_PROCESS_WORKER, $worker->id);
-        try {
-            switch ($this->getDriverInitPolicy()) {
-                case DriverInitPolicy::MULTI_PROCESS_INIT_IN_ALL_PROCESSES:
-                case DriverInitPolicy::MULTI_PROCESS_INIT_IN_ALL_WORKERS:
-                    $event = new DriverInitEvent($this);
-                    (new EventDispatcher())->dispatch($event);
-                    break;
-                case DriverInitPolicy::MULTI_PROCESS_INIT_IN_FIRST_WORKER:
-                    if (ProcessManager::getProcessId() === 0) {
-                        $event = new DriverInitEvent($this);
-                        (new EventDispatcher())->dispatch($event);
-                    }
-                    break;
-            }
-            $event = new WorkerStartEvent();
-            (new EventDispatcher())->dispatch($event);
-        } catch (Throwable $e) {
-            ExceptionHandler::getInstance()->handle($e);
-        }
-    }
-
-    public function onWorkerStop()
-    {
-        try {
-            $event = new WorkerStopEvent();
-            (new EventDispatcher())->dispatch($event);
-        } catch (Throwable $e) {
-            ExceptionHandler::getInstance()->handle($e);
-        }
-    }
-
     /**
      * 通过传入的配置文件初始化 Driver 下面的协议相关事件
      */
-    public function initDriverProtocols(array $comm): void
+    public function initInternalDriverClasses(?array $http, ?array $http_webhook, ?array $ws, ?array $ws_reverse)
     {
-        $http_index = null;
-        $ws_index = null;
-        foreach ($comm as $k => $v) {
-            if ($v['type'] === 'http') {
-                $http_index = $k;
-            } elseif ($v['type'] == 'websocket') {
-                $ws_index = $k;
-            }
-        }
-        if ($ws_index !== null) {
-            $this->ws_worker = new Worker('websocket://' . $comm[$ws_index]['host'] . ':' . $comm[$ws_index]['port']);
-            $this->ws_worker->count = $comm[$ws_index]['worker_count'] ?? 4;
+        if ($ws !== null) {
+            $this->ws_worker = new Worker('websocket://' . $ws['host'] . ':' . $ws['port']);
+            $this->ws_worker->count = $ws['worker_count'] ?? 4;
             Worker::$internal_running = true;  //不可以删除这句话哦
             $this->initWebSocketServer();
-            $this->ws_worker->onWorkerStart = [$this, 'onWorkerStart'];
-            $this->ws_worker->onWorkerStop = [$this, 'onWorkerStop'];
-            if ($http_index !== null) {
+            $this->initServer($this->ws_worker);
+            if ($http !== null) {
                 ob_logger()->warning('在 Workerman 驱动下不可以同时开启 http 和 websocket 模式，将优先开启 websocket');
             }
-        } elseif ($http_index !== null) {
+        } elseif ($http !== null) {
             // 定义 Workerman 的 worker 和相关回调
-            $this->http_worker = new Worker('http://' . $comm[$http_index]['host'] . ':' . $comm[$http_index]['port']);
-            $this->http_worker->count = $comm[$http_index]['worker_count'] ?? 4;
+            $this->http_worker = new Worker('http://' . $http['host'] . ':' . $http['port']);
+            $this->http_worker->count = $http['worker_count'] ?? 4;
             Worker::$internal_running = true; // 加上这句就可以不需要必须输 start 命令才能启动了，直接启动
             $this->initHttpServer();
-            $this->http_worker->onWorkerStart = [$this, 'onWorkerStart'];
-            $this->http_worker->onWorkerStop = [$this, 'onWorkerStop'];
+            $this->initServer($this->http_worker);
+        }
+        if ($http_webhook !== null) {
+            $this->http_webhook_config = $http_webhook;
+        }
+        if ($ws_reverse !== null) {
+            $this->ws_reverse_config = $ws_reverse;
         }
     }
 
@@ -111,7 +74,6 @@ class WorkermanDriver extends Driver
                 switch ($this->getDriverInitPolicy()) {
                     case DriverInitPolicy::MULTI_PROCESS_INIT_IN_MASTER:
                     case DriverInitPolicy::MULTI_PROCESS_INIT_IN_MANAGER:
-                    case DriverInitPolicy::MULTI_PROCESS_INIT_IN_ALL_PROCESSES:
                         $event = new DriverInitEvent($this);
                         (new EventDispatcher())->dispatch($event);
                         break;
@@ -120,6 +82,7 @@ class WorkermanDriver extends Driver
                             $event = new DriverInitEvent($this);
                             (new EventDispatcher())->dispatch($event);
                             if ($this->getParam('init_in_user_process_block', true) === true) {
+                                /* @phpstan-ignore-next-line */
                                 while (true) {
                                     sleep(100000);
                                 }
@@ -149,16 +112,24 @@ class WorkermanDriver extends Driver
         }
     }
 
-    public function getHttpWebhookUrl(): string
+    public function addTimer(int $ms, callable $callable, int $times = 1, array $arguments = []): int
     {
-        // TODO: Implement getHttpWebhookUrl() method.
-        return '';
+        $timer_count = 0;
+        return Timer::add($ms / 1000, function () use (&$timer_id, &$timer_count, $callable, $times, $arguments) {
+            if ($times > 0) {
+                ++$timer_count;
+                if ($timer_count > $times) {
+                    Timer::del($timer_id);
+                    return;
+                }
+            }
+            $callable($timer_id, ...$arguments);
+        }, $arguments);
     }
 
-    public function getWSReverseClient(): ?WebSocketClientInterface
+    public function clearTimer(int $timer_id)
     {
-        // TODO: Implement getWSReverseClient() method.
-        return null;
+        Timer::del($timer_id);
     }
 
     /**
@@ -180,7 +151,7 @@ class WorkermanDriver extends Driver
                 if (($psr_response = $event->getResponse()) !== null) {
                     $response->withStatus($psr_response->getStatusCode());
                     $response->withHeaders($psr_response->getHeaders());
-                    $response->withBody($psr_response->getBody());
+                    $response->withBody($psr_response->getBody()->getContents());
                 } else {
                     $response->withStatus(204);
                 }
@@ -222,7 +193,12 @@ class WorkermanDriver extends Driver
         $this->ws_worker->onMessage = function (TcpConnection $connection, $data) {
             try {
                 ob_logger()->debug('WebSocket message from: ' . $connection->id);
-                $event = new WebSocketMessageEvent($connection->id, $data, function (int $fd, string $data) use ($connection) {
+                $frame = FrameFactory::createTextFrame($data);
+                $event = new WebSocketMessageEvent($connection->id, $frame, function (int $fd, $data) use ($connection) {
+                    if ($data instanceof FrameInterface) {
+                        $data_w = $data->getData();
+                        return $connection->send($data_w, $data->getOpcode() === Opcode::TEXT);
+                    }
                     return $connection->send($data);
                 });
                 (new EventDispatcher())->dispatch($event);
@@ -248,5 +224,11 @@ class WorkermanDriver extends Driver
             }
         }
         return $headers;
+    }
+
+    private function initServer(Worker $worker)
+    {
+        $worker->onWorkerStart = [TopEventListener::getInstance(), 'onWorkerStart'];
+        $worker->onWorkerStop = [TopEventListener::getInstance(), 'onWorkerStop'];
     }
 }

@@ -60,6 +60,7 @@ abstract class OneBotEvent implements JsonSerializable
         if ($time === null) {
             $time = time();
         } elseif ($time instanceof DateTimeInterface) {
+            /** @var false|int $tmpTime */
             $tmpTime = $time->getTimestamp();
             // 在 PHP 8.0 前，DateTime::getTimestamp() 会在失败时返回 false
             if ($tmpTime === false) {

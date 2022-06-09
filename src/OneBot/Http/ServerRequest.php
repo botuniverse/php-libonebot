@@ -114,6 +114,9 @@ class ServerRequest implements ServerRequestInterface
         return $this->parsedBody;
     }
 
+    /**
+     * @param null|array|object $data
+     */
     public function withParsedBody($data): ServerRequestInterface
     {
         if (!is_array($data) && !is_object($data) && $data !== null) {

@@ -16,7 +16,7 @@ class ConsoleLogger extends AbstractLogger
     public static $date_format = 'Y-m-d H:i:s';
 
     /**
-     * @var string[] 颜色表
+     * @var array 颜色表
      */
     protected static $styles = [
         LogLevel::EMERGENCY => ['blink', 'white', 'bg_bright_red'],
@@ -68,9 +68,6 @@ class ConsoleLogger extends AbstractLogger
             }
             if (!isset($t['line'])) {
                 $t['line'] = 0;
-            }
-            if (!isset($t['function'])) {
-                $t['function'] = 'unknown';
             }
             $log .= "#{$i} {$t['file']}({$t['line']}): ";
             if (isset($t['object']) && is_object($t['object'])) {

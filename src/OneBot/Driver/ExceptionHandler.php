@@ -20,7 +20,7 @@ class ExceptionHandler
     {
         $whoops_class = 'Whoops\Run';
         $collision_class = 'NunoMaduro\Collision\Handler';
-        if (class_exists($collision_class)) {
+        if (class_exists($collision_class) && class_exists($whoops_class)) {
             /* @phpstan-ignore-next-line */
             $this->whoops = new $whoops_class();
             $this->whoops->allowQuit(false);

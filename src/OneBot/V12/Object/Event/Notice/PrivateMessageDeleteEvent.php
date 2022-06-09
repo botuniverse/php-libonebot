@@ -26,5 +26,6 @@ class PrivateMessageDeleteEvent extends NoticeEvent
     public function __construct(string $sub_type, string $message_id, string $user_id, $time = null)
     {
         parent::__construct('private_message_delete', $sub_type, $user_id, $time);
+        $this->message_id = $message_id;
     }
 }

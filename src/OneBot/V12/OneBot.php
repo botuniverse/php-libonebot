@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace OneBot\V12;
 
 use OneBot\Driver\Driver;
+use OneBot\Driver\DriverInitPolicy;
 use OneBot\Driver\Event\DriverInitEvent;
 use OneBot\Driver\Event\EventProvider;
 use OneBot\Driver\Event\Http\HttpRequestEvent;
@@ -56,7 +57,7 @@ class OneBot
      */
     public function __construct(ConfigInterface $config)
     {
-        if (isset(self::$instance)) {
+        if (self::$instance !== null) {
             throw new RuntimeException('只能有一个OneBot实例！');
         }
 
@@ -192,5 +193,11 @@ class OneBot
         EventProvider::addEventListener(ManagerStopEvent::getName(), [OneBotEventListener::getInstance(), 'onManagerStop'], ONEBOT_EVENT_LEVEL);
         // 监听单进程无 Server 模式的相关事件（如纯 Client 情况下的启动模式）
         EventProvider::addEventListener(DriverInitEvent::getName(), [OneBotEventListener::getInstance(), 'onDriverInit'], ONEBOT_EVENT_LEVEL);
+        // 如果Init策略是FirstWorker，则给WorkerStart添加添加相关事件，让WorkerStart事件（#0）中再套娃执行DriverInit事件
+        switch ($this->driver->getDriverInitPolicy()) {
+            case DriverInitPolicy::MULTI_PROCESS_INIT_IN_FIRST_WORKER:
+                EventProvider::addEventListener(WorkerStartEvent::getName(), [OneBotEventListener::getInstance(), 'onFirstWorkerInit'], ONEBOT_EVENT_LEVEL);
+                break;
+        }
     }
 }

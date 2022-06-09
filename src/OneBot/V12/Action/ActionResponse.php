@@ -6,6 +6,9 @@ namespace OneBot\V12\Action;
 
 use OneBot\V12\RetCode;
 
+/**
+ * @property mixed $echo
+ */
 class ActionResponse
 {
     public $status = 'ok';

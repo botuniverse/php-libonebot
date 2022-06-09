@@ -6,6 +6,7 @@ declare(strict_types=1);
 
 namespace OneBot\Driver\Workerman;
 
+use Closure;
 use Exception;
 use Workerman\Connection\ConnectionInterface;
 use Workerman\Events\EventInterface;
@@ -33,6 +34,9 @@ use const SIGTERM;
 use const SIGUSR1;
 use const WUNTRACED;
 
+/**
+ * @property callable|Closure $onWebSocketConnect
+ */
 class Worker extends \Workerman\Worker
 {
     public static $internal_running = false;
@@ -115,14 +119,11 @@ class Worker extends \Workerman\Worker
             }
             if (!static::$_gracefulStop || ConnectionInterface::$statistics['connection_count'] <= 0) {
                 static::$_workers = [];
-                if (static::$globalEvent) {
+                if (static::$globalEvent !== null) {
                     static::$globalEvent->destroy();
                 }
 
-                try {
-                    exit($code);
-                } catch (Exception $e) {
-                }
+                exit($code);
             }
         }
     }
@@ -133,6 +134,7 @@ class Worker extends \Workerman\Worker
      */
     protected static function init()
     {
+        /* @phpstan-ignore-next-line */
         set_error_handler(function ($code, $msg, $file, $line) {
             // 这里为重写的部分
             ob_logger()->critical("{$msg} in file {$file} on line {$line}\n");
@@ -427,6 +429,7 @@ class Worker extends \Workerman\Worker
     protected static function monitorWorkersForLinux()
     {
         static::$_status = static::STATUS_RUNNING;
+        /* @phpstan-ignore-next-line */
         while (1) {
             // Calls signal handlers for pending signals.
             pcntl_signal_dispatch();

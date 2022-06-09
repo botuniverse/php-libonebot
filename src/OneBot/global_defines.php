@@ -2,7 +2,6 @@
 
 declare(strict_types=1);
 
-use OneBot\V12\Config\ConfigInterface;
 use OneBot\V12\OneBot;
 use Psr\Log\LoggerInterface;
 
@@ -63,7 +62,7 @@ function ob_logger(): LoggerInterface
  * @param  null|mixed $default
  * @return mixed
  */
-function ob_config(string $key = null, $default = null): ConfigInterface
+function ob_config(string $key = null, $default = null)
 {
     $config = OneBot::getInstance()->getConfig();
     if (!is_null($key)) {

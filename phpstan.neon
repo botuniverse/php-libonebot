@@ -1,6 +1,7 @@
 parameters:
   reportUnmatchedIgnoredErrors: false
-  level: 0
+  treatPhpDocTypesAsCertain: false
+  level: 4
   paths:
     - ./src/
   ignoreErrors:

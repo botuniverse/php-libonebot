@@ -43,7 +43,7 @@ class CurlClient implements ClientInterface
 
     /**
      * @throws ClientException
-     * @return resource
+     * @return \CurlHandle|resource
      */
     private function createHandle(RequestInterface $request)
     {
@@ -59,6 +59,7 @@ class CurlClient implements ClientInterface
             }
         }
 
+        /** @var \CurlHandle|false|resource $curl_handle */
         $curl_handle = curl_init();
         if ($curl_handle === false) {
             throw new ClientException('Unable to initialize a cURL handle');
@@ -73,7 +74,7 @@ class CurlClient implements ClientInterface
     }
 
     /**
-     * @param resource $handle
+     * @param \CurlHandle|int|resource $handle
      */
     private function createResponse($handle): ResponseInterface
     {

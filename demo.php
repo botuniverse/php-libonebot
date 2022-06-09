@@ -22,12 +22,16 @@ $config = [
     ],
 
     'driver' => [
-        'class' => \OneBot\Driver\SwooleDriver::class,
-        'config' => [],
+        'class' => \OneBot\Driver\WorkermanDriver::class,
+        'config' => [
+            //'driver_init_policy' => \OneBot\Driver\DriverInitPolicy::MULTI_PROCESS_INIT_IN_USER_PROCESS,
+            'init_in_user_process_block' => true,
+            'swoole_server_mode' => SWOOLE_BASE,
+        ],
     ],
 
     'communications' => [
-        [
+        /*[
             'type' => 'http',
             'host' => '127.0.0.1',
             'port' => 2345,
@@ -46,10 +50,10 @@ $config = [
             'host' => '127.0.0.1',
             'port' => 2346,
             'access_token' => '',
-        ],
+        ],*/
         [
-            'type' => 'websocket_reverse',
-            'url' => 'wss://127.0.0.1:2347',
+            'type' => 'ws_reverse',
+            'url' => 'ws://127.0.0.1:2347',
             'access_token' => '',
             'reconnect_interval' => 5,
         ],

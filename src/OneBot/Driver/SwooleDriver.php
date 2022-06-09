@@ -9,84 +9,49 @@ namespace OneBot\Driver;
 use OneBot\Driver\Event\DriverInitEvent;
 use OneBot\Driver\Event\EventDispatcher;
 use OneBot\Driver\Event\EventProvider;
-use OneBot\Driver\Event\Http\HttpRequestEvent;
-use OneBot\Driver\Event\Process\ManagerStartEvent;
-use OneBot\Driver\Event\Process\ManagerStopEvent;
 use OneBot\Driver\Event\Process\UserProcessStartEvent;
-use OneBot\Driver\Event\Process\WorkerStartEvent;
-use OneBot\Driver\Event\Process\WorkerStopEvent;
-use OneBot\Driver\Event\WebSocket\WebSocketCloseEvent;
-use OneBot\Driver\Event\WebSocket\WebSocketMessageEvent;
-use OneBot\Driver\Event\WebSocket\WebSocketOpenEvent;
-use OneBot\Driver\Interfaces\WebSocketClientInterface;
+use OneBot\Driver\Swoole\TopEventListener;
 use OneBot\Driver\Swoole\UserProcess;
-use OneBot\Http\HttpFactory;
 use Swoole\Event;
-use Swoole\Http\Request;
-use Swoole\Http\Response;
 use Swoole\Http\Server as SwooleHttpServer;
-use Swoole\Server;
-use Swoole\WebSocket\Frame;
+use Swoole\Timer;
 use Swoole\WebSocket\Server as SwooleWebSocketServer;
 use Throwable;
 
 class SwooleDriver extends Driver
 {
-    /**
-     * @var string
-     */
-    public $http_webhook_url;
-
     /** @var SwooleHttpServer|SwooleWebSocketServer 服务端实例 */
     protected $server;
 
-    public function initDriverProtocols(array $comm): void
+    /**
+     * {@inheritDoc}
+     */
+    public function initInternalDriverClasses(?array $http, ?array $http_webhook, ?array $ws, ?array $ws_reverse)
     {
-        $ws_index = null;
-        $http_index = null;
-        $has_http_webhook = null;
-        $has_ws_reverse = null;
-        foreach ($comm as $k => $v) {
-            switch ($v['type']) {
-                case 'websocket':
-                    $ws_index = $k;
-                    break;
-                case 'http':
-                    $http_index = $k;
-                    break;
-                case 'http_webhook':
-                    $has_http_webhook = $k;
-                    break;
-                case 'ws_reverse':
-                    $has_ws_reverse = $k;
-                    break;
-            }
-        }
-        if ($ws_index !== null) {
-            $this->server = new SwooleWebSocketServer($comm[$ws_index]['host'], $comm[$ws_index]['port'], $this->getParam('swoole_server_mode', SWOOLE_PROCESS));
+        if ($ws !== null) {
+            $this->server = new SwooleWebSocketServer($ws['host'], $ws['port'], $this->getParam('swoole_server_mode', SWOOLE_PROCESS));
             $this->initServer();
-            if ($http_index !== null) {
+            if ($http !== null) {
                 ob_logger()->warning('检测到同时开启了http和正向ws，http的配置项将被忽略。');
                 $this->initHttpServer();
             }
             $this->initWebSocketServer();
-        } elseif ($http_index !== null) {
+        } elseif ($http !== null) {
             //echo "新建http服务器.\n";
-            $this->server = new SwooleHttpServer($comm[$http_index]['host'], $comm[$http_index]['port'], $this->getParam('swoole_server_mode', SWOOLE_PROCESS));
+            $this->server = new SwooleHttpServer($http['host'], $http['port'], $this->getParam('swoole_server_mode', SWOOLE_PROCESS));
             $this->initHttpServer();
             $this->initServer();
         }
-        if ($has_http_webhook !== null) {
-            $this->http_webhook_url = $comm[$has_http_webhook]['url'];
+        if ($http_webhook !== null) {
+            $this->http_webhook_config = $http_webhook;
         }
-        if ($has_ws_reverse !== null) {
-            $this->ws_reverse_client_params = $comm[$has_ws_reverse];
+        if ($ws_reverse !== null) {
+            $this->ws_reverse_config = $ws_reverse;
         }
 
         if ($this->server !== null) {
             switch ($this->getDriverInitPolicy()) {
                 case DriverInitPolicy::MULTI_PROCESS_INIT_IN_MASTER:
-                case DriverInitPolicy::MULTI_PROCESS_INIT_IN_ALL_PROCESSES:
                     $event = new DriverInitEvent($this);
                     (new EventDispatcher())->dispatch($event);
                     break;
@@ -95,6 +60,7 @@ class SwooleDriver extends Driver
                         $event = new DriverInitEvent($this);
                         (new EventDispatcher())->dispatch($event);
                         if ($this->getParam('init_in_user_process_block', true) === true) {
+                            /* @phpstan-ignore-next-line */
                             while (true) {
                                 sleep(100000);
                             }
@@ -120,7 +86,11 @@ class SwooleDriver extends Driver
     }
 
     /**
-     * {@inheritDoc}
+     * 给我跑！人和代码有一个能跑就行！
+     *
+     * 函数分为两部分，对于 Swoole 驱动而言，如果通信方式有需要启动 Server 的（HTTP/WebSocket），则需要启动 Server 模式。
+     *
+     * 反之，直接使用 SINGLE_PROCESS 模式在协程中启动，然后初始化 HTTP Webhook 或 WS Reverse 的连接，然后接着初始化用户自定的协议。
      */
     public function run(): void
     {
@@ -128,156 +98,69 @@ class SwooleDriver extends Driver
             echo '启动！' . PHP_EOL;
             $this->server->start();
         } else {
-            $event = new DriverInitEvent($this, self::SINGLE_PROCESS);
-            try {
-                (new EventDispatcher())->dispatch($event);
-            } catch (Throwable $e) {
-                ExceptionHandler::getInstance()->handle($e);
-            }
+            go(function () {
+                EventDispatcher::dispatchWithHandler(new DriverInitEvent($this, self::SINGLE_PROCESS));
+            });
             Event::wait();
         }
     }
 
-    public function getHttpWebhookUrl(): string
-    {
-        return $this->http_webhook_url;
-    }
-
     /**
-     * @return WebSocketClientInterface
+     * {@inheritDoc}
      */
-    public function getWSReverseClient(): ?WebSocketClientInterface
+    public function addTimer(int $ms, callable $callable, int $times = 1, array $arguments = []): int
     {
-        return $this->ws_reverse_client;
+        $timer_count = 0;
+        return Timer::tick($ms, function ($timer_id, ...$params) use (&$timer_count, $callable, $times) {
+            if ($times > 0) {
+                ++$timer_count;
+                if ($timer_count > $times) {
+                    Timer::clear($timer_id);
+                    return;
+                }
+            }
+            $callable($timer_id, ...$params);
+        }, ...$arguments);
     }
 
     /**
-     * 初始化 Websocket 服务端
+     * {@inheritDoc}
+     */
+    public function clearTimer(int $timer_id)
+    {
+        Timer::clear($timer_id);
+    }
+
+    /**
+     * 初始化 Websocket 服务端，注册 WS 连接、收到消息和断开连接三种事件的顶层回调
      */
     private function initWebSocketServer(): void
     {
-        $this->server->on('open', function (SwooleWebSocketServer $server, Request $request) {
-            ob_logger()->debug('WebSocket connection open: ' . $request->fd);
-            if (empty($content = $request->rawContent())) {
-                $content = null;
-            }
-            $event = new WebSocketOpenEvent(HttpFactory::getInstance()->createServerRequest(
-                $request->server['request_method'],
-                $request->server['request_uri'],
-                $request->header,
-                $content
-            ), $request->fd);
-            try {
-                (new EventDispatcher())->dispatch($event);
-            } catch (Throwable $e) {
-                ExceptionHandler::getInstance()->handle($e);
-            }
-        });
-
-        $this->server->on('message', function (?SwooleWebSocketServer $server, Frame $frame) {
-            try {
-                ob_logger()->debug('WebSocket message from: ' . $frame->fd);
-                $event = new WebSocketMessageEvent($frame->fd, $frame->data, function (int $fd, string $data) use ($server) {
-                    return $server->push($fd, $data);
-                });
-                $event->setOriginFrame($frame);
-                (new EventDispatcher())->dispatch($event);
-            } catch (Throwable $e) {
-                ExceptionHandler::getInstance()->handle($e);
-            }
-        });
-
-        $this->server->on('close', function (?Server $server, $fd) {
-            try {
-                ob_logger()->debug('WebSocket closed from: ' . $fd);
-                $event = new WebSocketCloseEvent($fd);
-                (new EventDispatcher())->dispatch($event);
-            } catch (Throwable $e) {
-                ExceptionHandler::getInstance()->handle($e);
-            }
-        });
+        $this->server->on('open', [TopEventListener::getInstance(), 'onOpen']);
+        $this->server->on('message', [TopEventListener::getInstance(), 'onMessage']);
+        $this->server->on('close', [TopEventListener::getInstance(), 'onClose']);
     }
 
     /**
-     * 初始化服务端
+     * 初始化服务端，注册 Worker、Manager 进程的启动和停止事件的顶层回调，以及 Swoole Server 一些核心的配置项
      */
     private function initServer(): void
     {
         $this->server->set($this->getParam('swoole_set', [
-            'max_coroutine' => 300000,
-            'max_wait_time' => 5,
+            'max_coroutine' => 300000, // 默认如果不手动设置 Swoole 的话，提供的协程数量尽量多一些，保证并发性能（反正协程不要钱）
+            'max_wait_time' => 5,      // 安全 shutdown 时候，让 Swoole 等待 Worker 进程响应的最大时间
         ]));
-        $this->server->on('workerstart', function (Server $server) {
-            ProcessManager::initProcess(ONEBOT_PROCESS_WORKER, $server->worker_id);
-            try {
-                $event = new WorkerStartEvent();
-                (new EventDispatcher())->dispatch($event);
-            } catch (Throwable $e) {
-                ExceptionHandler::getInstance()->handle($e);
-            }
-        });
-        $this->server->on('managerstart', function () {
-            ProcessManager::initProcess(ONEBOT_PROCESS_MANAGER, -1);
-            try {
-                $event = new ManagerStartEvent();
-                (new EventDispatcher())->dispatch($event);
-            } catch (Throwable $e) {
-                ExceptionHandler::getInstance()->handle($e);
-            }
-        });
-        $this->server->on('managerstop', function () {
-            try {
-                $event = new ManagerStopEvent();
-                (new EventDispatcher())->dispatch($event);
-            } catch (Throwable $e) {
-                ExceptionHandler::getInstance()->handle($e);
-            }
-        });
-        $this->server->on('workerstop', function () {
-            try {
-                $event = new WorkerStopEvent();
-                (new EventDispatcher())->dispatch($event);
-            } catch (Throwable $e) {
-                ExceptionHandler::getInstance()->handle($e);
-            }
-        });
+        $this->server->on('workerstart', [TopEventListener::getInstance(), 'onWorkerStart']);
+        $this->server->on('managerstart', [TopEventListener::getInstance(), 'onManagerStart']);
+        $this->server->on('managerstop', [TopEventListener::getInstance(), 'onManagerStop']);
+        $this->server->on('workerstop', [TopEventListener::getInstance(), 'onWorkerStop']);
     }
 
     /**
-     * 初始化使用http通信方式的注册事件.
+     * 初始化使用http通信方式的注册事件，包含收到 HTTP 请求的事件顶层回调
      */
     private function initHttpServer(): void
     {
-        $this->server->on('request', function (Request $request, Response $response) {
-            ob_logger()->debug('Http request: ' . $request->server['request_uri']);
-            if (empty($content = $request->rawContent())) {
-                $content = null;
-            }
-            $event = new HttpRequestEvent(HttpFactory::getInstance()->createServerRequest(
-                $request->server['request_method'],
-                $request->server['request_uri'],
-                $request->header,
-                $content
-            ));
-            try {
-                (new EventDispatcher())->dispatch($event);
-                if (($psr_response = $event->getResponse()) !== null) {
-                    foreach ($psr_response->getHeaders() as $header => $value) {
-                        if (is_array($value)) {
-                            $response->setHeader($header, implode(';', $value));
-                        }
-                    }
-                    $response->setStatusCode($psr_response->getStatusCode());
-                    $response->end($psr_response->getBody());
-                } else {
-                    $response->setStatusCode(204);
-                    $response->end();
-                }
-            } catch (Throwable $e) {
-                ExceptionHandler::getInstance()->handle($e);
-                $response->status(500);
-                $response->end('Internal Server Error');
-            }
-        });
+        $this->server->on('request', [TopEventListener::getInstance(), 'onRequest']);
     }
 }
