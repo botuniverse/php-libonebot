@@ -47,7 +47,7 @@ class ConsoleLogger extends AbstractLogger
     public function __construct($logLevel = LogLevel::INFO)
     {
         self::$logLevel = array_flip(self::$levels)[$logLevel];
-        //ExceptionHandler::getInstance();
+        // ExceptionHandler::getInstance();
     }
 
     public function colorize($string, $level): string
@@ -61,7 +61,7 @@ class ConsoleLogger extends AbstractLogger
     {
         $log = "Stack trace:\n";
         $trace = debug_backtrace();
-        //array_shift($trace);
+        // array_shift($trace);
         foreach ($trace as $i => $t) {
             if (!isset($t['file'])) {
                 $t['file'] = 'unknown';

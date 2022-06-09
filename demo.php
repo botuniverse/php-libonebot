@@ -24,7 +24,7 @@ $config = [
     'driver' => [
         'class' => \OneBot\Driver\WorkermanDriver::class,
         'config' => [
-            //'driver_init_policy' => \OneBot\Driver\DriverInitPolicy::MULTI_PROCESS_INIT_IN_USER_PROCESS,
+            // 'driver_init_policy' => \OneBot\Driver\DriverInitPolicy::MULTI_PROCESS_INIT_IN_USER_PROCESS,
             'init_in_user_process_block' => true,
             'swoole_server_mode' => SWOOLE_BASE,
         ],
@@ -60,7 +60,7 @@ $config = [
     ],
 ];
 
-//OneBotBuilder::factory()
+// OneBotBuilder::factory()
 //    ->setName($config['name'])
 //    ->setPlatform($config['platform'])
 //    ->setSelfId($config['self_id'])
@@ -69,7 +69,7 @@ $config = [
 //    ->setCommunicationsProtocol($config['communications'])
 //    ->build();
 
-//OneBotBuilder::buildFromConfig(new Config($config));
+// OneBotBuilder::buildFromConfig(new Config($config));
 
 $ob = OneBotBuilder::buildFromArray($config);
 $ob->setActionHandler(\OneBot\V12\Action\ReplAction::class);

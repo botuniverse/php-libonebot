@@ -8,28 +8,24 @@ namespace OneBot\Driver\Workerman;
 
 use Closure;
 use Exception;
-use Workerman\Connection\ConnectionInterface;
 use Workerman\Events\EventInterface;
 use Workerman\Lib\Timer;
-use function chmod;
 use function count;
 use function debug_backtrace;
 use function is_file;
 use function pcntl_signal;
 use function pcntl_signal_dispatch;
 use function pcntl_wait;
-use function posix_getpid;
 use function posix_kill;
 use function set_error_handler;
 use function str_replace;
 use function time;
-use function touch;
 use function unlink;
 use const OS_TYPE_LINUX;
 use const SIG_IGN;
 use const SIGHUP;
 use const SIGINT;
-use const SIGKILL;
+use const SIGQUIT;
 use const SIGTERM;
 use const SIGUSR1;
 use const WUNTRACED;
@@ -59,8 +55,8 @@ class Worker extends \Workerman\Worker
         static::daemonize();        // 创建守护进程，但 libob 好像也不太需要
         static::initWorkers();      // 初始化 Worker 进程
         static::installSignal();    // 安装信号处理函数
-        //static::saveMasterPid();    // 保存 Master PID
-        //static::displayUI();      // 显示开头的启动信息 UI，但 Swoole 没有，所以这里注释掉，以统一
+        // static::saveMasterPid();    // 保存 Master PID
+        // static::displayUI();      // 显示开头的启动信息 UI，但 Swoole 没有，所以这里注释掉，以统一
         static::forkWorkers();      // 创建 Worker 进程
         static::resetStd();         // 重置标准输入输出
         static::monitorWorkers();   // 监控 Worker 进程，这里是一个 while(1) 来等待的
@@ -73,59 +69,6 @@ class Worker extends \Workerman\Worker
     public static function log($msg)
     {
         ob_logger()->debug($msg);
-    }
-
-    /**
-     * Stop all.
-     *
-     * @param int    $code
-     * @param string $log
-     */
-    public static function stopAll($code = 0, $log = '')
-    {
-        if ($log) {
-            static::log($log);
-        }
-
-        static::$_status = static::STATUS_SHUTDOWN;
-        // For master process.
-        if (static::$_masterPid === posix_getpid()) {
-            $worker_pid_array = static::getAllWorkerPids();
-            // Send stop signal to all child processes.
-            if (static::$_gracefulStop) {
-                $sig = SIGHUP;
-            } else {
-                $sig = SIGINT;
-            }
-            foreach ($worker_pid_array as $worker_pid) {
-                posix_kill($worker_pid, $sig);
-                if (!static::$_gracefulStop) {
-                    Timer::add(static::KILL_WORKER_TIMER_TIME, '\posix_kill', [$worker_pid, SIGKILL], false);
-                }
-            }
-            Timer::add(1, '\\Workerman\\Worker::checkIfChildRunning');
-            // Remove statistics file.
-            if (is_file(static::$_statisticsFile)) {
-                @unlink(static::$_statisticsFile);
-            }
-        } // For child processes.
-        else {
-            // Execute exit.
-            foreach (static::$_workers as $worker) {
-                if (!$worker->stopping) {
-                    $worker->stop();
-                    $worker->stopping = true;
-                }
-            }
-            if (!static::$_gracefulStop || ConnectionInterface::$statistics['connection_count'] <= 0) {
-                static::$_workers = [];
-                if (static::$globalEvent !== null) {
-                    static::$globalEvent->destroy();
-                }
-
-                exit($code);
-            }
-        }
     }
 
     /**
@@ -226,7 +169,7 @@ class Worker extends \Workerman\Worker
             }
         }
         start:
-        //static::log("Workerman[{$start_file}] {$command} {$mode_str}");
+        // static::log("Workerman[{$start_file}] {$command} {$mode_str}");
 
         // Get master process PID.
         $master_pid = is_file(static::$pidFile) ? (int) file_get_contents(static::$pidFile) : 0;
@@ -348,21 +291,21 @@ class Worker extends \Workerman\Worker
         }
         $signalHandler = '\Workerman\Worker::signalHandler';
         // stop
-        //\pcntl_signal(\SIGINT, $signalHandler, false);
+        // \pcntl_signal(\SIGINT, $signalHandler, false);
         // stop
         pcntl_signal(SIGTERM, $signalHandler, false);
         // graceful stop
-        //\pcntl_signal(\SIGHUP, $signalHandler, false);
+        // \pcntl_signal(\SIGHUP, $signalHandler, false);
         // reload
         pcntl_signal(SIGUSR1, $signalHandler, false);
         // graceful reload
-        //\pcntl_signal(\SIGQUIT, $signalHandler, false);
+        // \pcntl_signal(\SIGQUIT, $signalHandler, false);
         // status
-        //\pcntl_signal(\SIGUSR2, $signalHandler, false);
+        // \pcntl_signal(\SIGUSR2, $signalHandler, false);
         // connection status
-        //\pcntl_signal(\SIGIO, $signalHandler, false);
+        // \pcntl_signal(\SIGIO, $signalHandler, false);
         // ignore
-        //\pcntl_signal(\SIGPIPE, \SIG_IGN, false);
+        // \pcntl_signal(\SIGPIPE, \SIG_IGN, false);
     }
 
     /**
@@ -375,31 +318,31 @@ class Worker extends \Workerman\Worker
         }
         $signalHandler = '\Workerman\Worker::signalHandler';
         // uninstall stop signal handler
-        //\pcntl_signal(\SIGINT, \SIG_IGN, false);
+        // \pcntl_signal(\SIGINT, \SIG_IGN, false);
         // uninstall stop signal handler
         pcntl_signal(SIGTERM, SIG_IGN, false);
         // uninstall graceful stop signal handler
-        //\pcntl_signal(\SIGHUP, \SIG_IGN, false);
+        // \pcntl_signal(\SIGHUP, \SIG_IGN, false);
         // uninstall reload signal handler
         pcntl_signal(SIGUSR1, SIG_IGN, false);
         // uninstall graceful reload signal handler
-        //\pcntl_signal(\SIGQUIT, \SIG_IGN, false);
+        // \pcntl_signal(\SIGQUIT, \SIG_IGN, false);
         // uninstall status signal handler
-        //\pcntl_signal(\SIGUSR2, \SIG_IGN, false);
+        // \pcntl_signal(\SIGUSR2, \SIG_IGN, false);
         // uninstall connections status signal handler
-        //\pcntl_signal(\SIGIO, \SIG_IGN, false);
+        // \pcntl_signal(\SIGIO, \SIG_IGN, false);
         // reinstall stop signal handler
-        //static::$globalEvent->add(\SIGINT, EventInterface::EV_SIGNAL, $signalHandler);
+        // static::$globalEvent->add(\SIGINT, EventInterface::EV_SIGNAL, $signalHandler);
         // reinstall graceful stop signal handler
-        //static::$globalEvent->add(\SIGHUP, EventInterface::EV_SIGNAL, $signalHandler);
+        // static::$globalEvent->add(\SIGHUP, EventInterface::EV_SIGNAL, $signalHandler);
         // reinstall reload signal handler
         static::$globalEvent->add(SIGUSR1, EventInterface::EV_SIGNAL, $signalHandler);
         // reinstall graceful reload signal handler
-        //static::$globalEvent->add(\SIGQUIT, EventInterface::EV_SIGNAL, $signalHandler);
+        // static::$globalEvent->add(\SIGQUIT, EventInterface::EV_SIGNAL, $signalHandler);
         // reinstall status signal handler
-        //static::$globalEvent->add(\SIGUSR2, EventInterface::EV_SIGNAL, $signalHandler);
+        // static::$globalEvent->add(\SIGUSR2, EventInterface::EV_SIGNAL, $signalHandler);
         // reinstall connection status signal handler
-        //static::$globalEvent->add(\SIGIO, EventInterface::EV_SIGNAL, $signalHandler);
+        // static::$globalEvent->add(\SIGIO, EventInterface::EV_SIGNAL, $signalHandler);
     }
 
     /**

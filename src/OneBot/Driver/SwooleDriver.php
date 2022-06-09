@@ -37,7 +37,7 @@ class SwooleDriver extends Driver
             }
             $this->initWebSocketServer();
         } elseif ($http !== null) {
-            //echo "新建http服务器.\n";
+            // echo "新建http服务器.\n";
             $this->server = new SwooleHttpServer($http['host'], $http['port'], $this->getParam('swoole_server_mode', SWOOLE_PROCESS));
             $this->initHttpServer();
             $this->initServer();

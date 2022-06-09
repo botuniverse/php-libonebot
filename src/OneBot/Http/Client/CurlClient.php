@@ -47,12 +47,12 @@ class CurlClient implements ClientInterface
      */
     private function createHandle(RequestInterface $request)
     {
-        $this->curl_options[CURLOPT_RETURNTRANSFER] = true; //返回的内容作为变量储存，而不是直接输出
-        $this->curl_options[CURLOPT_HEADER] = true; //获取结果返回时包含Header数据
-        $this->curl_options[CURLOPT_CUSTOMREQUEST] = $request->getMethod(); //设置请求方式
-        $this->curl_options[CURLOPT_URL] = (string) $request->getUri(); //设置请求的URL
-        $this->curl_options[CURLOPT_POSTFIELDS] = (string) $request->getBody(); //设置请求的Body
-        //设置请求头
+        $this->curl_options[CURLOPT_RETURNTRANSFER] = true; // 返回的内容作为变量储存，而不是直接输出
+        $this->curl_options[CURLOPT_HEADER] = true; // 获取结果返回时包含Header数据
+        $this->curl_options[CURLOPT_CUSTOMREQUEST] = $request->getMethod(); // 设置请求方式
+        $this->curl_options[CURLOPT_URL] = (string) $request->getUri(); // 设置请求的URL
+        $this->curl_options[CURLOPT_POSTFIELDS] = (string) $request->getBody(); // 设置请求的Body
+        // 设置请求头
         foreach ($request->getHeaders() as $name => $values) {
             foreach ($values as $value) {
                 $this->curl_options[CURLOPT_HTTPHEADER][] = sprintf('%s: %s', $name, $value);

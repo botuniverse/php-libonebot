@@ -165,7 +165,7 @@ class OneBot
     {
         $this->driver->initDriverProtocols($this->config->getEnabledCommunications());
         $this->addOneBotEvent();
-        //Driver::setLogger($this->logger);
+        // Driver::setLogger($this->logger);
         $this->driver->run();
     }
 

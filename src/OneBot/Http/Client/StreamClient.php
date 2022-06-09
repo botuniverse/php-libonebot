@@ -21,7 +21,7 @@ class StreamClient implements ClientInterface
 {
     private $config = [
         'remote_socket' => null,
-        'timeout' => 1000, //单位：毫秒
+        'timeout' => 1000, // 单位：毫秒
         'stream_context_options' => [],
         'stream_context_param' => [],
         'ssl' => null,

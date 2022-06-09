@@ -5,4 +5,4 @@ parameters:
   paths:
     - ./src/
   ignoreErrors:
-    - '#Used constant OS_TYPE_(LINUX|WINDOWS) not found#'
+    - '#OS_TYPE_(LINUX|WINDOWS) not found#'

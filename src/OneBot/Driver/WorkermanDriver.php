@@ -41,7 +41,7 @@ class WorkermanDriver extends Driver
         if ($ws !== null) {
             $this->ws_worker = new Worker('websocket://' . $ws['host'] . ':' . $ws['port']);
             $this->ws_worker->count = $ws['worker_count'] ?? 4;
-            Worker::$internal_running = true;  //不可以删除这句话哦
+            Worker::$internal_running = true;  // 不可以删除这句话哦
             $this->initWebSocketServer();
             $this->initServer($this->ws_worker);
             if ($http !== null) {
