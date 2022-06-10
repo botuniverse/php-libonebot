@@ -7,6 +7,7 @@ namespace OneBot\Driver;
 use OneBot\Driver\Interfaces\WebSocketClientInterface;
 use OneBot\Util\Utils;
 use OneBot\V12\Config\ConfigInterface;
+use Psr\Http\Message\UriInterface;
 
 abstract class Driver
 {
@@ -121,7 +122,11 @@ abstract class Driver
                     break;
             }
         }
-        return $this->initInternalDriverClasses($http_index, $has_http_webhook, $ws_index, $has_ws_reverse);
+        [$http, $webhook, $ws, $ws_reverse] = $this->initInternalDriverClasses($http_index, $has_http_webhook, $ws_index, $has_ws_reverse);
+        $ws ? ob_logger()->info('已开启正向 WebSocket，监听地址 ' . $ws_index['host'] . ':' . $ws_index['port']) : ob_logger()->debug('未开启正向 WebSocket');
+        $http ? ob_logger()->info('已开启 HTTP，监听地址 ' . $http_index['host'] . ':' . $http_index['port']) : ob_logger()->debug('未开启 HTTP');
+        $webhook ? ob_logger()->info('已开启 HTTP Webhook，地址 ' . $has_http_webhook['url']) : ob_logger()->debug('未开启 HTTP Webhook');
+        $ws_reverse ? ob_logger()->info('已开启反向 WebSocket，地址 ' . $has_ws_reverse['url']) : ob_logger()->debug('未开启反向 WebSocket');
     }
 
     /**
@@ -193,11 +198,17 @@ abstract class Driver
     abstract public function clearTimer(int $timer_id);
 
     /**
+     * 初始化驱动的 WS Reverse Client 连接
+     *
+     * @param string|UriInterface $address 目标地址
+     * @param array               $header  请求头
+     */
+    abstract public function initWebSocketClient($address, array $header = []): WebSocketClientInterface;
+
+    /**
      * 通过解析的配置，让 Driver 初始化不同的通信方式
      *
      * 当传入的任一参数不为 null 时，表明此通信方式启用。
-     *
-     * @return mixed
      */
-    abstract protected function initInternalDriverClasses(?array $http, ?array $http_webhook, ?array $ws, ?array $ws_reverse);
+    abstract protected function initInternalDriverClasses(?array $http, ?array $http_webhook, ?array $ws, ?array $ws_reverse): array;
 }

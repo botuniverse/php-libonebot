@@ -117,13 +117,13 @@ class WebSocketClient implements WebSocketClientInterface
         return false;
     }
 
-    public function setMessageCallback(callable $callable): WebSocketClientInterface
+    public function setMessageCallback($callable): WebSocketClientInterface
     {
         $this->message_func = $callable;
         return $this;
     }
 
-    public function setCloseCallback(callable $callable): WebSocketClientInterface
+    public function setCloseCallback($callable): WebSocketClientInterface
     {
         $this->close_func = $callable;
         return $this;

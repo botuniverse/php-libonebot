@@ -58,7 +58,7 @@ class EventProvider implements ListenerProviderInterface
     private static function sortEvents($name)
     {
         usort(self::$_events[$name], function ($a, $b) {
-            return $a[0] <= $b[0];
+            return $a[0] <= $b[0] ? -1 : 1;
         });
     }
 }

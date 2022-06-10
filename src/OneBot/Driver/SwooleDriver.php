@@ -10,8 +10,11 @@ use OneBot\Driver\Event\DriverInitEvent;
 use OneBot\Driver\Event\EventDispatcher;
 use OneBot\Driver\Event\EventProvider;
 use OneBot\Driver\Event\Process\UserProcessStartEvent;
+use OneBot\Driver\Interfaces\WebSocketClientInterface;
 use OneBot\Driver\Swoole\TopEventListener;
 use OneBot\Driver\Swoole\UserProcess;
+use OneBot\Driver\Swoole\WebSocketClient;
+use OneBot\Http\Client\Exception\ClientException;
 use Swoole\Event;
 use Swoole\Http\Server as SwooleHttpServer;
 use Swoole\Timer;
@@ -26,13 +29,13 @@ class SwooleDriver extends Driver
     /**
      * {@inheritDoc}
      */
-    public function initInternalDriverClasses(?array $http, ?array $http_webhook, ?array $ws, ?array $ws_reverse)
+    public function initInternalDriverClasses(?array $http, ?array $http_webhook, ?array $ws, ?array $ws_reverse): array
     {
         if ($ws !== null) {
             $this->server = new SwooleWebSocketServer($ws['host'], $ws['port'], $this->getParam('swoole_server_mode', SWOOLE_PROCESS));
             $this->initServer();
             if ($http !== null) {
-                ob_logger()->warning('检测到同时开启了http和正向ws，http的配置项将被忽略。');
+                ob_logger()->warning('检测到同时开启了http和正向ws，Swoole驱动下同时启用两者的话http的配置项将被忽略。');
                 $this->initHttpServer();
             }
             $this->initWebSocketServer();
@@ -83,6 +86,7 @@ class SwooleDriver extends Driver
                 $this->server->addProcess($process);
             }
         }
+        return [$http !== null, $http_webhook !== null, $ws !== null, $ws_reverse !== null];
     }
 
     /**
@@ -95,7 +99,6 @@ class SwooleDriver extends Driver
     public function run(): void
     {
         if ($this->server !== null) {
-            echo '启动！' . PHP_EOL;
             $this->server->start();
         } else {
             go(function () {
@@ -129,6 +132,16 @@ class SwooleDriver extends Driver
     public function clearTimer(int $timer_id)
     {
         Timer::clear($timer_id);
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * @throws ClientException
+     */
+    public function initWebSocketClient($address, array $header = []): WebSocketClientInterface
+    {
+        return $this->ws_reverse_client = WebSocketClient::createFromAddress($address, $header, $this->getParam('swoole_ws_client_set', ['websocket_mask' => true]));
     }
 
     /**

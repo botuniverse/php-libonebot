@@ -143,15 +143,17 @@ class OneBotEventListener
         if (!empty($event->getDriver()->ws_reverse_config)) {
             $run = function () use ($event, &$run) {
                 try {
-                    $event->getDriver()->ws_reverse_client = WebSocketClient::createFromAddress(
+                    $client = $event->getDriver()->ws_reverse_client = $event->getDriver()->initWebSocketClient(
                         $event->getDriver()->ws_reverse_config['url'],
-                        $event->getDriver()->ws_reverse_config['custom_header'] ?? [],
-                        $event->getDriver()->getParam('swoole_ws_client_set', ['websocket_mask' => true])
+                        $event->getDriver()->ws_reverse_config['custom_header'] ?? []
                     );
                     ob_logger()->debug('启动ws_reverse_client');
-                    $event->getDriver()->ws_reverse_client->setMessageCallback([$this, 'processClientMessage']);
-                    $event->getDriver()->ws_reverse_client->setCloseCallback([$this, 'processClientClose']);
-                    $status = $event->getDriver()->ws_reverse_client->connect();
+                    $client->setMessageCallback([$this, 'onClientMessage']);
+                    $client->setCloseCallback(function () use ($event, &$run) {
+                        ob_logger()->error('断开连接！');
+                        $event->getDriver()->addTimer(3000, $run);
+                    });
+                    $status = $client->connect();
                     if ($status !== true) {
                         ob_logger()->error('ws_reverse_client连接失败：无法建立连接');
                         $event->getDriver()->addTimer(3000, $run);
@@ -161,7 +163,7 @@ class OneBotEventListener
                     $event->getDriver()->addTimer(3000, $run);
                 }
             };
-            $event->getDriver()->addTimer(3000, $run);
+            $event->getDriver()->addTimer(1, $run);
         }
     }
 
@@ -175,6 +177,37 @@ class OneBotEventListener
         if (ProcessManager::getProcessId() === 0) {
             EventDispatcher::dispatchWithHandler(new DriverInitEvent(OneBot::getInstance()->getDriver()));
         }
+    }
+
+    /**
+     * 此方法的作用是将 ws_reverse，也就是本地发起的 ws client，处理收到的消息事件，转换并再次分发为 WebSocketMessageEvent。
+     *
+     * 也就是说，此处就是一个中转，最终分发了标准的 WS 消息事件，就是相当于调用此类上方的 onWebSocketMessage。
+     *
+     * @param FrameInterface           $frame  Frame 对象
+     * @param WebSocketClientInterface $client WebSocketClient 对象实例
+     */
+    public function onClientMessage(FrameInterface $frame, WebSocketClientInterface $client)
+    {
+        $event = new WebSocketMessageEvent($client->getFd(), $frame, function (int $fd, $data) use ($client) {
+            if ($data instanceof FrameInterface) {
+                return $client->push($data->getData());
+            }
+            return $client->push($data);
+        });
+        EventDispatcher::dispatchWithHandler($event);
+    }
+
+    /**
+     * 此方法的作用是将 ws client 关闭事件，转换并再次分发为 WebSocketCloseEvent
+     *
+     * @param CloseFrameInterface      $frame  CloseFrame 对象
+     * @param WebSocketClientInterface $client WebSocketClient 对象实例
+     * @param mixed                    $status
+     */
+    public function onClientClose(CloseFrameInterface $frame, WebSocketClientInterface $client, $status)
+    {
+        ob_logger()->error('断开连接！' . $status);
     }
 
     /**
@@ -220,35 +253,5 @@ class OneBotEventListener
             $response_obj = $base_handler->{$action_call_func}($action_obj);
         }
         return $response_obj instanceof ActionResponse ? $response_obj : ActionResponse::create($action_obj->echo)->fail(RetCode::BAD_HANDLER);
-    }
-
-    /**
-     * 此方法的作用是将 ws_reverse，也就是本地发起的 ws client，处理收到的消息事件，转换并再次分发为 WebSocketMessageEvent。
-     *
-     * 也就是说，此处就是一个中转，最终分发了标准的 WS 消息事件，就是相当于调用此类上方的 onWebSocketMessage。
-     *
-     * @param FrameInterface           $frame  Frame 对象
-     * @param WebSocketClientInterface $client WebSocketClient 对象实例
-     */
-    private function processClientMessage(FrameInterface $frame, WebSocketClientInterface $client)
-    {
-        $event = new WebSocketMessageEvent($client->getFd(), $frame, function (int $fd, $data) use ($client) {
-            if ($data instanceof FrameInterface) {
-                return $client->push($data->getData());
-            }
-            return $client->push($data);
-        });
-        EventDispatcher::dispatchWithHandler($event);
-    }
-
-    /**
-     * 此方法的作用是将 ws client 关闭事件，转换并再次分发为 WebSocketCloseEvent
-     *
-     * @param CloseFrameInterface      $frame  CloseFrame 对象
-     * @param WebSocketClientInterface $client WebSocketClient 对象实例
-     */
-    private function processClientClose(CloseFrameInterface $frame, WebSocketClientInterface $client)
-    {
-        // TODO：编写 Client 端断开连接的方法
     }
 }

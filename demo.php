@@ -31,7 +31,7 @@ $config = [
     ],
 
     'communications' => [
-        /*[
+        [
             'type' => 'http',
             'host' => '127.0.0.1',
             'port' => 2345,
@@ -40,7 +40,7 @@ $config = [
             'event_buffer_size' => 100,
         ],
         [
-            'type' => 'webhook',
+            'type' => 'http_webhook',
             'url' => 'https://example.com/webhook',
             'access_token' => '',
             'timeout' => 5,
@@ -50,10 +50,10 @@ $config = [
             'host' => '127.0.0.1',
             'port' => 2346,
             'access_token' => '',
-        ],*/
+        ],
         [
             'type' => 'ws_reverse',
-            'url' => 'ws://127.0.0.1:2347',
+            'url' => 'ws://127.0.0.1:20001',
             'access_token' => '',
             'reconnect_interval' => 5,
         ],

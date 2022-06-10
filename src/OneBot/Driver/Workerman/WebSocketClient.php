@@ -6,8 +6,10 @@ namespace OneBot\Driver\Workerman;
 
 use Exception;
 use OneBot\Driver\Interfaces\WebSocketClientInterface;
+use OneBot\Http\HttpFactory;
 use OneBot\Http\WebSocket\FrameFactory;
 use Psr\Http\Message\RequestInterface;
+use Psr\Http\Message\UriInterface;
 use Workerman\Connection\AsyncTcpConnection;
 
 class WebSocketClient implements WebSocketClientInterface
@@ -21,6 +23,20 @@ class WebSocketClient implements WebSocketClientInterface
      * @var AsyncTcpConnection Workerman 对应的连接维持对象
      */
     protected $connection;
+
+    /**
+     * 通过地址来创建一个 WebSocket 连接
+     *
+     * 支持 UriInterface 接口的 PSR 对象，也支持直接传入一个带 Scheme 的
+     *
+     * @param  string|UriInterface $address 地址
+     * @param  array               $header  请求头
+     * @throws Exception
+     */
+    public static function createFromAddress($address, array $header = []): WebSocketClientInterface
+    {
+        return (new self())->withRequest(HttpFactory::getInstance()->createRequest('GET', $address, $header));
+    }
 
     /**
      * @throws Exception
@@ -43,7 +59,7 @@ class WebSocketClient implements WebSocketClientInterface
         return $this->status <= 2;
     }
 
-    public function setMessageCallback(callable $callable): WebSocketClientInterface
+    public function setMessageCallback($callable): WebSocketClientInterface
     {
         $this->status = $this->connection->getStatus();
         $this->connection->onMessage = function (AsyncTcpConnection $con, $data) use ($callable) {
@@ -53,12 +69,12 @@ class WebSocketClient implements WebSocketClientInterface
         return $this;
     }
 
-    public function setCloseCallback(callable $callable): WebSocketClientInterface
+    public function setCloseCallback($callable): WebSocketClientInterface
     {
         $this->status = $this->connection->getStatus();
         $this->connection->onClose = function (AsyncTcpConnection $con) use ($callable) {
             $frame = FrameFactory::createCloseFrame(1000, '');
-            $callable($frame, $this);
+            $callable($frame, $this, $con->getStatus(false));
         };
         return $this;
     }

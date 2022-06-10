@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace OneBot\Driver;
 
+use Exception;
 use OneBot\Driver\Event\DriverInitEvent;
 use OneBot\Driver\Event\EventDispatcher;
 use OneBot\Driver\Event\EventProvider;
@@ -12,8 +13,10 @@ use OneBot\Driver\Event\Process\UserProcessStartEvent;
 use OneBot\Driver\Event\WebSocket\WebSocketCloseEvent;
 use OneBot\Driver\Event\WebSocket\WebSocketMessageEvent;
 use OneBot\Driver\Event\WebSocket\WebSocketOpenEvent;
+use OneBot\Driver\Interfaces\WebSocketClientInterface;
 use OneBot\Driver\Workerman\TopEventListener;
 use OneBot\Driver\Workerman\UserProcess;
+use OneBot\Driver\Workerman\WebSocketClient;
 use OneBot\Driver\Workerman\Worker;
 use OneBot\Http\HttpFactory;
 use OneBot\Http\WebSocket\FrameFactory;
@@ -36,7 +39,7 @@ class WorkermanDriver extends Driver
     /**
      * 通过传入的配置文件初始化 Driver 下面的协议相关事件
      */
-    public function initInternalDriverClasses(?array $http, ?array $http_webhook, ?array $ws, ?array $ws_reverse)
+    public function initInternalDriverClasses(?array $http, ?array $http_webhook, ?array $ws, ?array $ws_reverse): array
     {
         if ($ws !== null) {
             $this->ws_worker = new Worker('websocket://' . $ws['host'] . ':' . $ws['port']);
@@ -47,6 +50,7 @@ class WorkermanDriver extends Driver
             if ($http !== null) {
                 ob_logger()->warning('在 Workerman 驱动下不可以同时开启 http 和 websocket 模式，将优先开启 websocket');
             }
+            ob_logger()->info('已开启正向 WebSocket，监听地址 ' . $ws['host'] . ':' . $ws['port']);
         } elseif ($http !== null) {
             // 定义 Workerman 的 worker 和相关回调
             $this->http_worker = new Worker('http://' . $http['host'] . ':' . $http['port']);
@@ -54,13 +58,17 @@ class WorkermanDriver extends Driver
             Worker::$internal_running = true; // 加上这句就可以不需要必须输 start 命令才能启动了，直接启动
             $this->initHttpServer();
             $this->initServer($this->http_worker);
+            ob_logger()->info('已开启 HTTP，监听地址 ' . $http['host'] . ':' . $http['port']);
         }
         if ($http_webhook !== null) {
+            ob_logger()->info('已开启 HTTP Webhook，地址 ' . $http_webhook['url']);
             $this->http_webhook_config = $http_webhook;
         }
         if ($ws_reverse !== null) {
+            ob_logger()->info('已开启反向 WebSocket，地址 ' . $ws_reverse['url']);
             $this->ws_reverse_config = $ws_reverse;
         }
+        return [$this->http_worker !== null, $this->http_webhook_config !== null, $this->ws_worker !== null, $this->ws_reverse_config !== null];
     }
 
     /**
@@ -106,6 +114,11 @@ class WorkermanDriver extends Driver
                 }
             }
             // TODO: 编写纯 WS Reverse 连接下的逻辑，就是不启动 Server 的
+            if ($this->ws_worker === null && $this->http_worker === null) {
+                $worker = new Worker();
+                Worker::$internal_running = true; // 加上这句就可以不需要必须输 start 命令才能启动了，直接启动
+                $this->initServer($worker);
+            }
             // 启动 Workerman 下的 Worker 们
             Worker::runAll();
         } catch (Throwable $e) {
@@ -113,6 +126,9 @@ class WorkermanDriver extends Driver
         }
     }
 
+    /**
+     * {@inheritDoc}
+     */
     public function addTimer(int $ms, callable $callable, int $times = 1, array $arguments = []): int
     {
         $timer_count = 0;
@@ -128,9 +144,22 @@ class WorkermanDriver extends Driver
         }, $arguments);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     public function clearTimer(int $timer_id)
     {
         Timer::del($timer_id);
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * @throws Exception
+     */
+    public function initWebSocketClient($address, array $header = []): WebSocketClientInterface
+    {
+        return $this->ws_reverse_client = WebSocketClient::createFromAddress($address, $header);
     }
 
     /**
