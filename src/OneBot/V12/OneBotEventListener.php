@@ -145,7 +145,7 @@ class OneBotEventListener
                 try {
                     $client = $event->getDriver()->ws_reverse_client = $event->getDriver()->initWebSocketClient(
                         $event->getDriver()->ws_reverse_config['url'],
-                        $event->getDriver()->ws_reverse_config['custom_header'] ?? []
+                        $event->getDriver()->ws_reverse_config['custom_header'] ?? ['x-client-role' => 'qq']
                     );
                     ob_logger()->debug('启动ws_reverse_client');
                     $client->setMessageCallback([$this, 'onClientMessage']);
