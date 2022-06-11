@@ -6,34 +6,56 @@ namespace OneBot\V12;
 
 use MessagePack\Exception\UnpackingFailedException;
 use MessagePack\MessagePack;
-use OneBot\Driver\Event\HttpRequestEvent;
-use OneBot\Driver\Event\WebSocketOpenEvent;
+use OneBot\Driver\Event\DriverInitEvent;
+use OneBot\Driver\Event\EventDispatcher;
+use OneBot\Driver\Event\Http\HttpRequestEvent;
+use OneBot\Driver\Event\WebSocket\WebSocketMessageEvent;
+use OneBot\Driver\Event\WebSocket\WebSocketOpenEvent;
+use OneBot\Driver\Interfaces\WebSocketClientInterface;
+use OneBot\Driver\ProcessManager;
+use OneBot\Driver\Swoole\WebSocketClient;
+use OneBot\Http\Client\Exception\NetworkException;
 use OneBot\Http\HttpFactory;
+use OneBot\Http\WebSocket\CloseFrameInterface;
+use OneBot\Http\WebSocket\FrameInterface;
+use OneBot\Http\WebSocket\Opcode;
+use OneBot\Util\Singleton;
 use OneBot\Util\Utils;
 use OneBot\V12\Action\ActionResponse;
+use OneBot\V12\Action\DefaultActionHandler;
 use OneBot\V12\Exception\OneBotFailureException;
 use OneBot\V12\Object\ActionObject;
 use Throwable;
 
+/**
+ * OneBot 相关事件监听的集合
+ */
 class OneBotEventListener
 {
-    public static function onHttpRequest(HttpRequestEvent $event): void
+    use Singleton;
+
+    /**
+     * OneBot 相关的 HTTP 请求处理
+     *
+     * 先排除 Chrome 自动请求的 icon，直接返回 404；
+     * 然后对传入类型解析，分别交给 json 和 msgpack
+     */
+    public function onHttpRequest(HttpRequestEvent $event): void
     {
         try {
             $request = $event->getRequest();
-
+            // 排除掉 Chrome 浏览器的多余请求
             if ($request->getUri() == '/favicon.ico') {
                 $event->withResponse(HttpFactory::getInstance()->createResponse(404));
                 return;
             }
-
             if ($request->getHeaderLine('content-type') === 'application/json') {
-                $response_obj = self::processHttpRequest($request->getBody());
+                $response_obj = $this->processActionRequest($request->getBody());
                 $response = HttpFactory::getInstance()->createResponse(200, null, ['Content-Type' => 'application/json'], json_encode($response_obj, JSON_UNESCAPED_UNICODE));
                 $event->withResponse($response);
             } elseif ($request->getHeaderLine('content-type') === 'application/msgpack') {
-                $response_obj = self::processHttpRequest($request->getBody());
-                $response = HttpFactory::getInstance()->createResponse(200, null, ['Content-Type' => 'application/msgpack'], MessagePack::pack($response_obj));
+                $response_obj = $this->processActionRequest($request->getBody()->getContents(), ONEBOT_MSGPACK);
+                $response = HttpFactory::getInstance()->createResponse(200, null, ['Content-Type' => 'application/msgpack'], MessagePack::pack((array) $response_obj));
                 $event->withResponse($response);
             } else {
                 throw new OneBotFailureException(RetCode::BAD_REQUEST);
@@ -44,23 +66,157 @@ class OneBotEventListener
             $event->withResponse($response);
             ob_logger()->warning('OneBot Failure: ' . RetCode::getMessage($e->getRetCode()) . '(' . $e->getRetCode() . ') at ' . $e->getFile() . ':' . $e->getLine());
         } catch (Throwable $e) {
-            $response_obj = ActionResponse::create($action_obj->echo ?? null)->fail(RetCode::INTERNAL_HANDLER_ERROR);
+            $response_obj = ActionResponse::create($response_obj->echo ?? null)->fail(RetCode::INTERNAL_HANDLER_ERROR);
             $response = HttpFactory::getInstance()->createResponse(200, null, ['Content-Type' => 'application/json'], json_encode($response_obj, JSON_UNESCAPED_UNICODE));
             $event->withResponse($response);
             ob_logger()->error('Unhandled ' . get_class($e) . ': ' . $e->getMessage() . "\nStack trace:\n" . $e->getTraceAsString());
         }
     }
 
-    public static function onWebSocketOpen(WebSocketOpenEvent $event): void
+    /**
+     * OneBot 相关的 WebSocket 连接处理（仅限正向 WS）
+     */
+    public function onWebSocketOpen(WebSocketOpenEvent $event): void
     {
-        // TODO: Implement onWebSocketOpen() method.
+        // TODO: WebSocket 接入后的认证操作
     }
 
     /**
-     * @param  mixed                  $raw_data
-     * @throws OneBotFailureException
+     * OneBot 相关的 WebSocket 消息处理（正反 WS 都共用这里）
      */
-    private static function processHttpRequest($raw_data, int $type = ONEBOT_JSON): ActionResponse
+    public function onWebSocketMessage(WebSocketMessageEvent $event): void
+    {
+        try {
+            // 通过对 Frame 的 Opcode 进行判断，是否为 msgpack 数据，如果是文本的话，一律当 JSON 解析，如果是二进制，一律当 msgpack 解析
+            $response_obj = $this->processActionRequest($event->getFrame()->getData(), $event->getFrame()->getOpcode() === Opcode::BINARY ? ONEBOT_MSGPACK : ONEBOT_JSON);
+            $event->send(json_encode($response_obj));
+        } catch (OneBotFailureException $e) {
+            $response_obj = ActionResponse::create($e->getActionObject()->echo ?? null)->fail($e->getRetCode());
+            $event->send(json_encode($response_obj));
+            ob_logger()->warning('OneBot Failure: ' . RetCode::getMessage($e->getRetCode()) . '(' . $e->getRetCode() . ') at ' . $e->getFile() . ':' . $e->getLine());
+        } catch (Throwable $e) {
+            $response_obj = ActionResponse::create($response_obj->echo ?? null)->fail(RetCode::INTERNAL_HANDLER_ERROR);
+            $event->send(json_encode($response_obj));
+            ob_logger()->error('Unhandled ' . get_class($e) . ': ' . $e->getMessage() . "\nStack trace:\n" . $e->getTraceAsString());
+        }
+    }
+
+    /**
+     * OneBot 相关的 Worker 进程启动后逻辑的处理
+     */
+    public function onWorkerStart(): void
+    {
+        ob_logger()->debug('Worker #' . ProcessManager::getProcessId() . ' started');
+    }
+
+    /**
+     * OneBot 相关的 Worker 进程退出后逻辑的处理
+     */
+    public function onWorkerStop(): void
+    {
+        ob_logger()->debug('Worker #' . ProcessManager::getProcessId() . ' stopped');
+    }
+
+    /**
+     * OneBot 相关的 Manager 进程启动后的逻辑处理
+     */
+    public function onManagerStart(): void
+    {
+        ob_logger()->debug('Manager started');
+    }
+
+    /**
+     * OneBot 相关的 Manager 进程退出后的逻辑处理
+     */
+    public function onManagerStop(): void
+    {
+        ob_logger()->debug('Manager stopped');
+    }
+
+    /**
+     * OneBot 相关的 DriverInit 初始化函数
+     *
+     * 这里主要的部分还是用于初始化 ws_reverse 连接用的。
+     */
+    public function onDriverInit(DriverInitEvent $event)
+    {
+        if (!empty($event->getDriver()->ws_reverse_config)) {
+            $run = function () use ($event, &$run) {
+                try {
+                    $client = $event->getDriver()->ws_reverse_client = $event->getDriver()->initWebSocketClient(
+                        $event->getDriver()->ws_reverse_config['url'],
+                        $event->getDriver()->ws_reverse_config['custom_header'] ?? ['x-client-role' => 'qq']
+                    );
+                    ob_logger()->debug('启动ws_reverse_client');
+                    $client->setMessageCallback([$this, 'onClientMessage']);
+                    $client->setCloseCallback(function () use ($event, &$run) {
+                        ob_logger()->error('断开连接！');
+                        $event->getDriver()->addTimer(3000, $run);
+                    });
+                    $status = $client->connect();
+                    if ($status !== true) {
+                        ob_logger()->error('ws_reverse_client连接失败：无法建立连接');
+                        $event->getDriver()->addTimer(3000, $run);
+                    }
+                } catch (NetworkException $e) {
+                    ob_logger()->error('ws_reverse_client连接失败：' . $e->getMessage());
+                    $event->getDriver()->addTimer(3000, $run);
+                }
+            };
+            $event->getDriver()->addTimer(1, $run);
+        }
+    }
+
+    /**
+     * 此方法目前只用于在 First Worker 激活 DriverInitEvent 用
+     *
+     * 虽然此方法会在每个 Worker 执行，但内部限制到 #0 运行。
+     */
+    public function onFirstWorkerInit()
+    {
+        if (ProcessManager::getProcessId() === 0) {
+            EventDispatcher::dispatchWithHandler(new DriverInitEvent(OneBot::getInstance()->getDriver()));
+        }
+    }
+
+    /**
+     * 此方法的作用是将 ws_reverse，也就是本地发起的 ws client，处理收到的消息事件，转换并再次分发为 WebSocketMessageEvent。
+     *
+     * 也就是说，此处就是一个中转，最终分发了标准的 WS 消息事件，就是相当于调用此类上方的 onWebSocketMessage。
+     *
+     * @param FrameInterface           $frame  Frame 对象
+     * @param WebSocketClientInterface $client WebSocketClient 对象实例
+     */
+    public function onClientMessage(FrameInterface $frame, WebSocketClientInterface $client)
+    {
+        $event = new WebSocketMessageEvent($client->getFd(), $frame, function (int $fd, $data) use ($client) {
+            if ($data instanceof FrameInterface) {
+                return $client->push($data->getData());
+            }
+            return $client->push($data);
+        });
+        EventDispatcher::dispatchWithHandler($event);
+    }
+
+    /**
+     * 此方法的作用是将 ws client 关闭事件，转换并再次分发为 WebSocketCloseEvent
+     *
+     * @param CloseFrameInterface      $frame  CloseFrame 对象
+     * @param WebSocketClientInterface $client WebSocketClient 对象实例
+     * @param mixed                    $status
+     */
+    public function onClientClose(CloseFrameInterface $frame, WebSocketClientInterface $client, $status)
+    {
+        ob_logger()->error('断开连接！' . $status);
+    }
+
+    /**
+     * 调用 ActionHandler 已经实现了的动作，并将返回值返回到上层
+     *
+     * @param  mixed|string                                     $raw_data 传入的实际数据包，这里还是仅可传入 json 或 msgpack
+     * @throws Exception\OneBotException|OneBotFailureException 抛出 OneBot 异常，统一异常的 JSON 回复
+     */
+    private function processActionRequest($raw_data, int $type = ONEBOT_JSON): ActionResponse
     {
         switch ($type) {
             case ONEBOT_JSON:
@@ -76,7 +232,7 @@ class OneBotEventListener
                     if (!isset($msgpack['action'])) {
                         throw new OneBotFailureException(RetCode::BAD_REQUEST);
                     }
-                    $action_obj = $msgpack;
+                    $action_obj = ActionObject::fromArray($msgpack);
                 } catch (UnpackingFailedException $e) {
                     throw new OneBotFailureException(RetCode::BAD_REQUEST);
                 }
@@ -85,13 +241,17 @@ class OneBotEventListener
                 throw new OneBotFailureException(RetCode::INTERNAL_HANDLER_ERROR);
         }
 
-        // 解析调用action handler
-        $action_handler = OneBot::getInstance()->getActionHandler();
-        if ($action_handler === null) {
-            throw new OneBotFailureException(RetCode::INTERNAL_HANDLER_ERROR, $action_obj, '动作处理器不存在');
+        if (($handler = OneBot::getInstance()->getActionHandler($action_obj->action)) !== null) {
+            $response_obj = call_user_func($handler[0], $action_obj);
+        } else {
+            // 解析调用action handler
+            $base_handler = OneBot::getInstance()->getBaseActionHandler();
+            if ($base_handler === null) {
+                $base_handler = OneBot::getInstance()->setActionHandlerClass(DefaultActionHandler::class)->getBaseActionHandler();
+            }
+            $action_call_func = Utils::getActionFuncName($base_handler, $action_obj->action);
+            $response_obj = $base_handler->{$action_call_func}($action_obj);
         }
-        $action_call_func = Utils::getActionFuncName($action_handler, $action_obj->action);
-        $response_obj = $action_handler->{$action_call_func}($action_obj);
         return $response_obj instanceof ActionResponse ? $response_obj : ActionResponse::create($action_obj->echo)->fail(RetCode::BAD_HANDLER);
     }
 }

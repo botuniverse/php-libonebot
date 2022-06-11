@@ -7,9 +7,11 @@ namespace OneBot\Http;
 use InvalidArgumentException;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\StreamInterface;
+use function is_array;
 use function is_int;
 use function is_string;
 use function sprintf;
+use function strlen;
 
 class Response implements ResponseInterface
 {
@@ -55,6 +57,46 @@ class Response implements ResponseInterface
         }
 
         $this->protocol = $version;
+    }
+
+    public function __toString()
+    {
+        $reason = $this->reasonPhrase;
+        $body_len = strlen($this->getBody()->getContents());
+        if (empty($this->headers)) {
+            return "HTTP/{$this->protocol} {$this->statusCode} {$reason}\r\nContent-Type: text/html;charset=utf-8\r\nContent-Length: {$body_len}\r\nConnection: keep-alive\r\n\r\n{$this->getBody()->getContents()}";
+        }
+
+        $head = "HTTP/{$this->protocol} {$this->statusCode} {$reason}\r\n";
+        $headers = $this->headers;
+        foreach ($headers as $name => $value) {
+            if (is_array($value)) {
+                foreach ($value as $item) {
+                    $head .= "{$name}: {$item}\r\n";
+                }
+                continue;
+            }
+            $head .= "{$name}: {$value}\r\n";
+        }
+
+        if (!isset($headers['Connection'])) {
+            $head .= "Connection: keep-alive\r\n";
+        }
+
+        if (!isset($headers['Content-Type'])) {
+            $head .= "Content-Type: text/html;charset=utf-8\r\n";
+        } elseif ($headers['Content-Type'] === 'text/event-stream') {
+            return $head . $this->getBody()->getContents();
+        }
+
+        if (!isset($headers['Transfer-Encoding'])) {
+            $head .= "Content-Length: {$body_len}\r\n\r\n";
+        } else {
+            return "{$head}\r\n" . dechex($body_len) . "\r\n{$this->getBody()->getContents()}\r\n";
+        }
+
+        // The whole http package
+        return $head . $this->getBody()->getContents();
     }
 
     public function getStatusCode(): int

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace OneBot\Driver;
+namespace OneBot\Driver\Interfaces;
 
 use Psr\Http\Message\RequestInterface;
 
@@ -43,6 +43,13 @@ interface WebSocketClientInterface
      */
     public const STATUS_CLOSED = 8;
 
+    public static function createFromAddress($address, array $header = []): WebSocketClientInterface;
+
+    /**
+     * 通过 HTTP 请求对象创建 WebSocket 连接对象
+     *
+     * @param RequestInterface $request 请求对象
+     */
     public function withRequest(RequestInterface $request): WebSocketClientInterface;
 
     /**
@@ -50,11 +57,13 @@ interface WebSocketClientInterface
      */
     public function connect(): bool;
 
-    public function setMessageCallback(callable $callable): WebSocketClientInterface;
+    public function setMessageCallback($callable): WebSocketClientInterface;
 
-    public function setCloseCallback(callable $callable): WebSocketClientInterface;
+    public function setCloseCallback($callable): WebSocketClientInterface;
 
     public function send($data): bool;
 
     public function push($data): bool;
+
+    public function getFd(): int;
 }

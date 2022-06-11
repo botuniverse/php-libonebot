@@ -43,23 +43,24 @@ class CurlClient implements ClientInterface
 
     /**
      * @throws ClientException
-     * @return resource
+     * @return \CurlHandle|false|resource
      */
-    private function createHandle(RequestInterface $request)
+    private function createHandle(RequestInterface $request) /* @phpstan-ignore-line */
     {
-        $this->curl_options[CURLOPT_RETURNTRANSFER] = true; //返回的内容作为变量储存，而不是直接输出
-        $this->curl_options[CURLOPT_HEADER] = true; //获取结果返回时包含Header数据
-        $this->curl_options[CURLOPT_CUSTOMREQUEST] = $request->getMethod(); //设置请求方式
-        $this->curl_options[CURLOPT_URL] = (string) $request->getUri(); //设置请求的URL
-        $this->curl_options[CURLOPT_POSTFIELDS] = (string) $request->getBody(); //设置请求的Body
-        //设置请求头
+        $this->curl_options[CURLOPT_RETURNTRANSFER] = true; // 返回的内容作为变量储存，而不是直接输出
+        $this->curl_options[CURLOPT_HEADER] = true; // 获取结果返回时包含Header数据
+        $this->curl_options[CURLOPT_CUSTOMREQUEST] = $request->getMethod(); // 设置请求方式
+        $this->curl_options[CURLOPT_URL] = (string) $request->getUri(); // 设置请求的URL
+        $this->curl_options[CURLOPT_POSTFIELDS] = (string) $request->getBody(); // 设置请求的Body
+        // 设置请求头
         foreach ($request->getHeaders() as $name => $values) {
             foreach ($values as $value) {
                 $this->curl_options[CURLOPT_HTTPHEADER][] = sprintf('%s: %s', $name, $value);
             }
         }
 
-        $curl_handle = curl_init();
+        /** @var \CurlHandle|false|resource $curl_handle */
+        $curl_handle = curl_init(); /* @phpstan-ignore-line */
         if ($curl_handle === false) {
             throw new ClientException('Unable to initialize a cURL handle');
         }
@@ -73,14 +74,15 @@ class CurlClient implements ClientInterface
     }
 
     /**
-     * @param resource $handle
+     * @param \CurlHandle|int|resource $handle
      */
-    private function createResponse($handle): ResponseInterface
+    private function createResponse($handle): ResponseInterface /* @phpstan-ignore-line */
     {
         $status_code = curl_getinfo($handle, CURLINFO_RESPONSE_CODE);
         $response = HttpFactory::getInstance()->createResponse($status_code);
 
-        $message = curl_multi_getcontent($handle);
+        /** @var null|string $message */
+        $message = curl_multi_getcontent($handle); /* @phpstan-ignore-line */
         if ($message === null) {
             return $response;
         }

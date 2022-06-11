@@ -21,7 +21,7 @@ class StreamClient implements ClientInterface
 {
     private $config = [
         'remote_socket' => null,
-        'timeout' => 1000, //单位：毫秒
+        'timeout' => 1000, // 单位：毫秒
         'stream_context_options' => [],
         'stream_context_param' => [],
         'ssl' => null,
@@ -297,8 +297,9 @@ class StreamClient implements ClientInterface
         $read = [];
         $write = [$stream];
         $except = [];
-        @stream_select($read, $write, $except, 0);
-        if (!$write) {
+        $ss = @stream_select($read, $write, $except, 0);
+        // 这里做了个修改，原来下面是 !$write，但静态分析出来它是永久的false，所以改成了 !$ss
+        if (!$ss) {
             // The stream isn't writable, so we conclude that it probably really is
             // blocked and the underlying error was EAGAIN. Return 0 to indicate that
             // no data could be written yet.

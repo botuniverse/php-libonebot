@@ -22,8 +22,12 @@ $config = [
     ],
 
     'driver' => [
-        'class' => \OneBot\Driver\SwooleDriver::class,
-        'config' => [],
+        'class' => \OneBot\Driver\WorkermanDriver::class,
+        'config' => [
+            // 'driver_init_policy' => \OneBot\Driver\DriverInitPolicy::MULTI_PROCESS_INIT_IN_USER_PROCESS,
+            'init_in_user_process_block' => true,
+            'swoole_server_mode' => SWOOLE_BASE,
+        ],
     ],
 
     'communications' => [
@@ -36,7 +40,7 @@ $config = [
             'event_buffer_size' => 100,
         ],
         [
-            'type' => 'webhook',
+            'type' => 'http_webhook',
             'url' => 'https://example.com/webhook',
             'access_token' => '',
             'timeout' => 5,
@@ -48,15 +52,15 @@ $config = [
             'access_token' => '',
         ],
         [
-            'type' => 'websocket_reverse',
-            'url' => 'wss://127.0.0.1:2347',
+            'type' => 'ws_reverse',
+            'url' => 'ws://127.0.0.1:20001',
             'access_token' => '',
             'reconnect_interval' => 5,
         ],
     ],
 ];
 
-//OneBotBuilder::factory()
+// OneBotBuilder::factory()
 //    ->setName($config['name'])
 //    ->setPlatform($config['platform'])
 //    ->setSelfId($config['self_id'])
@@ -65,8 +69,11 @@ $config = [
 //    ->setCommunicationsProtocol($config['communications'])
 //    ->build();
 
-//OneBotBuilder::buildFromConfig(new Config($config));
+// OneBotBuilder::buildFromConfig(new Config($config));
 
 $ob = OneBotBuilder::buildFromArray($config);
-$ob->setActionHandler(\OneBot\V12\Action\ReplAction::class);
+$ob->setActionHandlerClass(\OneBot\V12\Action\ReplAction::class);
+$ob->addActionHandler('my_action', function (OneBot\V12\Object\ActionObject $obj) {
+    return \OneBot\V12\Action\ActionResponse::create($obj->echo)->ok(['hello' => 'world']);
+});
 $ob->run();

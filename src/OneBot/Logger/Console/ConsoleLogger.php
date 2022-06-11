@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace OneBot\Logger\Console;
 
-use OneBot\Util\MPUtils;
+use OneBot\Driver\ProcessManager;
 use Psr\Log\AbstractLogger;
 use Psr\Log\InvalidArgumentException;
 use Psr\Log\LogLevel;
@@ -16,7 +16,7 @@ class ConsoleLogger extends AbstractLogger
     public static $date_format = 'Y-m-d H:i:s';
 
     /**
-     * @var string[] 颜色表
+     * @var array 颜色表
      */
     protected static $styles = [
         LogLevel::EMERGENCY => ['blink', 'white', 'bg_bright_red'],
@@ -47,7 +47,7 @@ class ConsoleLogger extends AbstractLogger
     public function __construct($logLevel = LogLevel::INFO)
     {
         self::$logLevel = array_flip(self::$levels)[$logLevel];
-        ExceptionHandler::getInstance();
+        // ExceptionHandler::getInstance();
     }
 
     public function colorize($string, $level): string
@@ -61,16 +61,13 @@ class ConsoleLogger extends AbstractLogger
     {
         $log = "Stack trace:\n";
         $trace = debug_backtrace();
-        //array_shift($trace);
+        // array_shift($trace);
         foreach ($trace as $i => $t) {
             if (!isset($t['file'])) {
                 $t['file'] = 'unknown';
             }
             if (!isset($t['line'])) {
                 $t['line'] = 0;
-            }
-            if (!isset($t['function'])) {
-                $t['function'] = 'unknown';
             }
             $log .= "#{$i} {$t['file']}({$t['line']}): ";
             if (isset($t['object']) && is_object($t['object'])) {
@@ -107,7 +104,7 @@ class ConsoleLogger extends AbstractLogger
 
         $output = str_replace(
             ['%date%', '%level%', '%body%', '%process%'],
-            [date(self::$date_format), strtoupper(substr($level, 0, 4)), $message, MPUtils::getProcessLogName()],
+            [date(self::$date_format), strtoupper(substr($level, 0, 4)), $message, ProcessManager::getProcessLogName()],
             self::$format
         );
         $output = $this->interpolate($output, $context);

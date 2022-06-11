@@ -78,10 +78,16 @@ abstract class ActionBase
         return ActionResponse::create($action->echo)->fail(RetCode::UNSUPPORTED_ACTION);
     }
 
+    /**
+     * 内置的一个可以使用的 API，用来获取所有已注册成功的 action
+     */
     public function onGetSupportedActions(ActionObject $action): ActionResponse
     {
         $reflection = new ReflectionClass($this);
         $list = [];
+        foreach (OneBot::getInstance()->getActionHandlers() as $k => $v) {
+            $list[] = $k;
+        }
         foreach ($reflection->getMethods() as $v) {
             $sep = Utils::camelToSeparator($v->getName());
             if (strpos($sep, 'on_') === 0) {

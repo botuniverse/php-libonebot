@@ -5,8 +5,16 @@ declare(strict_types=1);
 namespace OneBot\V12;
 
 use OneBot\Driver\Driver;
-use OneBot\Driver\Event\Event;
+use OneBot\Driver\DriverInitPolicy;
+use OneBot\Driver\Event\DriverInitEvent;
 use OneBot\Driver\Event\EventProvider;
+use OneBot\Driver\Event\Http\HttpRequestEvent;
+use OneBot\Driver\Event\Process\ManagerStartEvent;
+use OneBot\Driver\Event\Process\ManagerStopEvent;
+use OneBot\Driver\Event\Process\WorkerStartEvent;
+use OneBot\Driver\Event\Process\WorkerStopEvent;
+use OneBot\Driver\Event\WebSocket\WebSocketMessageEvent;
+use OneBot\Driver\Event\WebSocket\WebSocketOpenEvent;
 use OneBot\Util\Singleton;
 use OneBot\V12\Action\ActionBase;
 use OneBot\V12\Config\ConfigInterface;
@@ -42,14 +50,17 @@ class OneBot
     private $driver;
 
     /** @var null|ActionBase 动作处理器 */
-    private $action_handler;
+    private $base_action_handler;
+
+    /** @var array 动作处理回调们 */
+    private $action_handlers = [];
 
     /**
      * 创建一个 OneBot 实例
      */
     public function __construct(ConfigInterface $config)
     {
-        if (isset(self::$instance)) {
+        if (self::$instance !== null) {
             throw new RuntimeException('只能有一个OneBot实例！');
         }
 
@@ -75,7 +86,8 @@ class OneBot
     }
 
     /**
-     * 获取实现名称
+     * 返回 OneBot 实现的名称
+     * @see https://12.onebot.dev/onebotrpc/data-protocol/event/
      */
     public function getImplementName(): string
     {
@@ -83,7 +95,8 @@ class OneBot
     }
 
     /**
-     * 获取实现平台
+     * 返回平台名称
+     * @see https://12.onebot.dev/onebotrpc/data-protocol/event/
      */
     public function getPlatform(): string
     {
@@ -91,7 +104,8 @@ class OneBot
     }
 
     /**
-     * 获取机器人 ID
+     * 返回 OneBot 实现自身的 ID
+     * @see https://12.onebot.dev/onebotrpc/data-protocol/event/
      */
     public function getSelfId(): string
     {
@@ -99,9 +113,9 @@ class OneBot
     }
 
     /**
-     * 获取驱动实例
+     * 获取 Driver
      */
-    public function getDriver(): Driver
+    public function getDriver(): ?Driver
     {
         return $this->driver;
     }
@@ -117,24 +131,23 @@ class OneBot
     /**
      * 获取动作处理器实例
      */
-    public function getActionHandler(): ?ActionBase
+    public function getBaseActionHandler(): ?ActionBase
     {
-        return $this->action_handler;
+        return $this->base_action_handler;
     }
 
     /**
-     * 设置动作处理器
+     * 设置动作处理器，用于处理 Action 的类（继承自 ActionBase 的类）
      *
-     * @param ActionBase|string $handler 动作处理器
-     *
+     * @param  ActionBase|string $handler 动作处理器
      * @throws OneBotException
      */
-    public function setActionHandler($handler): OneBot
+    public function setActionHandlerClass($handler): OneBot
     {
         if (is_string($handler) && is_a($handler, ActionBase::class, true)) {
-            $this->action_handler = new $handler();
+            $this->base_action_handler = new $handler();
         } elseif ($handler instanceof ActionBase) {
-            $this->action_handler = $handler;
+            $this->base_action_handler = $handler;
         } else {
             throw new OneBotException('CoreActionHandler必须extends ' . ActionBase::class);
         }
@@ -142,28 +155,82 @@ class OneBot
     }
 
     /**
+     * 动态插入动作处理器
+     *
+     * @return $this
+     */
+    public function addActionHandler(string $action, callable $handler, array $options = []): OneBot
+    {
+        $this->action_handlers[$action] = [$handler, $options];
+        return $this;
+    }
+
+    /**
+     * 获取动态插入的动作处理器
+     *
+     * @return null|mixed
+     */
+    public function getActionHandler(string $action)
+    {
+        return $this->action_handlers[$action] ?? null;
+    }
+
+    /**
+     * 获取所有动态插入的动作处理器
+     */
+    public function getActionHandlers(): array
+    {
+        return $this->action_handlers;
+    }
+
+    /**
      * 触发 OneBot 事件
+     * @todo 该做的东西
      */
     public function dispatchEvent(OneBotEvent $event): void
     {
     }
 
     /**
-     * 运行服务
+     * 运行 OneBot 及 Driver 服务
      */
     public function run(): void
     {
         $this->driver->initDriverProtocols($this->config->getEnabledCommunications());
-        $this->registerEventListeners();
+        $this->addOneBotEvent();
+        // Driver::setLogger($this->logger);
         $this->driver->run();
     }
 
     /**
-     * 注册事件监听器
+     * 这里是 OneBot 实现本身添加到 Driver 的事件
+     * 包含 HTTP 服务器接收 Request 和 WebSocket 服务器收到连接的事件
+     * 对应事件 id 为 http.request, websocket.open
+     * 如果你要二次开发或者添加新的事件，可以先继承此类，然后重写此方法
      */
-    private function registerEventListeners(): void
+    protected function addOneBotEvent()
     {
-        EventProvider::addEventListener(Event::EVENT_HTTP_REQUEST, [OneBotEventListener::class, 'onHttpRequest']);
-        EventProvider::addEventListener(Event::EVENT_WEBSOCKET_OPEN, [OneBotEventListener::class, 'onWebSocketOpen']);
+        if (!defined('ONEBOT_EVENT_LEVEL')) {
+            define('ONEBOT_EVENT_LEVEL', 15);
+        }
+        // 监听 HTTP 服务器收到的请求事件
+        EventProvider::addEventListener(HttpRequestEvent::getName(), [OneBotEventListener::getInstance(), 'onHttpRequest'], ONEBOT_EVENT_LEVEL);
+        // 监听 WS 服务器相关事件
+        EventProvider::addEventListener(WebSocketOpenEvent::getName(), [OneBotEventListener::getInstance(), 'onWebSocketOpen'], ONEBOT_EVENT_LEVEL);
+        EventProvider::addEventListener(WebSocketMessageEvent::getName(), [OneBotEventListener::getInstance(), 'onWebSocketMessage'], ONEBOT_EVENT_LEVEL);
+        // 监听 Worker 进程退出或启动的事件
+        EventProvider::addEventListener(WorkerStartEvent::getName(), [OneBotEventListener::getInstance(), 'onWorkerStart'], ONEBOT_EVENT_LEVEL);
+        EventProvider::addEventListener(WorkerStopEvent::getName(), [OneBotEventListener::getInstance(), 'onWorkerStop'], ONEBOT_EVENT_LEVEL);
+        // 监听 Manager 进程退出或启动事件（仅限 Swoole 驱动下的 SWOOLE_PROCESS 模式才能触发）
+        EventProvider::addEventListener(ManagerStartEvent::getName(), [OneBotEventListener::getInstance(), 'onManagerStart'], ONEBOT_EVENT_LEVEL);
+        EventProvider::addEventListener(ManagerStopEvent::getName(), [OneBotEventListener::getInstance(), 'onManagerStop'], ONEBOT_EVENT_LEVEL);
+        // 监听单进程无 Server 模式的相关事件（如纯 Client 情况下的启动模式）
+        EventProvider::addEventListener(DriverInitEvent::getName(), [OneBotEventListener::getInstance(), 'onDriverInit'], ONEBOT_EVENT_LEVEL);
+        // 如果Init策略是FirstWorker，则给WorkerStart添加添加相关事件，让WorkerStart事件（#0）中再套娃执行DriverInit事件
+        switch ($this->driver->getDriverInitPolicy()) {
+            case DriverInitPolicy::MULTI_PROCESS_INIT_IN_FIRST_WORKER:
+                EventProvider::addEventListener(WorkerStartEvent::getName(), [OneBotEventListener::getInstance(), 'onFirstWorkerInit'], ONEBOT_EVENT_LEVEL);
+                break;
+        }
     }
 }

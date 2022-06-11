@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace OneBot\Util;
+namespace OneBot\Driver;
 
-class MPUtils
+class ProcessManager
 {
     /** @var int 进程类型 */
     private static $process_type = ONEBOT_PROCESS_MASTER;
@@ -56,5 +56,21 @@ class MPUtils
             default:
                 return '';
         }
+    }
+
+    /**
+     * 检查系统环境是否支持多进程模式
+     */
+    public static function isSupportedMultiProcess(): bool
+    {
+        if (DIRECTORY_SEPARATOR === '\\' && Driver::getActiveDriverClass() === WorkermanDriver::class) {
+            // 判断是不是 Windows 下运行的，如果是 Windows 下，则不支持
+            return false;
+        }
+        if (Driver::getActiveDriverClass() === WorkermanDriver::class && !extension_loaded('pcntl')) {
+            // 如果是 Workerman 下运行，则判断是否支持 pcntl 扩展
+            return false;
+        }
+        return true;
     }
 }

@@ -2,7 +2,9 @@
 
 declare(strict_types=1);
 
-namespace OneBot\Driver\Event;
+namespace OneBot\Driver\Event\WebSocket;
+
+use OneBot\Driver\Event\DriverEvent;
 
 class WebSocketCloseEvent extends DriverEvent
 {
@@ -10,7 +12,11 @@ class WebSocketCloseEvent extends DriverEvent
 
     public function __construct(int $fd)
     {
-        parent::__construct(Event::EVENT_WEBSOCKET_CLOSE);
         $this->fd = $fd;
+    }
+
+    public function getFd(): int
+    {
+        return $this->fd;
     }
 }

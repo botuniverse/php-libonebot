@@ -108,7 +108,7 @@ class Stream implements StreamInterface
     /**
      * Creates a new PSR-7 stream.
      *
-     * @param resource|StreamInterface|string $body
+     * @param mixed|resource|StreamInterface|string $body
      *
      * @throws InvalidArgumentException
      */
