@@ -4,7 +4,12 @@ declare(strict_types=1);
 
 namespace OneBot\V12\Object;
 
-class MessageSegment
+use ArrayIterator;
+use IteratorAggregate;
+use JsonSerializable;
+use ReturnTypeWillChange;
+
+class MessageSegment implements JsonSerializable, IteratorAggregate
 {
     /** @var string 类型 */
     public $type;
@@ -32,5 +37,22 @@ class MessageSegment
     public static function createFromString(string $message): MessageSegment
     {
         return new self('text', ['text' => $message]);
+    }
+
+    public function jsonSerialize(): array
+    {
+        return [
+            'type' => $this->type,
+            'data' => $this->data,
+        ];
+    }
+
+    /**
+     * @noinspection PhpLanguageLevelInspection
+     */
+    #[ReturnTypeWillChange]
+    public function getIterator(): ArrayIterator
+    {
+        return new ArrayIterator($this);
     }
 }
