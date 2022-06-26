@@ -200,10 +200,17 @@ abstract class Driver
     /**
      * 初始化驱动的 WS Reverse Client 连接
      *
-     * @param string|UriInterface $address 目标地址
-     * @param array               $header  请求头
+     * @param resource $fd       文件描述符或资源 int
+     * @param callable $callable 回调函数
      */
-    abstract public function initWebSocketClient($address, array $header = []): WebSocketClientInterface;
+    abstract public function addReadEvent($fd, callable $callable);
+
+    /**
+     * 驱动必须提供一个可以删除对应驱动 EventLoop 的读接口
+     *
+     * @param resource $fd 文件描述符或资源 int
+     */
+    abstract public function delReadEvent($fd);
 
     /**
      * 通过解析的配置，让 Driver 初始化不同的通信方式
