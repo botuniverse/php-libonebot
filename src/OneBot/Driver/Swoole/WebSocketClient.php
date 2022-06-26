@@ -117,6 +117,12 @@ class WebSocketClient implements WebSocketClientInterface
         return false;
     }
 
+    public function reconnect(): bool
+    {
+        $this->status = self::STATUS_INITIAL;
+        return $this->withRequest($this->request)->connect();
+    }
+
     public function setMessageCallback($callable): WebSocketClientInterface
     {
         $this->message_func = $callable;
