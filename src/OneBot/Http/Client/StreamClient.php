@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace OneBot\Http\Client;
 
 use Exception;
+use OneBot\Driver\Driver;
+use OneBot\Driver\Workerman\Worker;
 use OneBot\Http\Client\Exception\NetworkException;
 use OneBot\Http\Client\Exception\RequestException;
 use OneBot\Http\Response;
@@ -12,12 +14,14 @@ use OneBot\Http\Stream;
 use Psr\Http\Client\ClientInterface;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
+use Swoole\Event;
+use Workerman\Events\EventInterface;
 
 /**
  * Stream HTTP Client based on PSR-18.
  * @see https://github.com/php-http/socket-client
  */
-class StreamClient implements ClientInterface
+class StreamClient extends ClientBase implements ClientInterface, AsyncClientInterface
 {
     private $config = [
         'remote_socket' => null,
@@ -36,8 +40,13 @@ class StreamClient implements ClientInterface
      */
     public function __construct($config = [])
     {
-        $this->config = empty($config) ? $this->config : $config;
+        $this->config = array_merge($this->config, $config);
         $this->config['stream_context'] = stream_context_create($this->config['stream_context_options'], $this->config['stream_context_param']);
+    }
+
+    public function setTimeout(int $timeout): void
+    {
+        $this->config['timeout'] = $timeout;
     }
 
     /**
@@ -62,6 +71,7 @@ class StreamClient implements ClientInterface
         }
 
         $socket = $this->createSocket($request, $remote, $useSsl);
+        stream_set_timeout($socket, (int) floor($this->config['timeout'] / 1000), $this->config['timeout'] % 1000);
 
         try {
             $this->writeRequest($socket, $request, $this->config['write_buffer_size']);
@@ -72,6 +82,48 @@ class StreamClient implements ClientInterface
         }
 
         return $response;
+    }
+
+    public function sendRequestAsync(RequestInterface $request, callable $success_callback, callable $error_callback)
+    {
+        $remote = $this->config['remote_socket'];
+        $useSsl = $this->config['ssl'];
+
+        if (!$request->hasHeader('Connection')) {
+            $request = $request->withHeader('Connection', 'close');
+        }
+
+        if ($remote === null) {
+            $remote = $this->determineRemoteFromRequest($request);
+        }
+
+        if ($useSsl === null) {
+            $useSsl = ($request->getUri()->getScheme() === 'https');
+        }
+
+        $socket = $this->createSocket($request, $remote, $useSsl);
+        if (Driver::getActiveDriverClass() === 'workerman') {
+            stream_set_blocking($socket, false);
+            Worker::$globalEvent->add($socket, EventInterface::EV_WRITE, function ($socket) use ($request, $success_callback) {
+                $this->writeRequest($socket, $request, $this->config['write_buffer_size']);
+                Worker::$globalEvent->del($socket, EventInterface::EV_WRITE);
+                Worker::$globalEvent->add($socket, EventInterface::EV_READ, function ($socket) use ($request, $success_callback) {
+                    $response = $this->readResponse($request, $socket);
+                    $success_callback($response);
+                    Worker::$globalEvent->del($socket, EventInterface::EV_READ);
+                });
+            });
+        } elseif (Driver::getActiveDriverClass() === 'swoole') {
+            Event::add($socket, null, function ($socket) use ($request, $success_callback) {
+                $this->writeRequest($socket, $request, $this->config['write_buffer_size']);
+                Event::del($socket);
+                Event::add($socket, function ($socket) use ($request, $success_callback) {
+                    $response = $this->readResponse($request, $socket);
+                    $success_callback($response);
+                    Event::del($socket);
+                });
+            });
+        }
     }
 
     /**
@@ -97,8 +149,6 @@ class StreamClient implements ClientInterface
 
             throw new NetworkException($request, $errMsg);
         }
-
-        stream_set_timeout($socket, (int) floor($this->config['timeout'] / 1000), $this->config['timeout'] % 1000);
 
         if ($useSsl && @stream_socket_enable_crypto($socket, true, $this->config['ssl_method']) === false) {
             throw new NetworkException($request, sprintf('Cannot enable tls: %s', error_get_last()['message']));
