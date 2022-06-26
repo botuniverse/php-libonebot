@@ -15,11 +15,16 @@ use OneBot\Driver\Event\Process\WorkerStartEvent;
 use OneBot\Driver\Event\Process\WorkerStopEvent;
 use OneBot\Driver\Event\WebSocket\WebSocketMessageEvent;
 use OneBot\Driver\Event\WebSocket\WebSocketOpenEvent;
+use OneBot\Http\WebSocket\FrameFactory;
+use OneBot\Util\ObjectQueue;
 use OneBot\Util\Singleton;
 use OneBot\V12\Action\ActionBase;
 use OneBot\V12\Config\ConfigInterface;
 use OneBot\V12\Exception\OneBotException;
+use OneBot\V12\Object\Event\Meta\MetaEvent;
 use OneBot\V12\Object\Event\OneBotEvent;
+use Psr\Http\Message\RequestInterface;
+use Psr\Http\Message\ResponseInterface;
 use Psr\Log\LoggerInterface;
 use RuntimeException;
 
@@ -184,11 +189,63 @@ class OneBot
     }
 
     /**
-     * 触发 OneBot 事件
-     * @todo 该做的东西
+     * 获取 HTTP Webhook 及反向 WebSocket 连接时请求的 Headers
+     *
+     * $addition 参数为自定义部分，将会被合并到头内
+     */
+    public function getRequestHeaders(array $additions = [], string $access_token = ''): array
+    {
+        $default_headers = [
+            'User-Agent' => 'OneBot/12 (' . $this->getPlatform() . ') ' . $this->getImplementName() . '/' . $this->getAppVersion(),
+            'X-OneBot-Version' => '12',
+            'X-Impl' => $this->getImplementName(),
+            'X-Platform' => $this->getPlatform(),
+            'X-Self-ID' => $this->getSelfId(),
+        ];
+        if ($access_token !== '') {
+            $default_headers['Authorization'] = 'Bearer ' . $access_token;
+        }
+        return array_merge($default_headers, $additions);
+    }
+
+    /**
+     * 获取 OneBot 实现的版本
+     *
+     * 通过 ONEBOT_APP_VERSION 常量定义，需自行在项目内 define 。
+     */
+    public function getAppVersion(): string
+    {
+        return defined('ONEBOT_APP_VERSION') ? ONEBOT_APP_VERSION : ONEBOT_LIBOB_VERSION;
+    }
+
+    /**
+     * 触发 OneBot 事件，通过已知的方法发送事件
+     *
+     * 此方法默认会将 MetaEvent 排除，如果需要分发 MetaEvent 请自行获取 Driver 的 Socket 进行发送。
+     * 首先会对 HTTP Webhook 进行分发，并优先采用异步发送，如果没有支持异步的 Client，则会采用同步发送。
+     * 然后对所有连接到正向 WS 的客户端挨个发送一遍。
+     * 最后对所有连接到反向 WS 的发送一遍。
+     *
+     * @param OneBotEvent $event 事件对象
      */
     public function dispatchEvent(OneBotEvent $event): void
     {
+        ob_logger()->info('Dispatching event: ' . $event->type);
+        if (!($event instanceof MetaEvent)) { // 排除 meta_event，要不然队列速度爆炸
+            ObjectQueue::enqueue('ob_event', $event);
+        }
+        foreach ($this->driver->getHttpWebhookSockets() as $socket) {
+            $socket->post(json_encode($event->jsonSerialize()), $this->getRequestHeaders(), function (ResponseInterface $response) {
+                // TODO：编写 HTTP Webhook 响应的处理逻辑
+            }, function (RequestInterface $request) {});
+        }
+        $frame_str = FrameFactory::createTextFrame(json_encode($event->jsonSerialize())); // 创建文本帧
+        foreach ($this->driver->getWSServerSockets() as $socket) {
+            $socket->sendAll($frame_str);
+        }
+        foreach ($this->driver->getWSReverseSockets() as $socket) {
+            $socket->send($frame_str);
+        }
     }
 
     /**
@@ -198,7 +255,8 @@ class OneBot
     {
         $this->driver->initDriverProtocols($this->config->getEnabledCommunications());
         $this->addOneBotEvent();
-        // Driver::setLogger($this->logger);
+
+        ObjectQueue::limit('ob_event', 99999);
         $this->driver->run();
     }
 
