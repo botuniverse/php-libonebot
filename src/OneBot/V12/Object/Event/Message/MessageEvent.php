@@ -49,6 +49,7 @@ abstract class MessageEvent extends OneBotEvent
         parent::__construct('message', $detail_type, '', $time);
 
         if (is_string($message)) {
+            $this->alt_message = $message;
             $message = MessageSegment::createFromString($message);
         }
 
