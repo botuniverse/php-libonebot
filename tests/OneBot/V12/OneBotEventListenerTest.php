@@ -8,7 +8,7 @@ use MessagePack\MessagePack;
 use OneBot\Driver\Event\Http\HttpRequestEvent;
 use OneBot\Http\HttpFactory;
 use OneBot\V12\Action\ActionResponse;
-use OneBot\V12\Object\ActionObject;
+use OneBot\V12\Object\Action;
 use OneBot\V12\OneBot;
 use OneBot\V12\OneBotEventListener;
 use OneBot\V12\RetCode;
@@ -22,7 +22,7 @@ class OneBotEventListenerTest extends TestCase
 {
     public static function setUpBeforeClass(): void
     {
-        OneBot::getInstance()->addActionHandler('test', function (ActionObject $obj) {
+        OneBot::getInstance()->addActionHandler('test', function (Action $obj) {
             return ActionResponse::create($obj->echo)->ok(['hello' => 'world']);
         });
     }

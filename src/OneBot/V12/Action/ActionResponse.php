@@ -51,7 +51,6 @@ class ActionResponse implements JsonSerializable, IteratorAggregate
     }
 
     /**
-     * @return ArrayIterator
      * @noinspection PhpLanguageLevelInspection
      */
     #[ReturnTypeWillChange]
