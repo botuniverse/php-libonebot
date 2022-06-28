@@ -13,7 +13,6 @@ use OneBot\Driver\Event\WebSocket\WebSocketMessageEvent;
 use OneBot\Driver\Event\WebSocket\WebSocketOpenEvent;
 use OneBot\Driver\Interfaces\WebSocketClientInterface;
 use OneBot\Driver\ProcessManager;
-use OneBot\Driver\Swoole\WebSocketClient;
 use OneBot\Http\Client\Exception\NetworkException;
 use OneBot\Http\HttpFactory;
 use OneBot\Http\WebSocket\CloseFrameInterface;
@@ -24,7 +23,7 @@ use OneBot\Util\Utils;
 use OneBot\V12\Action\ActionResponse;
 use OneBot\V12\Action\DefaultActionHandler;
 use OneBot\V12\Exception\OneBotFailureException;
-use OneBot\V12\Object\ActionObject;
+use OneBot\V12\Object\Action;
 use Throwable;
 
 /**
@@ -47,6 +46,10 @@ class OneBotEventListener
             // 排除掉 Chrome 浏览器的多余请求
             if ($request->getUri() == '/favicon.ico') {
                 $event->withResponse(HttpFactory::getInstance()->createResponse(404));
+                return;
+            }
+            if ($request->getMethod() === 'GET') {
+                $event->withResponse(HttpFactory::getInstance()->createResponse(200, 'OK', [], 'Hello OneBot!'));
                 return;
             }
             if ($request->getHeaderLine('content-type') === 'application/json') {
@@ -140,30 +143,34 @@ class OneBotEventListener
      */
     public function onDriverInit(DriverInitEvent $event)
     {
-        if (!empty($event->getDriver()->ws_reverse_config)) {
-            $run = function () use ($event, &$run) {
+        ob_logger()->info('初始化 ws reverse 连接 ing');
+        $event->getDriver()->ws_reverse_client = $event->getDriver()->initWSReverseClients();
+        foreach ($event->getDriver()->getWSReverseSockets() as $k => $v) {
+            $reconnect = function () use ($v, $event, &$reconnect) {
                 try {
-                    $client = $event->getDriver()->ws_reverse_client = $event->getDriver()->initWebSocketClient(
-                        $event->getDriver()->ws_reverse_config['url'],
-                        $event->getDriver()->ws_reverse_config['custom_header'] ?? ['x-client-role' => 'qq']
-                    );
-                    ob_logger()->debug('启动ws_reverse_client');
-                    $client->setMessageCallback([$this, 'onClientMessage']);
-                    $client->setCloseCallback(function () use ($event, &$run) {
-                        ob_logger()->error('断开连接！');
-                        $event->getDriver()->addTimer(3000, $run);
-                    });
-                    $status = $client->connect();
-                    if ($status !== true) {
+                    if ($v->getClient()->reconnect() !== true) {
                         ob_logger()->error('ws_reverse_client连接失败：无法建立连接');
-                        $event->getDriver()->addTimer(3000, $run);
+                        $event->getDriver()->addTimer($v->getReconnectInterval(), $reconnect);
                     }
                 } catch (NetworkException $e) {
                     ob_logger()->error('ws_reverse_client连接失败：' . $e->getMessage());
-                    $event->getDriver()->addTimer(3000, $run);
+                    $event->getDriver()->addTimer($v->getReconnectInterval(), $reconnect);
                 }
             };
-            $event->getDriver()->addTimer(1, $run);
+            $v->getClient()->setMessageCallback([$this, 'onClientMessage']);
+            $v->getClient()->setCloseCallback(function () use ($event, $reconnect, $v) {
+                ob_logger()->error('WS Reverse 服务端断开连接！');
+                $event->getDriver()->addTimer($v->getReconnectInterval(), $reconnect);
+            });
+            try {
+                if ($v->getClient()->connect() !== true) {
+                    ob_logger()->error('ws_reverse_client连接失败：首次无法建立连接');
+                    $event->getDriver()->addTimer($v->getReconnectInterval(), $reconnect);
+                }
+            } catch (NetworkException $e) {
+                ob_logger()->error('ws_reverse_client连接失败：' . $e->getMessage());
+                $event->getDriver()->addTimer($v->getReconnectInterval(), $reconnect);
+            }
         }
     }
 
@@ -224,7 +231,7 @@ class OneBotEventListener
                 if (!isset($json['action'])) {
                     throw new OneBotFailureException(RetCode::BAD_REQUEST);
                 }
-                $action_obj = new ActionObject($json['action'], $json['params'] ?? [], $json['echo'] ?? null);
+                $action_obj = new Action($json['action'], $json['params'] ?? [], $json['echo'] ?? null);
                 break;
             case ONEBOT_MSGPACK:
                 try {
@@ -232,7 +239,7 @@ class OneBotEventListener
                     if (!isset($msgpack['action'])) {
                         throw new OneBotFailureException(RetCode::BAD_REQUEST);
                     }
-                    $action_obj = ActionObject::fromArray($msgpack);
+                    $action_obj = Action::fromArray($msgpack);
                 } catch (UnpackingFailedException $e) {
                     throw new OneBotFailureException(RetCode::BAD_REQUEST);
                 }
@@ -241,6 +248,7 @@ class OneBotEventListener
                 throw new OneBotFailureException(RetCode::INTERNAL_HANDLER_ERROR);
         }
 
+        Utils::validateParamsByAction($action_obj, ['detail_type' => true]);
         if (($handler = OneBot::getInstance()->getActionHandler($action_obj->action)) !== null) {
             $response_obj = call_user_func($handler[0], $action_obj);
         } else {

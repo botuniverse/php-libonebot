@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace OneBot\V12\Exception;
 
 use Exception;
-use OneBot\V12\Object\ActionObject;
+use OneBot\V12\Object\Action;
 use OneBot\V12\RetCode;
 
 class OneBotFailureException extends OneBotException
@@ -13,13 +13,13 @@ class OneBotFailureException extends OneBotException
     private $retcode;
 
     /**
-     * @var null|ActionObject
+     * @var null|Action
      */
     private $action_object;
 
     public function __construct(
         $retcode = RetCode::INTERNAL_HANDLER_ERROR,
-        ?ActionObject $action_object = null,
+        ?Action $action_object = null,
         $message = null,
         Exception $previous = null
     ) {
@@ -34,7 +34,7 @@ class OneBotFailureException extends OneBotException
         return $this->retcode;
     }
 
-    public function getActionObject(): ?ActionObject
+    public function getActionObject(): ?Action
     {
         return $this->action_object;
     }

@@ -4,17 +4,20 @@ declare(strict_types=1);
 
 namespace OneBot\V12\Object\Event;
 
+use ArrayIterator;
 use DateTimeInterface;
+use IteratorAggregate;
 use JsonSerializable;
 use OneBot\V12\Exception\OneBotException;
 use OneBot\V12\OneBot;
+use ReturnTypeWillChange;
 
 /**
  * OneBot 事件
  *
  * @internal
  */
-abstract class OneBotEvent implements JsonSerializable
+abstract class OneBotEvent implements JsonSerializable, IteratorAggregate
 {
     /** @var string 事件ID */
     public $id;
@@ -137,15 +140,25 @@ abstract class OneBotEvent implements JsonSerializable
 
     public function jsonSerialize(): array
     {
-        return array_merge([
-            'id' => $this->id,
-            'impl' => $this->impl,
-            'platform' => $this->platform,
-            'self_id' => $this->self_id,
-            'time' => $this->time,
-            'type' => $this->type,
-            'detail_type' => empty($this->extended_data) ? $this->detail_type : "{$this->impl}.{$this->detail_type}",
-            'sub_type' => $this->sub_type,
-        ], $this->extended_data);
+        $data = [];
+        foreach ($this as $k => $v) {
+            if ($k === 'extended_data') {
+                continue;
+            }
+            $data[$k] = $v;
+            if ($k === 'detail_type') {
+                $data[$k] = empty($this->extended_data) ? $this->detail_type : "{$this->impl}.{$this->detail_type}";
+            }
+        }
+        return $data;
+    }
+
+    /**
+     * @noinspection PhpLanguageLevelInspection
+     */
+    #[ReturnTypeWillChange]
+    public function getIterator(): ArrayIterator
+    {
+        return new ArrayIterator($this);
     }
 }

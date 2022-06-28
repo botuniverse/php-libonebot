@@ -8,67 +8,58 @@ use Exception;
 use OneBot\Driver\Event\DriverInitEvent;
 use OneBot\Driver\Event\EventDispatcher;
 use OneBot\Driver\Event\EventProvider;
-use OneBot\Driver\Event\Http\HttpRequestEvent;
 use OneBot\Driver\Event\Process\UserProcessStartEvent;
-use OneBot\Driver\Event\WebSocket\WebSocketCloseEvent;
-use OneBot\Driver\Event\WebSocket\WebSocketMessageEvent;
-use OneBot\Driver\Event\WebSocket\WebSocketOpenEvent;
-use OneBot\Driver\Interfaces\WebSocketClientInterface;
+use OneBot\Driver\Event\Process\WorkerStartEvent;
+use OneBot\Driver\Workerman\Socket\HttpServerSocket;
+use OneBot\Driver\Workerman\Socket\HttpWebhookSocket;
+use OneBot\Driver\Workerman\Socket\WSReverseSocket;
+use OneBot\Driver\Workerman\Socket\WSServerSocket;
 use OneBot\Driver\Workerman\TopEventListener;
 use OneBot\Driver\Workerman\UserProcess;
 use OneBot\Driver\Workerman\WebSocketClient;
 use OneBot\Driver\Workerman\Worker;
-use OneBot\Http\HttpFactory;
-use OneBot\Http\WebSocket\FrameFactory;
-use OneBot\Http\WebSocket\FrameInterface;
-use OneBot\Http\WebSocket\Opcode;
+use OneBot\Http\Client\CurlClient;
+use OneBot\Http\Client\StreamClient;
+use OneBot\Util\Singleton;
 use Throwable;
-use Workerman\Connection\TcpConnection;
-use Workerman\Protocols\Http\Request;
-use Workerman\Protocols\Http\Response as WorkermanResponse;
+use Workerman\Events\EventInterface;
 use Workerman\Timer;
 
 class WorkermanDriver extends Driver
 {
-    /** @var Worker HTTP Worker */
-    protected $http_worker;
+    use Singleton;
 
-    /** @var Worker WS Worker */
-    protected $ws_worker;
+    public const SUPPORTED_CLIENTS = [
+        CurlClient::class,
+        StreamClient::class,
+    ];
 
     /**
-     * 通过传入的配置文件初始化 Driver 下面的协议相关事件
+     * @throws Exception
      */
-    public function initInternalDriverClasses(?array $http, ?array $http_webhook, ?array $ws, ?array $ws_reverse): array
+    public function __construct(array $params = [])
     {
-        if ($ws !== null) {
-            $this->ws_worker = new Worker('websocket://' . $ws['host'] . ':' . $ws['port']);
-            $this->ws_worker->count = $ws['worker_count'] ?? 4;
-            Worker::$internal_running = true;  // 不可以删除这句话哦
-            $this->initWebSocketServer();
-            $this->initServer($this->ws_worker);
-            if ($http !== null) {
-                ob_logger()->warning('在 Workerman 驱动下不可以同时开启 http 和 websocket 模式，将优先开启 websocket');
+        if (static::$instance !== null) {
+            throw new Exception('不能重复初始化');
+        }
+        static::$instance = $this;
+        parent::__construct($params);
+    }
+
+    /**
+     * 获取 WS Server Socket 对象，通过 Workerman 的 Worker 实例
+     *
+     * @param Worker $worker Workerman Worker 实例
+     */
+    public function getWSServerSocketByWorker(Worker $worker): ?WSServerSocket
+    {
+        foreach ($this->ws_socket as $v) {
+            /** @var WSServerSocket $v */
+            if ($v->worker->token === $worker->token) {
+                return $v;
             }
-            ob_logger()->info('已开启正向 WebSocket，监听地址 ' . $ws['host'] . ':' . $ws['port']);
-        } elseif ($http !== null) {
-            // 定义 Workerman 的 worker 和相关回调
-            $this->http_worker = new Worker('http://' . $http['host'] . ':' . $http['port']);
-            $this->http_worker->count = $http['worker_count'] ?? 4;
-            Worker::$internal_running = true; // 加上这句就可以不需要必须输 start 命令才能启动了，直接启动
-            $this->initHttpServer();
-            $this->initServer($this->http_worker);
-            ob_logger()->info('已开启 HTTP，监听地址 ' . $http['host'] . ':' . $http['port']);
         }
-        if ($http_webhook !== null) {
-            ob_logger()->info('已开启 HTTP Webhook，地址 ' . $http_webhook['url']);
-            $this->http_webhook_config = $http_webhook;
-        }
-        if ($ws_reverse !== null) {
-            ob_logger()->info('已开启反向 WebSocket，地址 ' . $ws_reverse['url']);
-            $this->ws_reverse_config = $ws_reverse;
-        }
-        return [$this->http_worker !== null, $this->http_webhook_config !== null, $this->ws_worker !== null, $this->ws_reverse_config !== null];
+        return null;
     }
 
     /**
@@ -100,11 +91,11 @@ class WorkermanDriver extends Driver
                 }
                 // 添加插入用户进程的启动仪式
                 if (!empty(EventProvider::getEventListeners(UserProcessStartEvent::getName()))) {
-                    Worker::$user_process = new UserProcess(function () {
+                    $process = Worker::$user_process = new UserProcess(function () use (&$process) {
                         ProcessManager::initProcess(ONEBOT_PROCESS_USER, 0);
                         ob_logger()->debug('新建UserProcess');
                         try {
-                            $event = new UserProcessStartEvent();
+                            $event = new UserProcessStartEvent($process);
                             (new EventDispatcher())->dispatch($event);
                         } catch (Throwable $e) {
                             ExceptionHandler::getInstance()->handle($e);
@@ -114,16 +105,22 @@ class WorkermanDriver extends Driver
                 }
             }
             // TODO: 编写纯 WS Reverse 连接下的逻辑，就是不启动 Server 的
-            if ($this->ws_worker === null && $this->http_worker === null) {
+            if ($this->ws_socket === [] && $this->http_socket === []) {
                 $worker = new Worker();
                 Worker::$internal_running = true; // 加上这句就可以不需要必须输 start 命令才能启动了，直接启动
-                $this->initServer($worker);
+                $worker->onWorkerStart = [TopEventListener::getInstance(), 'onWorkerStart'];
+                $worker->onWorkerStop = [TopEventListener::getInstance(), 'onWorkerStop'];
             }
             // 启动 Workerman 下的 Worker 们
             Worker::runAll();
         } catch (Throwable $e) {
             ExceptionHandler::getInstance()->handle($e);
         }
+    }
+
+    public function getName(): string
+    {
+        return 'workerman';
     }
 
     /**
@@ -157,108 +154,112 @@ class WorkermanDriver extends Driver
      *
      * @throws Exception
      */
-    public function initWebSocketClient($address, array $header = []): WebSocketClientInterface
+    public function initWSReverseClients()
     {
-        return $this->ws_reverse_client = WebSocketClient::createFromAddress($address, $header);
+        foreach ($this->ws_reverse_socket as $v) {
+            $v->setClient(WebSocketClient::createFromAddress($v->getUrl(), $v->getHeaders()));
+        }
     }
 
     /**
-     * 初始化 HTTP Request 响应的回调
+     * {@inheritDoc}
      */
-    private function initHttpServer()
+    public function addReadEvent($fd, callable $callable)
     {
-        $this->http_worker->onMessage = static function (TcpConnection $connection, Request $request) {
-            ob_logger()->debug('Http request: ' . $request->uri());
-            $event = new HttpRequestEvent(HttpFactory::getInstance()->createServerRequest(
-                $request->method(),
-                $request->uri(),
-                $request->header(),
-                $request->rawBody()
-            ));
-            $response = new WorkermanResponse();
-            try {
-                (new EventDispatcher())->dispatch($event);
-                if (($psr_response = $event->getResponse()) !== null) {
-                    $response->withStatus($psr_response->getStatusCode());
-                    $response->withHeaders($psr_response->getHeaders());
-                    $response->withBody($psr_response->getBody()->getContents());
-                } else {
-                    $response->withStatus(204);
-                }
-                $connection->send($response);
-            } catch (Throwable $e) {
-                ExceptionHandler::getInstance()->handle($e);
-                $response->withStatus(500);
-                $response->withBody('Internal Server Error');
-                $connection->send($response);
-            }
-        };
+        Worker::getEventLoop()->add($fd, EventInterface::EV_READ, $callable);
     }
 
-    private function initWebSocketServer()
+    public function delReadEvent($fd)
     {
-        // WebSocket 隐藏特性： _SERVER 全局变量会在 onWebSocketConnect 中被替换为当前连接的 Header 相关信息
-        $this->ws_worker->onWebSocketConnect = function (TcpConnection $connection, $data) {
-            try {
-                global $_SERVER;
-                $headers = $this->convertHeaderFromGlobal($_SERVER);
-                $server_request = HttpFactory::getInstance()->createServerRequest(
-                    $_SERVER['REQUEST_METHOD'],
-                    'http://' . $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI'],
-                    $headers
-                );
-                $event = new WebSocketOpenEvent($server_request, $connection->id);
-                (new EventDispatcher())->dispatch($event);
-                if (is_object($event->getResponse()) && method_exists($event->getResponse(), '__toString')) {
-                    $connection->close((string) $event->getResponse());
-                }
-            } catch (Throwable $e) {
-                ExceptionHandler::getInstance()->handle($e);
+        Worker::getEventLoop()->del($fd, EventInterface::EV_READ);
+    }
+
+    /**
+     * 通过传入的配置文件初始化 Driver 下面的协议相关事件
+     */
+    protected function initInternalDriverClasses(?array $http, ?array $http_webhook, ?array $ws, ?array $ws_reverse): array
+    {
+        if (!empty($ws)) {
+            // 因为 Workerman 要和 Swoole 统一，同时如果是 Linux，可以监听多个端口的情况下，先开一个 Worker，然后把剩下的塞进去。
+            $ws_0 = array_shift($ws);
+            $worker = new Worker('websocket://' . $ws_0['host'] . ':' . $ws_0['port']);
+            $worker->count = $ws_0['worker_count'] ?? 1;
+            Worker::$internal_running = true;
+            // ws server 相关事件
+            $worker->onWebSocketConnect = [TopEventListener::getInstance(), 'onWebSocketOpen'];
+            $worker->onClose = [TopEventListener::getInstance(), 'onWebSocketClose'];
+            $worker->onMessage = [TopEventListener::getInstance(), 'onWebSocketMessage'];
+            // worker 相关事件
+            $worker->onWorkerStart = [TopEventListener::getInstance(), 'onWorkerStart'];
+            $worker->onWorkerStop = [TopEventListener::getInstance(), 'onWorkerStop'];
+            $worker->token = ob_uuidgen();
+            // 将剩下的 ws 协议配置加入到 worker 中
+            if (DIRECTORY_SEPARATOR === '\\') {
+                ob_logger()->warning('Workerman 在 Windows 下只支持一个 Worker。');
+                // Windows 下，Workerman 只支持一个 Worker，所以需要把剩下的 ws 协议配置加入到 worker 中
             }
-        };
-        $this->ws_worker->onClose = function (TcpConnection $connection) {
-            $event = new WebSocketCloseEvent($connection->id);
-            (new EventDispatcher())->dispatch($event);
-        };
-        $this->ws_worker->onMessage = function (TcpConnection $connection, $data) {
-            try {
-                ob_logger()->debug('WebSocket message from: ' . $connection->id);
-                $frame = FrameFactory::createTextFrame($data);
-                $event = new WebSocketMessageEvent($connection->id, $frame, function (int $fd, $data) use ($connection) {
-                    if ($data instanceof FrameInterface) {
-                        $data_w = $data->getData();
-                        return $connection->send($data_w, $data->getOpcode() === Opcode::TEXT);
+            if (!empty($ws)) {
+                EventProvider::addEventListener(WorkerStartEvent::getName(), function () use ($ws) {
+                    ob_logger()->info('Workerman 开始加载 WS 协议配置');
+                    foreach ($ws as $ws_1) {
+                        $worker = new Worker('websocket://' . $ws_1['host'] . ':' . $ws_1['port']);
+                        $worker->reusePort = true;
+                        $worker->token = ob_uuidgen();
+                        $this->ws_socket[] = new WSServerSocket($worker);
+
+                        // ws server 相关事件
+                        $worker->onWebSocketConnect = [TopEventListener::getInstance(), 'onWebSocketOpen'];
+                        $worker->onClose = [TopEventListener::getInstance(), 'onWebSocketClose'];
+                        $worker->onMessage = [TopEventListener::getInstance(), 'onWebSocketMessage'];
+                        $worker->listen();
                     }
-                    return $connection->send($data);
-                });
-                (new EventDispatcher())->dispatch($event);
-            } catch (Throwable $e) {
-                ExceptionHandler::getInstance()->handle($e);
+                }, 999);
             }
-        };
-    }
+            $this->ws_socket[] = new WSServerSocket($worker);
 
-    /**
-     * 将 $_SERVER 变量中的 Header 提取出来转换为数组 K-V 形式
-     */
-    private function convertHeaderFromGlobal(array $server): array
-    {
-        $headers = [];
-        foreach ($server as $header => $value) {
-            $header = strtolower($header);
-            if (strpos($header, 'http_') === 0) {
-                $string = '_' . str_replace('_', ' ', strtolower($header));
-                $header = ltrim(str_replace(' ', '-', ucwords($string)), '_');
-                $header = substr($header, 5);
-                $headers[$header] = $value;
+            if (!empty($http)) {
+                $http_in_worker_start_init = true;
             }
         }
-        return $headers;
-    }
-
-    private function initServer(Worker $worker)
-    {
-        $worker->onWorkerStart = [TopEventListener::getInstance(), 'onWorkerStart'];
-        $worker->onWorkerStop = [TopEventListener::getInstance(), 'onWorkerStop'];
+        if (!empty($http)) {
+            if (isset($http_in_worker_start_init)) {
+                $http_pending = $http;
+            } else {
+                $http_0 = array_shift($http);
+                $http_pending = $http;
+                $worker = new Worker('http://' . $http_0['host'] . ':' . $http_0['port']);
+                $worker->count = $http_0['worker_count'] ?? 1;
+                Worker::$internal_running = true;
+                // http server 相关事件
+                $worker->onMessage = [TopEventListener::getInstance(), 'onHttpRequest'];
+                // worker 相关事件
+                $worker->onWorkerStart = [TopEventListener::getInstance(), 'onWorkerStart'];
+                $worker->onWorkerStop = [TopEventListener::getInstance(), 'onWorkerStop'];
+                $worker->token = ob_uuidgen();
+                $this->http_socket[] = new HttpServerSocket($worker);
+            }
+            if (!empty($http_pending)) {
+                EventProvider::addEventListener(WorkerStartEvent::getName(), function () use ($http_pending) {
+                    ob_logger()->info('Workerman 开始加载 HTTP 协议配置');
+                    foreach ($http_pending as $http_1) {
+                        $worker = new Worker('http://' . $http_1['host'] . ':' . $http_1['port']);
+                        $worker->reusePort = true;
+                        $worker->token = ob_uuidgen();
+                        $this->http_socket[] = new HttpServerSocket($worker);
+                        // http server 相关事件
+                        $worker->onMessage = [TopEventListener::getInstance(), 'onHttpRequest'];
+                        $worker->listen();
+                    }
+                }, 998);
+            }
+        }
+        /* @noinspection DuplicatedCode */
+        foreach ($http_webhook as $v) {
+            $this->http_webhook_socket[] = new HttpWebhookSocket($v['url'], $v['header'] ?? [], $v['access_token'] ?? '', $v['timeout'] ?? 5);
+        }
+        foreach ($ws_reverse as $v) {
+            $this->ws_reverse_socket[] = new WSReverseSocket($v['url'], $v['header'] ?? [], $v['access_token'] ?? '', $v['reconnect_interval'] ?? 5);
+        }
+        return [$this->http_socket !== [], $this->http_webhook_socket !== [], $this->ws_socket !== [], $this->ws_reverse_socket !== []];
     }
 }
