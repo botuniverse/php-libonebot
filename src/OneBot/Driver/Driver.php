@@ -5,15 +5,19 @@ declare(strict_types=1);
 namespace OneBot\Driver;
 
 use OneBot\Driver\Interfaces\WebSocketClientInterface;
-use OneBot\Util\Utils;
+use OneBot\Driver\Socket\HttpServerSocketBase;
+use OneBot\Driver\Socket\HttpWebhookSocketBase;
+use OneBot\Driver\Socket\WSReverseSocketBase;
+use OneBot\Driver\Socket\WSServerSocketBase;
 use OneBot\V12\Config\ConfigInterface;
-use Psr\Http\Message\UriInterface;
 
 abstract class Driver
 {
     public const SINGLE_PROCESS = 0;
 
     public const MULTI_PROCESS = 1;
+
+    public const SUPPORTED_CLIENTS = [];
 
     /**
      * @var array
@@ -28,11 +32,20 @@ abstract class Driver
     /** @var array */
     public $ws_reverse_config;
 
+    /** @var WSServerSocketBase[] */
+    protected $ws_socket = [];
+
+    /** @var HttpServerSocketBase[] */
+    protected $http_socket = [];
+
+    /** @var HttpWebhookSocketBase[] */
+    protected $http_webhook_socket = [];
+
+    /** @var WSReverseSocketBase[] */
+    protected $ws_reverse_socket = [];
+
     /** @var ConfigInterface 配置实例 */
     protected $config;
-
-    /** @var array 事件 */
-    protected $_events = [];
 
     /**
      * @var string
@@ -59,14 +72,6 @@ abstract class Driver
     public static function getActiveDriverClass(): string
     {
         return self::$active_driver_class;
-    }
-
-    /**
-     * 获取驱动名称
-     */
-    public function getName(): string
-    {
-        return Utils::camelToSeparator(str_replace('Driver', '', static::class));
     }
 
     /**
@@ -102,57 +107,39 @@ abstract class Driver
      */
     public function initDriverProtocols(array $comm)
     {
-        $ws_index = null;
-        $http_index = null;
-        $has_http_webhook = null;
-        $has_ws_reverse = null;
+        $ws_index = [];
+        $http_index = [];
+        $has_http_webhook = [];
+        $has_ws_reverse = [];
         foreach ($comm as $k => $v) {
             switch ($v['type']) {
                 case 'websocket':
-                    $ws_index = $v;
+                    $ws_index[] = $v;
                     break;
                 case 'http':
-                    $http_index = $v;
+                    $http_index[] = $v;
                     break;
                 case 'http_webhook':
-                    $has_http_webhook = $v;
+                    $has_http_webhook[] = $v;
                     break;
                 case 'ws_reverse':
-                    $has_ws_reverse = $v;
+                    $has_ws_reverse[] = $v;
                     break;
             }
         }
         [$http, $webhook, $ws, $ws_reverse] = $this->initInternalDriverClasses($http_index, $has_http_webhook, $ws_index, $has_ws_reverse);
-        $ws ? ob_logger()->info('已开启正向 WebSocket，监听地址 ' . $ws_index['host'] . ':' . $ws_index['port']) : ob_logger()->debug('未开启正向 WebSocket');
-        $http ? ob_logger()->info('已开启 HTTP，监听地址 ' . $http_index['host'] . ':' . $http_index['port']) : ob_logger()->debug('未开启 HTTP');
-        $webhook ? ob_logger()->info('已开启 HTTP Webhook，地址 ' . $has_http_webhook['url']) : ob_logger()->debug('未开启 HTTP Webhook');
-        $ws_reverse ? ob_logger()->info('已开启反向 WebSocket，地址 ' . $has_ws_reverse['url']) : ob_logger()->debug('未开启反向 WebSocket');
-    }
-
-    /**
-     * 获取 HTTP Webhook 的配置文件
-     */
-    public function getHttpWebhookConfig(): array
-    {
-        return $this->http_webhook_config;
-    }
-
-    /**
-     * 获取反向 WS 建立的连接操作对象
-     *
-     * @return WebSocketClientInterface
-     */
-    public function getWSReverseClient(): ?WebSocketClientInterface
-    {
-        return $this->ws_reverse_client;
-    }
-
-    /**
-     * 获取反向 WS 通信方式的配置文件
-     */
-    public function getWSReverseConfig(): array
-    {
-        return $this->ws_reverse_config;
+        if ($ws) {
+            ob_logger()->info('已开启正向 WebSocket');
+        }
+        if ($http) {
+            ob_logger()->info('已开启 HTTP');
+        }
+        if ($webhook) {
+            ob_logger()->info('已开启 HTTP Webhook');
+        }
+        if ($ws_reverse) {
+            ob_logger()->info('已开启反向 WebSocket');
+        }
     }
 
     /**
@@ -175,10 +162,72 @@ abstract class Driver
         return $this->params[$key] ?? $default;
     }
 
+    public function getHttpServerSocket(int $key = 0): ?HttpServerSocketBase
+    {
+        return $this->http_socket[$key] ?? null;
+    }
+
+    /**
+     * @return HttpServerSocketBase[]
+     */
+    public function getHttpServerSockets(): array
+    {
+        return $this->http_socket;
+    }
+
+    public function getWSServerSocket(int $key = 0): ?WSServerSocketBase
+    {
+        return $this->ws_socket[$key] ?? null;
+    }
+
+    /**
+     * @return WSServerSocketBase[]
+     */
+    public function getWSServerSockets(): array
+    {
+        return $this->ws_socket;
+    }
+
+    public function getHttpWebhookSocket(int $key = 0): ?HttpWebhookSocketBase
+    {
+        return $this->http_webhook_socket[$key] ?? null;
+    }
+
+    /**
+     * @return HttpWebhookSocketBase[]
+     */
+    public function getHttpWebhookSockets(): array
+    {
+        return $this->http_webhook_socket;
+    }
+
+    public function getWSReverseSocket(int $key = 0): ?WSReverseSocketBase
+    {
+        return $this->ws_reverse_socket[$key] ?? null;
+    }
+
+    /**
+     * @return WSReverseSocketBase[]
+     */
+    public function getWSReverseSockets(): array
+    {
+        return $this->ws_reverse_socket;
+    }
+
+    public function getSupportedClients(): array
+    {
+        return static::SUPPORTED_CLIENTS;
+    }
+
     /**
      * 运行驱动
      */
     abstract public function run(): void;
+
+    /**
+     * 获取驱动名称
+     */
+    abstract public function getName(): string;
 
     /**
      * 添加一个定时器
@@ -199,11 +248,23 @@ abstract class Driver
 
     /**
      * 初始化驱动的 WS Reverse Client 连接
-     *
-     * @param string|UriInterface $address 目标地址
-     * @param array               $header  请求头
      */
-    abstract public function initWebSocketClient($address, array $header = []): WebSocketClientInterface;
+    abstract public function initWSReverseClients();
+
+    /**
+     * 驱动必须提供一个可以添加到对应驱动 EventLoop 的读接口
+     *
+     * @param resource $fd       文件描述符或资源 int
+     * @param callable $callable 回调函数
+     */
+    abstract public function addReadEvent($fd, callable $callable);
+
+    /**
+     * 驱动必须提供一个可以删除对应驱动 EventLoop 的读接口
+     *
+     * @param resource $fd 文件描述符或资源 int
+     */
+    abstract public function delReadEvent($fd);
 
     /**
      * 通过解析的配置，让 Driver 初始化不同的通信方式

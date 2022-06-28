@@ -17,13 +17,27 @@ use Psr\Http\Message\ResponseInterface;
  * Curl HTTP Client based on PSR-18.
  * @see https://github.com/sunrise-php/http-client-curl/blob/master/src/Client.php
  */
-class CurlClient implements ClientInterface
+class CurlClient extends ClientBase implements ClientInterface
 {
     protected $curl_options;
 
+    /**
+     * @throws ClientException
+     */
     public function __construct(array $curl_options = [])
     {
+        if (!extension_loaded('curl')) { // 必须安装 Curl 扩展才能使用
+            throw new ClientException('Curl extension is not loaded');
+        }
         $this->curl_options = $curl_options;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function setTimeout(int $timeout)
+    {
+        $this->curl_options[CURLOPT_TIMEOUT_MS] = $timeout;
     }
 
     /**

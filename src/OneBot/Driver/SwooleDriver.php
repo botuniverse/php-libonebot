@@ -6,52 +6,104 @@ declare(strict_types=1);
 
 namespace OneBot\Driver;
 
+use Exception;
 use OneBot\Driver\Event\DriverInitEvent;
 use OneBot\Driver\Event\EventDispatcher;
 use OneBot\Driver\Event\EventProvider;
 use OneBot\Driver\Event\Process\UserProcessStartEvent;
-use OneBot\Driver\Interfaces\WebSocketClientInterface;
+use OneBot\Driver\Swoole\Socket\HttpServerSocket;
+use OneBot\Driver\Swoole\Socket\HttpWebhookSocket;
+use OneBot\Driver\Swoole\Socket\WSReverseSocket;
+use OneBot\Driver\Swoole\Socket\WSServerSocket;
 use OneBot\Driver\Swoole\TopEventListener;
 use OneBot\Driver\Swoole\UserProcess;
 use OneBot\Driver\Swoole\WebSocketClient;
 use OneBot\Http\Client\Exception\ClientException;
+use OneBot\Http\Client\SwooleClient;
+use OneBot\Util\Singleton;
 use Swoole\Event;
 use Swoole\Http\Server as SwooleHttpServer;
+use Swoole\Server;
+use Swoole\Server\Port;
 use Swoole\Timer;
 use Swoole\WebSocket\Server as SwooleWebSocketServer;
 use Throwable;
 
 class SwooleDriver extends Driver
 {
+    use Singleton;
+
+    public const SUPPORTED_CLIENTS = [
+        SwooleClient::class,
+    ];
+
     /** @var SwooleHttpServer|SwooleWebSocketServer 服务端实例 */
     protected $server;
+
+    /**
+     * @throws Exception
+     */
+    public function __construct(array $params = [])
+    {
+        if (static::$instance !== null) {
+            throw new Exception('不能重复初始化');
+        }
+        static::$instance = $this;
+        parent::__construct($params);
+    }
 
     /**
      * {@inheritDoc}
      */
     public function initInternalDriverClasses(?array $http, ?array $http_webhook, ?array $ws, ?array $ws_reverse): array
     {
-        if ($ws !== null) {
-            $this->server = new SwooleWebSocketServer($ws['host'], $ws['port'], $this->getParam('swoole_server_mode', SWOOLE_PROCESS));
+        if (!empty($ws)) {
+            $ws_0 = array_shift($ws);
+            $this->server = new SwooleWebSocketServer($ws_0['host'], $ws_0['port'], $this->getParam('swoole_server_mode', SWOOLE_PROCESS));
             $this->initServer();
-            if ($http !== null) {
-                ob_logger()->warning('检测到同时开启了http和正向ws，Swoole驱动下同时启用两者的话http的配置项将被忽略。');
-                $this->initHttpServer();
+            $this->initWebSocketServer($this->server);
+            $this->ws_socket[] = new WSServerSocket($this->server, $ws_0);
+            if (!empty($ws)) {
+                foreach ($ws as $v) {
+                    $this->addWSServerListener($v);
+                }
             }
-            $this->initWebSocketServer();
-        } elseif ($http !== null) {
-            // echo "新建http服务器.\n";
-            $this->server = new SwooleHttpServer($http['host'], $http['port'], $this->getParam('swoole_server_mode', SWOOLE_PROCESS));
-            $this->initHttpServer();
+            if (!empty($http)) {
+                foreach ($http as $v) {
+                    $this->addHttpServerListener($v);
+                }
+            }
+        } elseif (!empty($http)) {
+            $http_0 = array_shift($http);
+            $this->server = new SwooleHttpServer($http_0['host'], $http_0['port'], $this->getParam('swoole_server_mode', SWOOLE_PROCESS));
             $this->initServer();
+            $this->initHttpServer($this->server);
+            $this->http_socket[] = new HttpServerSocket($this->server, $http_0);
+            if (!empty($http)) {
+                foreach ($http as $v) {
+                    $this->addHttpServerListener($v);
+                }
+            }
         }
-        if ($http_webhook !== null) {
-            $this->http_webhook_config = $http_webhook;
+        /* @noinspection DuplicatedCode */
+        foreach ($http_webhook as $v) {
+            $this->http_webhook_socket[] = new HttpWebhookSocket($v['url'], $v['header'] ?? [], $v['access_token'] ?? '', $v['timeout'] ?? 5);
         }
-        if ($ws_reverse !== null) {
-            $this->ws_reverse_config = $ws_reverse;
+        foreach ($ws_reverse as $v) {
+            $this->ws_reverse_socket[] = new WSReverseSocket($v['url'], $v['header'] ?? [], $v['access_token'] ?? '', $v['reconnect_interval'] ?? 5);
         }
+        return [$this->http_socket !== [], $this->http_webhook_socket !== [], $this->ws_socket !== [], $this->ws_reverse_socket !== []];
+    }
 
+    /**
+     * 给我跑！人和代码有一个能跑就行！
+     *
+     * 函数分为两部分，对于 Swoole 驱动而言，如果通信方式有需要启动 Server 的（HTTP/WebSocket），则需要启动 Server 模式。
+     *
+     * 反之，直接使用 SINGLE_PROCESS 模式在协程中启动，然后初始化 HTTP Webhook 或 WS Reverse 的连接，然后接着初始化用户自定的协议。
+     */
+    public function run(): void
+    {
         if ($this->server !== null) {
             switch ($this->getDriverInitPolicy()) {
                 case DriverInitPolicy::MULTI_PROCESS_INIT_IN_MASTER:
@@ -73,11 +125,11 @@ class SwooleDriver extends Driver
             }
             // 添加插入用户进程的启动仪式
             if (!empty(EventProvider::getEventListeners(UserProcessStartEvent::getName()))) {
-                $process = new UserProcess(function () {
+                $process = new UserProcess(function () use (&$process) {
                     ProcessManager::initProcess(ONEBOT_PROCESS_USER, 0);
                     ob_logger()->debug('新建UserProcess');
                     try {
-                        $event = new UserProcessStartEvent();
+                        $event = new UserProcessStartEvent($process);
                         (new EventDispatcher())->dispatch($event);
                     } catch (Throwable $e) {
                         ExceptionHandler::getInstance()->handle($e);
@@ -85,20 +137,6 @@ class SwooleDriver extends Driver
                 }, false);
                 $this->server->addProcess($process);
             }
-        }
-        return [$http !== null, $http_webhook !== null, $ws !== null, $ws_reverse !== null];
-    }
-
-    /**
-     * 给我跑！人和代码有一个能跑就行！
-     *
-     * 函数分为两部分，对于 Swoole 驱动而言，如果通信方式有需要启动 Server 的（HTTP/WebSocket），则需要启动 Server 模式。
-     *
-     * 反之，直接使用 SINGLE_PROCESS 模式在协程中启动，然后初始化 HTTP Webhook 或 WS Reverse 的连接，然后接着初始化用户自定的协议。
-     */
-    public function run(): void
-    {
-        if ($this->server !== null) {
             $this->server->start();
         } else {
             go(function () {
@@ -106,6 +144,11 @@ class SwooleDriver extends Driver
             });
             Event::wait();
         }
+    }
+
+    public function getName(): string
+    {
+        return 'swoole';
     }
 
     /**
@@ -139,19 +182,39 @@ class SwooleDriver extends Driver
      *
      * @throws ClientException
      */
-    public function initWebSocketClient($address, array $header = []): WebSocketClientInterface
+    public function initWSReverseClients()
     {
-        return $this->ws_reverse_client = WebSocketClient::createFromAddress($address, $header, $this->getParam('swoole_ws_client_set', ['websocket_mask' => true]));
+        foreach ($this->ws_reverse_socket as $v) {
+            $v->setClient(WebSocketClient::createFromAddress($v->getUrl(), $v->getHeaders(), $this->getParam('swoole_ws_client_set', ['websocket_mask' => true])));
+        }
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function addReadEvent($fd, callable $callable)
+    {
+        Event::add($fd, $callable);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function delReadEvent($fd)
+    {
+        Event::del($fd);
     }
 
     /**
      * 初始化 Websocket 服务端，注册 WS 连接、收到消息和断开连接三种事件的顶层回调
+     *
+     * @param Port|Server $obj
      */
-    private function initWebSocketServer(): void
+    private function initWebSocketServer($obj): void
     {
-        $this->server->on('open', [TopEventListener::getInstance(), 'onOpen']);
-        $this->server->on('message', [TopEventListener::getInstance(), 'onMessage']);
-        $this->server->on('close', [TopEventListener::getInstance(), 'onClose']);
+        $obj->on('open', [TopEventListener::getInstance(), 'onOpen']);
+        $obj->on('message', [TopEventListener::getInstance(), 'onMessage']);
+        $obj->on('close', [TopEventListener::getInstance(), 'onClose']);
     }
 
     /**
@@ -171,9 +234,33 @@ class SwooleDriver extends Driver
 
     /**
      * 初始化使用http通信方式的注册事件，包含收到 HTTP 请求的事件顶层回调
+     * @param mixed $obj
      */
-    private function initHttpServer(): void
+    private function initHttpServer($obj): void
     {
-        $this->server->on('request', [TopEventListener::getInstance(), 'onRequest']);
+        $obj->on('request', [TopEventListener::getInstance(), 'onRequest']);
+    }
+
+    private function addWSServerListener($v)
+    {
+        /** @var Port $port */
+        $port = $this->server->addlistener($v['host'], $v['port'], SWOOLE_SOCK_TCP);
+        $port->set([
+            'open_websocket_protocol' => true,
+            'open_http_protocol' => false,
+        ]);
+        $this->initWebSocketServer($port);
+        $this->ws_socket[] = new WSServerSocket($port, $v);
+    }
+
+    private function addHttpServerListener($v)
+    {
+        $port = $this->server->addlistener($v['host'], $v['port'], SWOOLE_SOCK_TCP);
+        $port->set([
+            'open_websocket_protocol' => false,
+            'open_http_protocol' => true,
+        ]);
+        $this->initHttpServer($port);
+        $this->http_socket[] = new HttpServerSocket($port, $v);
     }
 }
