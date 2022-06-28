@@ -25,6 +25,21 @@ class WebSocketClient implements WebSocketClientInterface
     protected $connection;
 
     /**
+     * @var RequestInterface 请求对象
+     */
+    protected $request;
+
+    /**
+     * @var callable 消息回调
+     */
+    protected $on_message;
+
+    /**
+     * @var callable 关闭回调
+     */
+    protected $on_close;
+
+    /**
      * 通过地址来创建一个 WebSocket 连接
      *
      * 支持 UriInterface 接口的 PSR 对象，也支持直接传入一个带 Scheme 的
@@ -55,6 +70,7 @@ class WebSocketClient implements WebSocketClientInterface
             $this->connection->send($request->getBody()->getContents());
             $this->status = self::STATUS_ESTABLISHED;
         };
+        $this->request = $request;
 
         return $this;
     }
@@ -66,9 +82,18 @@ class WebSocketClient implements WebSocketClientInterface
         return $this->status <= 2;
     }
 
+    /**
+     * @throws Exception
+     */
+    public function reconnect(): bool
+    {
+        return $this->withRequest($this->request)->setMessageCallback($this->on_message)->setCloseCallback($this->on_close)->connect();
+    }
+
     public function setMessageCallback($callable): WebSocketClientInterface
     {
         $this->status = $this->connection->getStatus();
+        $this->on_message = $callable;
         $this->connection->onMessage = function (AsyncTcpConnection $con, $data) use ($callable) {
             $frame = FrameFactory::createTextFrame($data);
             $callable($frame, $this);
@@ -79,8 +104,10 @@ class WebSocketClient implements WebSocketClientInterface
     public function setCloseCallback($callable): WebSocketClientInterface
     {
         $this->status = $this->connection->getStatus();
+        $this->on_close = $callable;
         $this->connection->onClose = function (AsyncTcpConnection $con) use ($callable) {
             $frame = FrameFactory::createCloseFrame(1000, '');
+            $con->close();
             $callable($frame, $this, $con->getStatus(false));
         };
         return $this;

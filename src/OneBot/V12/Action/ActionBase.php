@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace OneBot\V12\Action;
 
 use OneBot\Util\Utils;
-use OneBot\V12\Object\ActionObject;
+use OneBot\V12\Object\Action;
 use OneBot\V12\OneBot;
 use OneBot\V12\RetCode;
 use ReflectionClass;
@@ -18,62 +18,62 @@ abstract class ActionBase
     /** @internal 内部使用的缓存 */
     public static $ext_cache;
 
-    public function onSendMessage(ActionObject $action): ActionResponse
+    public function onSendMessage(Action $action): ActionResponse
     {
         return ActionResponse::create($action->echo)->fail(RetCode::UNSUPPORTED_ACTION);
     }
 
-    public function onDeleteMessage(ActionObject $action): ActionResponse
+    public function onDeleteMessage(Action $action): ActionResponse
     {
         return ActionResponse::create($action->echo)->fail(RetCode::UNSUPPORTED_ACTION);
     }
 
-    public function onGetStatus(ActionObject $action): ActionResponse
+    public function onGetStatus(Action $action): ActionResponse
     {
         return ActionResponse::create($action->echo)->fail(RetCode::UNSUPPORTED_ACTION);
     }
 
-    public function onGetVersion(ActionObject $action): ActionResponse
+    public function onGetVersion(Action $action): ActionResponse
     {
         return ActionResponse::create($action->echo)->fail(RetCode::UNSUPPORTED_ACTION);
     }
 
-    public function onGetSelfInfo(ActionObject $action): ActionResponse
+    public function onGetSelfInfo(Action $action): ActionResponse
     {
         return ActionResponse::create($action->echo)->fail(RetCode::UNSUPPORTED_ACTION);
     }
 
-    public function onGetUserInfo(ActionObject $action): ActionResponse
+    public function onGetUserInfo(Action $action): ActionResponse
     {
         return ActionResponse::create($action->echo)->fail(RetCode::UNSUPPORTED_ACTION);
     }
 
-    public function onGetFriendList(ActionObject $action): ActionResponse
+    public function onGetFriendList(Action $action): ActionResponse
     {
         return ActionResponse::create($action->echo)->fail(RetCode::UNSUPPORTED_ACTION);
     }
 
-    public function onGetGroupInfo(ActionObject $action): ActionResponse
+    public function onGetGroupInfo(Action $action): ActionResponse
     {
         return ActionResponse::create($action->echo)->fail(RetCode::UNSUPPORTED_ACTION);
     }
 
-    public function onGetGroupList(ActionObject $action): ActionResponse
+    public function onGetGroupList(Action $action): ActionResponse
     {
         return ActionResponse::create($action->echo)->fail(RetCode::UNSUPPORTED_ACTION);
     }
 
-    public function onGetGroupMemberList(ActionObject $action): ActionResponse
+    public function onGetGroupMemberList(Action $action): ActionResponse
     {
         return ActionResponse::create($action->echo)->fail(RetCode::UNSUPPORTED_ACTION);
     }
 
-    public function onGetGroupMemberInfo(ActionObject $action): ActionResponse
+    public function onGetGroupMemberInfo(Action $action): ActionResponse
     {
         return ActionResponse::create($action->echo)->fail(RetCode::UNSUPPORTED_ACTION);
     }
 
-    public function onGetLatestEvents(ActionObject $action): ActionResponse
+    public function onGetLatestEvents(Action $action): ActionResponse
     {
         return ActionResponse::create($action->echo)->fail(RetCode::UNSUPPORTED_ACTION);
     }
@@ -81,7 +81,7 @@ abstract class ActionBase
     /**
      * 内置的一个可以使用的 API，用来获取所有已注册成功的 action
      */
-    public function onGetSupportedActions(ActionObject $action): ActionResponse
+    public function onGetSupportedActions(Action $action): ActionResponse
     {
         $reflection = new ReflectionClass($this);
         $list = [];
