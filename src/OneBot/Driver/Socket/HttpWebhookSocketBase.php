@@ -16,6 +16,8 @@ use Throwable;
 
 abstract class HttpWebhookSocketBase implements SocketInterface
 {
+    use SocketFlag;
+
     protected $url;
 
     protected $headers;

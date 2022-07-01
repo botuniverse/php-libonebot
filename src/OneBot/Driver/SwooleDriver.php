@@ -62,7 +62,7 @@ class SwooleDriver extends Driver
             $this->server = new SwooleWebSocketServer($ws_0['host'], $ws_0['port'], $this->getParam('swoole_server_mode', SWOOLE_PROCESS));
             $this->initServer();
             $this->initWebSocketServer($this->server);
-            $this->ws_socket[] = new WSServerSocket($this->server, $ws_0);
+            $this->ws_socket[] = (new WSServerSocket($this->server, $ws_0))->setFlag(1);
             if (!empty($ws)) {
                 foreach ($ws as $v) {
                     $this->addWSServerListener($v);
@@ -78,7 +78,7 @@ class SwooleDriver extends Driver
             $this->server = new SwooleHttpServer($http_0['host'], $http_0['port'], $this->getParam('swoole_server_mode', SWOOLE_PROCESS));
             $this->initServer();
             $this->initHttpServer($this->server);
-            $this->http_socket[] = new HttpServerSocket($this->server, $http_0);
+            $this->http_socket[] = (new HttpServerSocket($this->server, $http_0))->setFlag(1);
             if (!empty($http)) {
                 foreach ($http as $v) {
                     $this->addHttpServerListener($v);
@@ -87,10 +87,10 @@ class SwooleDriver extends Driver
         }
         /* @noinspection DuplicatedCode */
         foreach ($http_webhook as $v) {
-            $this->http_webhook_socket[] = new HttpWebhookSocket($v['url'], $v['header'] ?? [], $v['access_token'] ?? '', $v['timeout'] ?? 5);
+            $this->http_webhook_socket[] = (new HttpWebhookSocket($v['url'], $v['header'] ?? [], $v['access_token'] ?? '', $v['timeout'] ?? 5))->setFlag(1);
         }
         foreach ($ws_reverse as $v) {
-            $this->ws_reverse_socket[] = new WSReverseSocket($v['url'], $v['header'] ?? [], $v['access_token'] ?? '', $v['reconnect_interval'] ?? 5);
+            $this->ws_reverse_socket[] = (new WSReverseSocket($v['url'], $v['header'] ?? [], $v['access_token'] ?? '', $v['reconnect_interval'] ?? 5))->setFlag(1);
         }
         return [$this->http_socket !== [], $this->http_webhook_socket !== [], $this->ws_socket !== [], $this->ws_reverse_socket !== []];
     }
