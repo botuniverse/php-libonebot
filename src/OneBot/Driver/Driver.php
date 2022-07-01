@@ -248,8 +248,10 @@ abstract class Driver
 
     /**
      * 初始化驱动的 WS Reverse Client 连接
+     *
+     * @param array $headers 请求头
      */
-    abstract public function initWSReverseClients();
+    abstract public function initWSReverseClients(array $headers = []);
 
     /**
      * 驱动必须提供一个可以添加到对应驱动 EventLoop 的读接口
