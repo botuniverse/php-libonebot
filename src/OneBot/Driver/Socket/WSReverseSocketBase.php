@@ -7,9 +7,12 @@ namespace OneBot\Driver\Socket;
 use OneBot\Driver\Interfaces\SocketInterface;
 use OneBot\Driver\Interfaces\WebSocketClientInterface;
 use OneBot\Driver\Interfaces\WebSocketInterface;
+use OneBot\Http\WebSocket\FrameInterface;
 
 abstract class WSReverseSocketBase implements SocketInterface, WebSocketInterface
 {
+    use SocketFlag;
+
     protected $url;
 
     protected $headers;
@@ -59,5 +62,10 @@ abstract class WSReverseSocketBase implements SocketInterface, WebSocketInterfac
     public function getClient(): WebSocketClientInterface
     {
         return $this->client;
+    }
+
+    public function send(FrameInterface $data, $id = null): bool
+    {
+        return $this->client->send($data);
     }
 }

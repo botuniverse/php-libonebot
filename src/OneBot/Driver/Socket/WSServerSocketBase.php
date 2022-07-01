@@ -10,6 +10,8 @@ use OneBot\Http\WebSocket\FrameInterface;
 
 abstract class WSServerSocketBase implements SocketInterface, WebSocketInterface
 {
+    use SocketFlag;
+
     abstract public function sendAll(FrameInterface $data): array;
 
     abstract public function close($id): bool;
