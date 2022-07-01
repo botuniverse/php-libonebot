@@ -144,7 +144,7 @@ class OneBotEventListener
     public function onDriverInit(DriverInitEvent $event)
     {
         ob_logger()->info('初始化 ws reverse 连接 ing');
-        $event->getDriver()->ws_reverse_client = $event->getDriver()->initWSReverseClients();
+        $event->getDriver()->initWSReverseClients(OneBot::getInstance()->getRequestHeaders());
         foreach ($event->getDriver()->getWSReverseSockets() as $k => $v) {
             $reconnect = function () use ($v, $event, &$reconnect) {
                 try {
