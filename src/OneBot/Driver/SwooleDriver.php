@@ -182,10 +182,10 @@ class SwooleDriver extends Driver
      *
      * @throws ClientException
      */
-    public function initWSReverseClients()
+    public function initWSReverseClients(array $headers = [])
     {
         foreach ($this->ws_reverse_socket as $v) {
-            $v->setClient(WebSocketClient::createFromAddress($v->getUrl(), $v->getHeaders(), $this->getParam('swoole_ws_client_set', ['websocket_mask' => true])));
+            $v->setClient(WebSocketClient::createFromAddress($v->getUrl(), array_merge($headers, $v->getHeaders()), $this->getParam('swoole_ws_client_set', ['websocket_mask' => true])));
         }
     }
 
