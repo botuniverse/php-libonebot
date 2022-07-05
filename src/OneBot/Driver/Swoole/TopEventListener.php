@@ -67,19 +67,22 @@ class TopEventListener
     /**
      * Swoole 的顶层 httpRequest 事件回调
      */
-    public function onRequest(Request $request, Response $response)
+    public function onRequest(int $flag, Request $request, Response $response)
     {
         ob_logger()->debug('Http request: ' . $request->server['request_uri']);
-        if (empty($content = $request->rawContent())) {
+        if (empty($content = $request->rawContent()) && $content !== '0') { // empty 遇到纯0的请求会返回true，所以这里加上 !== '0'
             $content = null;
         }
-        $event = new HttpRequestEvent(HttpFactory::getInstance()->createServerRequest(
+        $req = HttpFactory::getInstance()->createServerRequest(
             $request->server['request_method'],
             $request->server['request_uri'],
             $request->header,
             $content
-        ));
+        );
+        $req = $req->withQueryParams($request->get ?? []);
+        $event = new HttpRequestEvent($req);
         try {
+            $event->setSocketFlag($flag);
             (new EventDispatcher())->dispatch($event);
             if (($psr_response = $event->getResponse()) !== null) {
                 foreach ($psr_response->getHeaders() as $header => $value) {
@@ -87,11 +90,9 @@ class TopEventListener
                         $response->setHeader($header, implode(';', $value));
                     }
                 }
+                ob_dump($psr_response);
                 $response->setStatusCode($psr_response->getStatusCode());
                 $response->end($psr_response->getBody());
-            } else {
-                $response->setStatusCode(204);
-                $response->end();
             }
         } catch (Throwable $e) {
             ExceptionHandler::getInstance()->handle($e);
@@ -118,33 +119,37 @@ class TopEventListener
      *
      * @param int|string $fd
      */
-    public function onClose(?Server $server, $fd)
+    public function onClose(int $flag, ?Server $server, $fd)
     {
         ob_logger()->debug('WebSocket closed from: ' . $fd);
-        EventDispatcher::dispatchWithHandler(new WebSocketCloseEvent($fd));
+        $event = new WebSocketCloseEvent($fd);
+        $event->setSocketFlag($flag);
+        EventDispatcher::dispatchWithHandler($event);
     }
 
     /**
      * Swoole 的顶层 open 事件回调（WebSocket 连接建立事件）
      */
-    public function onOpen(SwooleWebSocketServer $server, Request $request)
+    public function onOpen(int $flag, SwooleWebSocketServer $server, Request $request)
     {
         ob_logger()->debug('WebSocket connection open: ' . $request->fd);
         if (empty($content = $request->rawContent())) {
             $content = null;
         }
-        EventDispatcher::dispatchWithHandler(new WebSocketOpenEvent(HttpFactory::getInstance()->createServerRequest(
+        $event = new WebSocketOpenEvent(HttpFactory::getInstance()->createServerRequest(
             $request->server['request_method'],
             $request->server['request_uri'],
             $request->header,
             $content
-        ), $request->fd));
+        ), $request->fd);
+        $event->setSocketFlag($flag);
+        EventDispatcher::dispatchWithHandler($event);
     }
 
     /**
      * Swoole 的顶层 message 事件回调（WebSocket 消息事件）
      */
-    public function onMessage(?SwooleWebSocketServer $server, Frame $frame)
+    public function onMessage(int $flag, ?SwooleWebSocketServer $server, Frame $frame)
     {
         ob_logger()->debug('WebSocket message from: ' . $frame->fd);
         $new_frame = new \OneBot\Http\WebSocket\Frame($frame->data, $frame->opcode, true);
@@ -155,6 +160,7 @@ class TopEventListener
             return $server->push($fd, $data);
         });
         $event->setOriginFrame($frame);
+        $event->setSocketFlag($flag);
         EventDispatcher::dispatchWithHandler($event);
     }
 }
