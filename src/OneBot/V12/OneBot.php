@@ -118,6 +118,14 @@ class OneBot
     }
 
     /**
+     * @param string $self_id
+     */
+    public function setSelfId(mixed $self_id): void
+    {
+        $this->self_id = $self_id;
+    }
+
+    /**
      * 获取 Driver
      */
     public function getDriver(): ?Driver
@@ -235,15 +243,24 @@ class OneBot
             ObjectQueue::enqueue('ob_event', $event);
         }
         foreach ($this->driver->getHttpWebhookSockets() as $socket) {
+            if ($socket->getFlag() !== 1) {
+                continue;
+            }
             $socket->post(json_encode($event->jsonSerialize()), $this->getRequestHeaders(), function (ResponseInterface $response) {
                 // TODO：编写 HTTP Webhook 响应的处理逻辑
             }, function (RequestInterface $request) {});
         }
         $frame_str = FrameFactory::createTextFrame(json_encode($event->jsonSerialize())); // 创建文本帧
         foreach ($this->driver->getWSServerSockets() as $socket) {
+            if ($socket->getFlag() !== 1) {
+                continue;
+            }
             $socket->sendAll($frame_str);
         }
         foreach ($this->driver->getWSReverseSockets() as $socket) {
+            if ($socket->getFlag() !== 1) {
+                continue;
+            }
             $socket->send($frame_str);
         }
     }
