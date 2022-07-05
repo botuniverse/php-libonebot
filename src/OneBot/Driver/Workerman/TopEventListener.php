@@ -19,6 +19,7 @@ use OneBot\Http\WebSocket\FrameFactory;
 use OneBot\Http\WebSocket\FrameInterface;
 use OneBot\Util\Singleton;
 use OneBot\Util\Utils;
+use Psr\Http\Message\ResponseInterface;
 use Throwable;
 use Workerman\Connection\TcpConnection;
 use Workerman\Protocols\Http\Request;
@@ -63,6 +64,7 @@ class TopEventListener
                 $headers
             );
             $event = new WebSocketOpenEvent($server_request, $connection->id);
+            $event->setSocketFlag($connection->worker->flag ?? 0);
             (new EventDispatcher())->dispatch($event);
             if (is_object($event->getResponse()) && method_exists($event->getResponse(), '__toString')) {
                 $connection->close((string) $event->getResponse());
@@ -92,6 +94,7 @@ class TopEventListener
             ob_logger()->error('WorkermanDriver::getWSServerSocketByWorker() returned null');
         }
         $event = new WebSocketCloseEvent($connection->id);
+        $event->setSocketFlag($connection->worker->flag ?? 0);
         (new EventDispatcher())->dispatch($event);
     }
 
@@ -114,6 +117,7 @@ class TopEventListener
                 }
                 return $connection->send($data);
             });
+            $event->setSocketFlag($connection->worker->flag ?? 0);
             (new EventDispatcher())->dispatch($event);
         } catch (Throwable $e) {
             ExceptionHandler::getInstance()->handle($e);
@@ -130,22 +134,30 @@ class TopEventListener
             $request->header(),
             $request->rawBody()
         ));
+        $send_callable = function (ResponseInterface $psr_response) use ($connection) {
+            $response = new WorkermanResponse();
+            $response->withStatus($psr_response->getStatusCode());
+            $response->withHeaders($psr_response->getHeaders());
+            $response->withBody($psr_response->getBody()->getContents());
+            $connection->send($response);
+        };
+        $event->withAsyncResponseCallable($send_callable);
         $response = new WorkermanResponse();
         try {
+            $event->setSocketFlag($connection->worker->flag ?? 0);
             (new EventDispatcher())->dispatch($event);
             if (($psr_response = $event->getResponse()) !== null) {
                 $response->withStatus($psr_response->getStatusCode());
                 $response->withHeaders($psr_response->getHeaders());
                 $response->withBody($psr_response->getBody()->getContents());
-            } else {
-                $response->withStatus(204);
+                $connection->send($response);
             }
-            $connection->send($response);
         } catch (Throwable $e) {
             ExceptionHandler::getInstance()->handle($e);
             $response->withStatus(500);
             $response->withBody('Internal Server Error');
             $connection->send($response);
         }
+        ob_dump($response);
     }
 }
