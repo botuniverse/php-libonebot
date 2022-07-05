@@ -20,6 +20,7 @@ use OneBot\Http\WebSocket\FrameInterface;
 use OneBot\Http\WebSocket\Opcode;
 use OneBot\Util\Singleton;
 use OneBot\Util\Utils;
+use OneBot\Util\Validator;
 use OneBot\V12\Action\ActionResponse;
 use OneBot\V12\Action\DefaultActionHandler;
 use OneBot\V12\Exception\OneBotFailureException;
@@ -41,6 +42,9 @@ class OneBotEventListener
      */
     public function onHttpRequest(HttpRequestEvent $event): void
     {
+        if ($event->getSocketFlag() !== 1) {
+            return;
+        }
         try {
             $request = $event->getRequest();
             // 排除掉 Chrome 浏览器的多余请求
@@ -82,6 +86,9 @@ class OneBotEventListener
     public function onWebSocketOpen(WebSocketOpenEvent $event): void
     {
         // TODO: WebSocket 接入后的认证操作
+        if ($event->getSocketFlag() !== 1) {
+            return;
+        }
     }
 
     /**
@@ -89,6 +96,9 @@ class OneBotEventListener
      */
     public function onWebSocketMessage(WebSocketMessageEvent $event): void
     {
+        if ($event->getSocketFlag() !== 1) {
+            return;
+        }
         try {
             // 通过对 Frame 的 Opcode 进行判断，是否为 msgpack 数据，如果是文本的话，一律当 JSON 解析，如果是二进制，一律当 msgpack 解析
             $response_obj = $this->processActionRequest($event->getFrame()->getData(), $event->getFrame()->getOpcode() === Opcode::BINARY ? ONEBOT_MSGPACK : ONEBOT_JSON);
@@ -143,9 +153,9 @@ class OneBotEventListener
      */
     public function onDriverInit(DriverInitEvent $event)
     {
-        ob_logger()->info('初始化 ws reverse 连接 ing');
         $event->getDriver()->initWSReverseClients(OneBot::getInstance()->getRequestHeaders());
         foreach ($event->getDriver()->getWSReverseSockets() as $k => $v) {
+            ob_logger()->info('初始化 ws reverse 连接 ing');
             $reconnect = function () use ($v, $event, &$reconnect) {
                 try {
                     if ($v->getClient()->reconnect() !== true) {
@@ -222,8 +232,9 @@ class OneBotEventListener
      *
      * @param  mixed|string                                     $raw_data 传入的实际数据包，这里还是仅可传入 json 或 msgpack
      * @throws Exception\OneBotException|OneBotFailureException 抛出 OneBot 异常，统一异常的 JSON 回复
+     * @internal
      */
-    private function processActionRequest($raw_data, int $type = ONEBOT_JSON): ActionResponse
+    public function processActionRequest($raw_data, int $type = ONEBOT_JSON): ActionResponse
     {
         switch ($type) {
             case ONEBOT_JSON:
@@ -248,7 +259,7 @@ class OneBotEventListener
                 throw new OneBotFailureException(RetCode::INTERNAL_HANDLER_ERROR);
         }
 
-        Utils::validateParamsByAction($action_obj, ['detail_type' => true]);
+        Validator::validateParamsByAction($action_obj, ['detail_type' => true]);
         if (($handler = OneBot::getInstance()->getActionHandler($action_obj->action)) !== null) {
             $response_obj = call_user_func($handler[0], $action_obj);
         } else {
