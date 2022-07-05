@@ -5,14 +5,13 @@ declare(strict_types=1);
 namespace OneBot\Driver;
 
 use OneBot\Driver\Interfaces\WebSocketClientInterface;
-use OneBot\Driver\Socket\HttpServerSocketBase;
-use OneBot\Driver\Socket\HttpWebhookSocketBase;
-use OneBot\Driver\Socket\WSReverseSocketBase;
-use OneBot\Driver\Socket\WSServerSocketBase;
+use OneBot\Driver\Socket\SocketTrait;
 use OneBot\V12\Config\ConfigInterface;
 
 abstract class Driver
 {
+    use SocketTrait;
+
     public const SINGLE_PROCESS = 0;
 
     public const MULTI_PROCESS = 1;
@@ -20,29 +19,9 @@ abstract class Driver
     public const SUPPORTED_CLIENTS = [];
 
     /**
-     * @var array
-     */
-    public $http_webhook_config;
-
-    /**
      * @var WebSocketClientInterface
      */
     public $ws_reverse_client;
-
-    /** @var array */
-    public $ws_reverse_config;
-
-    /** @var WSServerSocketBase[] */
-    protected $ws_socket = [];
-
-    /** @var HttpServerSocketBase[] */
-    protected $http_socket = [];
-
-    /** @var HttpWebhookSocketBase[] */
-    protected $http_webhook_socket = [];
-
-    /** @var WSReverseSocketBase[] */
-    protected $ws_reverse_socket = [];
 
     /** @var ConfigInterface 配置实例 */
     protected $config;
@@ -111,18 +90,21 @@ abstract class Driver
         $http_index = [];
         $has_http_webhook = [];
         $has_ws_reverse = [];
-        foreach ($comm as $k => $v) {
+        foreach ($comm as $v) {
             switch ($v['type']) {
                 case 'websocket':
+                case 'ws':
                     $ws_index[] = $v;
                     break;
                 case 'http':
                     $http_index[] = $v;
                     break;
                 case 'http_webhook':
+                case 'webhook':
                     $has_http_webhook[] = $v;
                     break;
                 case 'ws_reverse':
+                case 'websocket_reverse':
                     $has_ws_reverse[] = $v;
                     break;
             }
@@ -160,58 +142,6 @@ abstract class Driver
     public function getParam($key, $default)
     {
         return $this->params[$key] ?? $default;
-    }
-
-    public function getHttpServerSocket(int $key = 0): ?HttpServerSocketBase
-    {
-        return $this->http_socket[$key] ?? null;
-    }
-
-    /**
-     * @return HttpServerSocketBase[]
-     */
-    public function getHttpServerSockets(): array
-    {
-        return $this->http_socket;
-    }
-
-    public function getWSServerSocket(int $key = 0): ?WSServerSocketBase
-    {
-        return $this->ws_socket[$key] ?? null;
-    }
-
-    /**
-     * @return WSServerSocketBase[]
-     */
-    public function getWSServerSockets(): array
-    {
-        return $this->ws_socket;
-    }
-
-    public function getHttpWebhookSocket(int $key = 0): ?HttpWebhookSocketBase
-    {
-        return $this->http_webhook_socket[$key] ?? null;
-    }
-
-    /**
-     * @return HttpWebhookSocketBase[]
-     */
-    public function getHttpWebhookSockets(): array
-    {
-        return $this->http_webhook_socket;
-    }
-
-    public function getWSReverseSocket(int $key = 0): ?WSReverseSocketBase
-    {
-        return $this->ws_reverse_socket[$key] ?? null;
-    }
-
-    /**
-     * @return WSReverseSocketBase[]
-     */
-    public function getWSReverseSockets(): array
-    {
-        return $this->ws_reverse_socket;
     }
 
     public function getSupportedClients(): array
