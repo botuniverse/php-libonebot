@@ -183,7 +183,7 @@ class WorkermanDriver extends Driver
             // 因为 Workerman 要和 Swoole 统一，同时如果是 Linux，可以监听多个端口的情况下，先开一个 Worker，然后把剩下的塞进去。
             $ws_0 = array_shift($ws);
             $worker = new Worker('websocket://' . $ws_0['host'] . ':' . $ws_0['port']);
-            $worker->count = $ws_0['worker_count'] ?? 1;
+            $worker->count = $this->getParam('workerman_worker_num', 1);
             Worker::$internal_running = true;
             // ws server 相关事件
             $worker->onWebSocketConnect = [TopEventListener::getInstance(), 'onWebSocketOpen'];
@@ -193,6 +193,7 @@ class WorkermanDriver extends Driver
             $worker->onWorkerStart = [TopEventListener::getInstance(), 'onWorkerStart'];
             $worker->onWorkerStop = [TopEventListener::getInstance(), 'onWorkerStop'];
             $worker->token = ob_uuidgen();
+            $worker->flag = $ws_0['flag'] ?? 1;
             // 将剩下的 ws 协议配置加入到 worker 中
             if (DIRECTORY_SEPARATOR === '\\') {
                 ob_logger()->warning('Workerman 在 Windows 下只支持一个 Worker。');
@@ -227,7 +228,7 @@ class WorkermanDriver extends Driver
                 $http_0 = array_shift($http);
                 $http_pending = $http;
                 $worker = new Worker('http://' . $http_0['host'] . ':' . $http_0['port']);
-                $worker->count = $http_0['worker_count'] ?? 1;
+                $worker->count = $this->getParam('workerman_worker_num', 1);
                 Worker::$internal_running = true;
                 // http server 相关事件
                 $worker->onMessage = [TopEventListener::getInstance(), 'onHttpRequest'];
@@ -235,7 +236,8 @@ class WorkermanDriver extends Driver
                 $worker->onWorkerStart = [TopEventListener::getInstance(), 'onWorkerStart'];
                 $worker->onWorkerStop = [TopEventListener::getInstance(), 'onWorkerStop'];
                 $worker->token = ob_uuidgen();
-                $this->http_socket[] = (new HttpServerSocket($worker))->setFlag(1);
+                $worker->flag = $http_0['flag'] ?? 1;
+                $this->http_socket[] = (new HttpServerSocket($worker, $http_0['port']))->setFlag(1);
             }
             if (!empty($http_pending)) {
                 EventProvider::addEventListener(WorkerStartEvent::getName(), function () use ($http_pending) {
@@ -244,7 +246,8 @@ class WorkermanDriver extends Driver
                         $worker = new Worker('http://' . $http_1['host'] . ':' . $http_1['port']);
                         $worker->reusePort = true;
                         $worker->token = ob_uuidgen();
-                        $this->http_socket[] = (new HttpServerSocket($worker))->setFlag(1);
+                        $worker->flag = $http_1['flag'] ?? 1;
+                        $this->http_socket[] = (new HttpServerSocket($worker, $http_1['port']))->setFlag(1);
                         // http server 相关事件
                         $worker->onMessage = [TopEventListener::getInstance(), 'onHttpRequest'];
                         $worker->listen();

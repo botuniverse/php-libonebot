@@ -38,6 +38,9 @@ class Worker extends \Workerman\Worker
     /** @var null|string */
     public $token = '';
 
+    /** @var int */
+    public $flag = 0;
+
     public static $internal_running = false;
 
     public static $user_process_pid = -1;
