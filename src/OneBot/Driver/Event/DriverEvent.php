@@ -11,6 +11,8 @@ abstract class DriverEvent implements Event, StoppableEventInterface
     /** @var bool 是否停止分发 */
     protected $propagationStopped = false;
 
+    protected $socket_flag = 0;
+
     /** @var null|string 事件自定义名称 */
     protected static $custom_name;
 
@@ -49,5 +51,15 @@ abstract class DriverEvent implements Event, StoppableEventInterface
     public function setPropagationStopped(): void
     {
         $this->propagationStopped = true;
+    }
+
+    public function getSocketFlag(): int
+    {
+        return $this->socket_flag;
+    }
+
+    public function setSocketFlag(int $socket_flag): void
+    {
+        $this->socket_flag = $socket_flag;
     }
 }

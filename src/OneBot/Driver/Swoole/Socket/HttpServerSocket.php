@@ -20,4 +20,9 @@ class HttpServerSocket extends HttpServerSocketBase
         $this->socket_obj = $server_or_port;
         $this->config = $config;
     }
+
+    public function getPort(): int
+    {
+        return $this->socket_obj->port;
+    }
 }
