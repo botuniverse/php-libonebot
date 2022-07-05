@@ -30,6 +30,16 @@ class HttpRequestEvent extends DriverEvent
      */
     protected $error_handler;
 
+    /**
+     * @var null|callable
+     */
+    protected $async_send_callable;
+
+    /**
+     * @var bool
+     */
+    protected $async_send = false;
+
     public function __construct(ServerRequestInterface $request, $origin_request = null)
     {
         $this->request = $request;
@@ -60,5 +70,21 @@ class HttpRequestEvent extends DriverEvent
     public function getErrorHandler(): callable
     {
         return $this->error_handler;
+    }
+
+    public function withAsyncResponseCallable(callable $callable): HttpRequestEvent
+    {
+        $this->async_send_callable = $callable;
+        return $this;
+    }
+
+    public function setAsyncSend(bool $async_send = true): void
+    {
+        $this->async_send = $async_send;
+    }
+
+    public function getAsyncSendCallable(): ?callable
+    {
+        return $this->async_send_callable;
     }
 }
