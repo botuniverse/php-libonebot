@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace OneBot\V12\Object\Event\Message;
 
 use DateTimeInterface;
-use InvalidArgumentException;
 use OneBot\V12\Exception\OneBotException;
 use OneBot\V12\Object\Event\HasMessageId;
 use OneBot\V12\Object\Event\HasUserId;
@@ -25,7 +24,7 @@ abstract class MessageEvent extends OneBotEvent
     /**
      * 消息内容
      *
-     * @var MessageSegment|MessageSegment[]
+     * @var array<int, MessageSegment>|MessageSegment
      */
     public $message;
 
@@ -49,14 +48,16 @@ abstract class MessageEvent extends OneBotEvent
         parent::__construct('message', $detail_type, '', $time);
 
         if (is_string($message)) {
+            $this->alt_message = $message;
             $message = MessageSegment::createFromString($message);
         }
 
-        if (!($message instanceof MessageSegment)) {
-            throw new InvalidArgumentException('消息内容必须为字符串或消息段对象/数组');
+        if ($message instanceof MessageSegment) {
+            $this->message = [$message];
+        } elseif (is_array($message)) {
+            $this->message = $message;
         }
 
-        $this->message = $message;
         $this->user_id = $user_id;
     }
 

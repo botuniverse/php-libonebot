@@ -1,6 +1,7 @@
 {
     "name": "onebot/libonebot",
-    "description": "PHP 的 LibOneBot 库",
+    "description": "PHP 的 LibOneBot 库，通过此库可快速接入 OneBot 生态",
+    "license": "MIT",
     "type": "library",
     "keywords": [
         "php",
@@ -8,8 +9,6 @@
         "onebot",
         "starter"
     ],
-    "homepage": "https://github.com/botuniverse/php-libonebot",
-    "license": "MIT",
     "authors": [
         {
             "name": "crazywhalecc",
@@ -20,61 +19,71 @@
             "email": "xy2496419818@gmail.com"
         }
     ],
+    "homepage": "https://github.com/botuniverse/php-libonebot",
     "support": {
         "issues": "https://github.com/botuniverse/php-libonebot/issues",
         "wiki": "https://github.com/botuniverse/php-libonebot/wiki"
     },
-    "config": {
-        "optimize-autoloader": true,
-        "sort-packages": true
-    },
-    "prefer-stable": true,
-    "minimum-stability": "dev",
     "require": {
-        "php": "^7.2|^7.3|^7.4|^8.0|^8.1",
+        "php": "^7.2 || ^7.3 || ^7.4 || ^8.0 || ^8.1",
         "ext-json": "*",
         "ext-pdo": "*",
-        "ext-posix": "*",
-        "hassankhan/config": "^2.2",
-        "lezhnev74/pasvl": "^1.0",
         "psr/cache": "^1.0",
+        "psr/event-dispatcher": "^1.0",
+        "psr/http-client": "^1.0",
         "psr/log": "^1.1",
         "rybakit/msgpack": "^0.9.0",
-        "symfony/var-dumper": "^5.3",
         "workerman/workerman": "^4.0"
     },
     "require-dev": {
         "brainmaestro/composer-git-hooks": "^2.8",
         "friendsofphp/php-cs-fixer": "^3.2",
         "phpstan/phpstan": "^1.1",
-        "swoole/ide-helper": "@dev"
+        "phpunit/phpunit": "^9.0 || ^8.0",
+        "swoole/ide-helper": "~4.4.0",
+        "symfony/var-dumper": "^5.3"
     },
+    "suggest": {
+        "nunomaduro/collision": "Better display for exception and error message",
+        "symfony/var-dumper": "Better display for `ob_dump()` global debug function"
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true,
     "autoload": {
         "psr-4": {
             "OneBot\\": "src/OneBot"
         },
         "files": [
-            "src/OneBot/V12/global_defines.php"
+            "src/OneBot/global_defines.php"
         ]
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Tests\\": "tests"
+        }
+    },
+    "config": {
+        "optimize-autoloader": true,
+        "sort-packages": true
+    },
+    "extra": {
+        "hooks": {
+            "post-merge": "composer install",
+            "pre-commit": [
+                "echo committing as $(git config user.name)",
+                "composer cs-fix -- --diff"
+            ],
+            "pre-push": [
+                "composer cs-fix -- --dry-run --diff",
+                "composer analyse"
+            ]
+        }
     },
     "scripts": {
         "post-install-cmd": [
             "[ $COMPOSER_DEV_MODE -eq 0 ] || vendor/bin/cghooks add"
         ],
-        "cs-fix": "php-cs-fixer fix $1",
-        "analyse": "phpstan analyse --memory-limit 300M -l 0 ./src"
-    },
-    "extra": {
-        "hooks": {
-            "pre-commit": [
-                "echo committing as $(git config user.name)",
-                "./vendor/bin/php-cs-fixer fix --dry-run --diff ./src"
-            ],
-            "pre-push": [
-                "./vendor/bin/php-cs-fixer fix --dry-run --diff ./src",
-                "composer analyse"
-            ],
-            "post-merge": "composer install"
-        }
+        "analyse": "phpstan analyse --memory-limit 300M",
+        "cs-fix": "php-cs-fixer fix"
     }
 }

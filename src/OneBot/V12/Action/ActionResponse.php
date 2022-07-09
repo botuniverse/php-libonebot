@@ -4,9 +4,16 @@ declare(strict_types=1);
 
 namespace OneBot\V12\Action;
 
+use ArrayIterator;
+use IteratorAggregate;
+use JsonSerializable;
 use OneBot\V12\RetCode;
+use ReturnTypeWillChange;
 
-class ActionResponse
+/**
+ * @property mixed $echo
+ */
+class ActionResponse implements JsonSerializable, IteratorAggregate
 {
     public $status = 'ok';
 
@@ -16,7 +23,7 @@ class ActionResponse
 
     public $message = '';
 
-    public static function create($echo = null)
+    public static function create($echo = null): ActionResponse
     {
         $a = new self();
         if ($echo !== null) {
@@ -41,5 +48,23 @@ class ActionResponse
         $this->data = [];
         $this->message = $message === '' ? RetCode::getMessage($retcode) : $message;
         return $this;
+    }
+
+    /**
+     * @noinspection PhpLanguageLevelInspection
+     */
+    #[ReturnTypeWillChange]
+    public function getIterator(): ArrayIterator
+    {
+        return new ArrayIterator($this);
+    }
+
+    public function jsonSerialize(): array
+    {
+        $data = [];
+        foreach ($this as $k => $v) {
+            $data[$k] = $v;
+        }
+        return $data;
     }
 }

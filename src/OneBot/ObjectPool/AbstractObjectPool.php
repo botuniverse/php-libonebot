@@ -4,16 +4,18 @@ declare(strict_types=1);
 
 namespace OneBot\ObjectPool;
 
-use Exception;
+use OneBot\Driver\SwooleDriver;
+use OneBot\Driver\WorkermanDriver;
+use RuntimeException;
+use SplQueue;
 use Swoole\Coroutine\Channel;
 
 /**
  * 抽象对象池
- * 只能在Swoole协程中使用
  */
 abstract class AbstractObjectPool
 {
-    /** @var Channel 队列 */
+    /** @var Channel|SplQueue 队列 */
     private $queue;
 
     /** @var array 活跃对象 */
@@ -22,21 +24,29 @@ abstract class AbstractObjectPool
     public function __construct()
     {
         // TODO: 添加更多可配置项
-        $this->queue = new Channel(swoole_cpu_num());
+        if (ob_driver_is(SwooleDriver::class)) {
+            $this->queue = new Channel(swoole_cpu_num());
+        } elseif (ob_driver_is(WorkermanDriver::class)) {
+            $this->queue = new SplQueue();
+        }
     }
 
     /**
      * 取出对象
-     *
-     * @throws Exception
      */
     public function take(): object
     {
         if ($this->getFreeCount() > 0) {
             // 如有可用对象则取用
-            $object = $this->queue->pop(5);
+            try {
+                $object = $this->queue->pop();
+            } catch (RuntimeException $e) {
+                // 此处用以捕获 SplQueue 在对象池空时抛出的异常
+                throw new RuntimeException('对象池已空，无法取出');
+            }
             if (!$object) {
-                throw new Exception('取出对象时等待超时');
+                // Swoole Channel 在通道关闭时会返回 false
+                throw new RuntimeException('对象池通道被关闭，无法去除');
             }
         } else {
             // 没有就整个新的
@@ -58,7 +68,7 @@ abstract class AbstractObjectPool
         unset($this->actives[$hash]);
 
         // 放回队列里
-        return $this->queue->push($object, 5);
+        return $this->queue->push($object);
     }
 
     abstract protected function makeObject(): object;
@@ -68,8 +78,13 @@ abstract class AbstractObjectPool
      */
     protected function getFreeCount(): int
     {
-        $count = $this->queue->stats()['queue_num'];
-        return $count < 0 ? 0 : $count;
+        $count = 0;
+        if (ob_driver_is(SwooleDriver::class)) {
+            $count = $this->queue->stats()['queue_num'];
+        } elseif (ob_driver_is(WorkermanDriver::class)) {
+            $count = $this->queue->count();
+        }
+        return max($count, 0);
     }
 
     /**

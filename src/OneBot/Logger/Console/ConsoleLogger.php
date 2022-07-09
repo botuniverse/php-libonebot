@@ -4,30 +4,29 @@ declare(strict_types=1);
 
 namespace OneBot\Logger\Console;
 
+use OneBot\Driver\ProcessManager;
 use Psr\Log\AbstractLogger;
 use Psr\Log\InvalidArgumentException;
 use Psr\Log\LogLevel;
 
 class ConsoleLogger extends AbstractLogger
 {
-    public static $format = '[%date%] [%level%] %body%';
+    public static $format = '[%date%] [%level%] %process%%body%';
 
     public static $date_format = 'Y-m-d H:i:s';
 
     /**
-     * @var string[] 颜色表
-     *
-     * TODO: redesign color schema
+     * @var array 颜色表
      */
-    protected static $colors = [
-        LogLevel::EMERGENCY => 'red',
-        LogLevel::ALERT => 'red',
-        LogLevel::CRITICAL => 'red',
-        LogLevel::ERROR => 'red',
-        LogLevel::WARNING => 'yellow',
-        LogLevel::NOTICE => 'yellow',
-        LogLevel::INFO => 'lightblue',
-        LogLevel::DEBUG => 'gray',
+    protected static $styles = [
+        LogLevel::EMERGENCY => ['blink', 'white', 'bg_bright_red'],
+        LogLevel::ALERT => ['white', 'bg_bright_red'],
+        LogLevel::CRITICAL => ['underline', 'red'],
+        LogLevel::ERROR => ['red'],
+        LogLevel::WARNING => ['bright_yellow'],
+        LogLevel::NOTICE => ['cyan'],
+        LogLevel::INFO => ['green'],
+        LogLevel::DEBUG => ['gray'],
     ];
 
     protected static $levels = [
@@ -43,51 +42,26 @@ class ConsoleLogger extends AbstractLogger
 
     protected static $logLevel;
 
+    protected $exceptionHandler;
+
     public function __construct($logLevel = LogLevel::INFO)
     {
-        self::$logLevel = $logLevel;
+        self::$logLevel = array_flip(self::$levels)[$logLevel];
+        // ExceptionHandler::getInstance();
     }
 
-    public function colorize($string, $level)
+    public function colorize($string, $level): string
     {
         $string = $this->stringify($string);
-        $color = self::$colors[$level] ?? '';
-        switch ($color) {
-            case 'black':
-                return TermColor::color8(30) . $string . TermColor::RESET;
-            case 'red':
-                return TermColor::color8(31) . $string . TermColor::RESET;
-            case 'green':
-                return TermColor::color8(32) . $string . TermColor::RESET;
-            case 'yellow':
-                return TermColor::color8(33) . $string . TermColor::RESET;
-            case 'blue':
-                return TermColor::color8(34) . $string . TermColor::RESET;
-            case 'pink': // I really don't know what stupid color it is.
-            case 'lightpurple':
-                return TermColor::color8(35) . $string . TermColor::RESET;
-            case 'lightblue':
-                return TermColor::color8(36) . $string . TermColor::RESET;
-            case 'white':
-                return TermColor::color8(37) . $string . TermColor::RESET;
-            case 'gold':
-                return TermColor::frontColor256(214) . $string . TermColor::RESET;
-            case 'gray':
-                return TermColor::frontColor256(59) . $string . TermColor::RESET;
-            case 'lightlightblue':
-                return TermColor::frontColor256(63) . $string . TermColor::RESET;
-            case '':
-                return $string;
-            default:
-                return TermColor::frontColor256($color) . $string . TermColor::RESET;
-        }
+        $styles = self::$styles[$level] ?? [];
+        return ConsoleColor::apply($styles, $string)->__toString();
     }
 
-    public function trace()
+    public function trace(): void
     {
         $log = "Stack trace:\n";
         $trace = debug_backtrace();
-        //array_shift($trace);
+        // array_shift($trace);
         foreach ($trace as $i => $t) {
             if (!isset($t['file'])) {
                 $t['file'] = 'unknown';
@@ -95,11 +69,8 @@ class ConsoleLogger extends AbstractLogger
             if (!isset($t['line'])) {
                 $t['line'] = 0;
             }
-            if (!isset($t['function'])) {
-                $t['function'] = 'unknown';
-            }
             $log .= "#{$i} {$t['file']}({$t['line']}): ";
-            if (isset($t['object']) and is_object($t['object'])) {
+            if (isset($t['object']) && is_object($t['object'])) {
                 $log .= get_class($t['object']) . '->';
             }
             $log .= "{$t['function']}()\n";
@@ -121,9 +92,9 @@ class ConsoleLogger extends AbstractLogger
 //        $trace = debug_backtrace()[1] ?? ['file' => '', 'function' => ''];
 //        $trace = '[' . ($trace['class'] ?? '') . ':' . ($trace['function'] ?? '') . '] ';
 
-    public function log($level, $message, array $context = [])
+    public function log($level, $message, array $context = []): void
     {
-        if (!in_array($level, self::$levels)) {
+        if (!in_array($level, self::$levels, true)) {
             throw new InvalidArgumentException();
         }
 
@@ -132,8 +103,8 @@ class ConsoleLogger extends AbstractLogger
         }
 
         $output = str_replace(
-            ['%date%', '%level%', '%body%'],
-            [date(self::$date_format), strtoupper(substr($level, 0, 4)), $message],
+            ['%date%', '%level%', '%body%', '%process%'],
+            [date(self::$date_format), strtoupper(substr($level, 0, 4)), $message, ProcessManager::getProcessLogName()],
             self::$format
         );
         $output = $this->interpolate($output, $context);

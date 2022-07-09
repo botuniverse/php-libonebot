@@ -6,7 +6,12 @@ namespace OneBot\Util;
 
 trait Singleton
 {
-    private static $instance;
+    /**
+     * 类实例
+     *
+     * @var static
+     */
+    protected static $instance;
 
     /**
      * 获取单例.
@@ -17,7 +22,7 @@ trait Singleton
      */
     public static function getInstance(...$args): object
     {
-        if (!isset(static::$instance)) {
+        if (static::$instance === null) {
             // @phpstan-ignore-next-line
             static::$instance = new static(...$args);
         }
