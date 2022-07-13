@@ -107,7 +107,7 @@ class OneBotEventListener
             $event->send(json_encode($response_obj));
             ob_logger()->warning('OneBot Failure: ' . RetCode::getMessage($e->getRetCode()) . '(' . $e->getRetCode() . ') at ' . $e->getFile() . ':' . $e->getLine());
         } catch (Throwable $e) {
-            $response_obj = ActionResponse::create($response_obj->echo ?? null)->fail(RetCode::INTERNAL_HANDLER_ERROR);
+            $response_obj = ActionResponse::create()->fail(RetCode::INTERNAL_HANDLER_ERROR);
             $event->send(json_encode($response_obj));
             ob_logger()->error('Unhandled ' . get_class($e) . ': ' . $e->getMessage() . "\nStack trace:\n" . $e->getTraceAsString());
         }
