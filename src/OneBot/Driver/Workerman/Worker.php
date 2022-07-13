@@ -221,7 +221,7 @@ class Worker extends \Workerman\Worker
                     }
                     static::safeEcho("\nPress Ctrl+C to quit.\n\n");
                 }
-                // no break
+            // no break
             case 'connections':
                 if (is_file($statistics_file) && is_writable($statistics_file)) {
                     unlink($statistics_file);

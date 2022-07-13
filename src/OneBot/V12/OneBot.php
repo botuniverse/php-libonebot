@@ -247,7 +247,7 @@ class OneBot
                 continue;
             }
             $socket->post(json_encode($event->jsonSerialize()), $this->getRequestHeaders(), function (ResponseInterface $response) {
-            // TODO：编写 HTTP Webhook 响应的处理逻辑
+                // TODO：编写 HTTP Webhook 响应的处理逻辑
             }, function (RequestInterface $request) {});
         }
         $frame_str = FrameFactory::createTextFrame(json_encode($event->jsonSerialize())); // 创建文本帧
