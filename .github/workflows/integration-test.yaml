@@ -54,6 +54,3 @@ jobs:
 
       - name: Run Static Analysis
         run: "composer analyse"
-
-      - name: Run PHP CS Fixer Check
-        run: "./vendor/bin/php-cs-fixer fix --dry-run --diff"
