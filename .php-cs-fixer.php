@@ -69,6 +69,7 @@ return (new PhpCsFixer\Config())
         'phpdoc_summary' => false,
         'types_spaces' => false,
         'braces' => false,
+        'blank_line_between_import_groups' => false,
     ])
     ->setFinder(
         PhpCsFixer\Finder::create()

@@ -9,7 +9,6 @@ use InvalidArgumentException;
 use Psr\Http\Message\StreamInterface;
 use RuntimeException;
 use Throwable;
-
 use function clearstatcache;
 use function fclose;
 use function feof;
@@ -26,7 +25,6 @@ use function stream_get_contents;
 use function stream_get_meta_data;
 use function trigger_error;
 use function var_export;
-
 use const E_USER_ERROR;
 use const PHP_VERSION_ID;
 use const SEEK_CUR;

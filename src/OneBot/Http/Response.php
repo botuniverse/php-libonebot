@@ -7,7 +7,6 @@ namespace OneBot\Http;
 use InvalidArgumentException;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\StreamInterface;
-
 use function is_array;
 use function is_int;
 use function is_string;
