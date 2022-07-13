@@ -14,7 +14,7 @@ use OneBot\Http\HttpFactory;
 use Psr\Http\Client\ClientInterface;
 use Throwable;
 
-abstract class HttpWebhookSocketBase implements SocketInterface
+abstract class HttpClientSocketBase implements SocketInterface
 {
     use SocketFlag;
 

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace OneBot\Logger\Console;
 
-use OneBot\Driver\ProcessManager;
+use OneBot\Driver\Process\ProcessManager;
 use Psr\Log\AbstractLogger;
 use Psr\Log\InvalidArgumentException;
 use Psr\Log\LogLevel;

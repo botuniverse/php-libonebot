@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace OneBot\Util;
 
-use OneBot\V12\Action\ActionBase;
+use OneBot\V12\Action\ActionHandlerBase;
 use OneBot\V12\Exception\OneBotFailureException;
 use OneBot\V12\OneBot;
 use OneBot\V12\RetCode;
@@ -70,24 +70,24 @@ class Utils
      *
      * @throws OneBotFailureException
      */
-    public static function getActionFuncName(ActionBase $handler, string $action): string
+    public static function getActionFuncName(ActionHandlerBase $handler, string $action): string
     {
-        if (isset(ActionBase::$core_cache[$action])) {
-            return ActionBase::$core_cache[$action];
+        if (isset(ActionHandlerBase::$core_cache[$action])) {
+            return ActionHandlerBase::$core_cache[$action];
         }
 
-        if (isset(ActionBase::$ext_cache[$action])) {
-            return ActionBase::$ext_cache[$action];
+        if (isset(ActionHandlerBase::$ext_cache[$action])) {
+            return ActionHandlerBase::$ext_cache[$action];
         }
         if (strpos($action, (OneBot::getInstance()->getPlatform() . '.')) === 0) {
             $func = self::separatorToCamel('ext_' . substr($action, strlen(OneBot::getInstance()->getPlatform()) + 1));
             if (method_exists($handler, $func)) {
-                return ActionBase::$ext_cache[$action] = $func;
+                return ActionHandlerBase::$ext_cache[$action] = $func;
             }
         } else {
             $func = self::separatorToCamel('on_' . $action);
             if (method_exists($handler, $func)) {
-                return ActionBase::$core_cache[$action] = $func;
+                return ActionHandlerBase::$core_cache[$action] = $func;
             }
         }
         throw new OneBotFailureException(RetCode::UNSUPPORTED_ACTION);

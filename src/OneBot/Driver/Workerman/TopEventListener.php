@@ -12,8 +12,7 @@ use OneBot\Driver\Event\WebSocket\WebSocketCloseEvent;
 use OneBot\Driver\Event\WebSocket\WebSocketMessageEvent;
 use OneBot\Driver\Event\WebSocket\WebSocketOpenEvent;
 use OneBot\Driver\ExceptionHandler;
-use OneBot\Driver\ProcessManager;
-use OneBot\Driver\WorkermanDriver;
+use OneBot\Driver\Process\ProcessManager;
 use OneBot\Http\HttpFactory;
 use OneBot\Http\WebSocket\FrameFactory;
 use OneBot\Http\WebSocket\FrameInterface;
@@ -63,6 +62,7 @@ class TopEventListener
                 'http://' . $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI'],
                 $headers
             );
+            $server_request = $server_request->withQueryParams($_GET);
             $event = new WebSocketOpenEvent($server_request, $connection->id);
             $event->setSocketFlag($connection->worker->flag ?? 0);
             (new EventDispatcher())->dispatch($event);

@@ -12,7 +12,7 @@ use OneBot\Driver\Event\Http\HttpRequestEvent;
 use OneBot\Driver\Event\WebSocket\WebSocketMessageEvent;
 use OneBot\Driver\Event\WebSocket\WebSocketOpenEvent;
 use OneBot\Driver\Interfaces\WebSocketClientInterface;
-use OneBot\Driver\ProcessManager;
+use OneBot\Driver\Process\ProcessManager;
 use OneBot\Http\Client\Exception\NetworkException;
 use OneBot\Http\HttpFactory;
 use OneBot\Http\WebSocket\CloseFrameInterface;
@@ -20,7 +20,6 @@ use OneBot\Http\WebSocket\FrameInterface;
 use OneBot\Http\WebSocket\Opcode;
 use OneBot\Util\Singleton;
 use OneBot\Util\Utils;
-use OneBot\Util\Validator;
 use OneBot\V12\Action\ActionResponse;
 use OneBot\V12\Action\DefaultActionHandler;
 use OneBot\V12\Exception\OneBotFailureException;
@@ -160,26 +159,26 @@ class OneBotEventListener
                 try {
                     if ($v->getClient()->reconnect() !== true) {
                         ob_logger()->error('ws_reverse_client连接失败：无法建立连接');
-                        $event->getDriver()->addTimer($v->getReconnectInterval(), $reconnect);
+                        $event->getDriver()->getEventLoop()->addTimer($v->getReconnectInterval(), $reconnect);
                     }
                 } catch (NetworkException $e) {
                     ob_logger()->error('ws_reverse_client连接失败：' . $e->getMessage());
-                    $event->getDriver()->addTimer($v->getReconnectInterval(), $reconnect);
+                    $event->getDriver()->getEventLoop()->addTimer($v->getReconnectInterval(), $reconnect);
                 }
             };
             $v->getClient()->setMessageCallback([$this, 'onClientMessage']);
             $v->getClient()->setCloseCallback(function () use ($event, $reconnect, $v) {
                 ob_logger()->error('WS Reverse 服务端断开连接！');
-                $event->getDriver()->addTimer($v->getReconnectInterval(), $reconnect);
+                $event->getDriver()->getEventLoop()->addTimer($v->getReconnectInterval(), $reconnect);
             });
             try {
                 if ($v->getClient()->connect() !== true) {
                     ob_logger()->error('ws_reverse_client连接失败：首次无法建立连接');
-                    $event->getDriver()->addTimer($v->getReconnectInterval(), $reconnect);
+                    $event->getDriver()->getEventLoop()->addTimer($v->getReconnectInterval(), $reconnect);
                 }
             } catch (NetworkException $e) {
                 ob_logger()->error('ws_reverse_client连接失败：' . $e->getMessage());
-                $event->getDriver()->addTimer($v->getReconnectInterval(), $reconnect);
+                $event->getDriver()->getEventLoop()->addTimer($v->getReconnectInterval(), $reconnect);
             }
         }
     }

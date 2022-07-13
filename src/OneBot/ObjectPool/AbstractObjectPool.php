@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace OneBot\ObjectPool;
 
-use OneBot\Driver\SwooleDriver;
-use OneBot\Driver\WorkermanDriver;
+use OneBot\Driver\Swoole\SwooleDriver;
+use OneBot\Driver\Workerman\WorkermanDriver;
 use RuntimeException;
 use SplQueue;
 use Swoole\Coroutine\Channel;

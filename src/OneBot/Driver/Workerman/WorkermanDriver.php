@@ -2,28 +2,27 @@
 
 declare(strict_types=1);
 
-namespace OneBot\Driver;
+namespace OneBot\Driver\Workerman;
 
 use Exception;
+use OneBot\Driver\Driver;
+use OneBot\Driver\DriverEventLoopBase;
 use OneBot\Driver\Event\DriverInitEvent;
 use OneBot\Driver\Event\EventDispatcher;
 use OneBot\Driver\Event\EventProvider;
 use OneBot\Driver\Event\Process\UserProcessStartEvent;
 use OneBot\Driver\Event\Process\WorkerStartEvent;
+use OneBot\Driver\ExceptionHandler;
+use OneBot\Driver\Interfaces\DriverInitPolicy;
+use OneBot\Driver\Process\ProcessManager;
+use OneBot\Driver\Workerman\Socket\HttpClientSocket;
 use OneBot\Driver\Workerman\Socket\HttpServerSocket;
-use OneBot\Driver\Workerman\Socket\HttpWebhookSocket;
-use OneBot\Driver\Workerman\Socket\WSReverseSocket;
+use OneBot\Driver\Workerman\Socket\WSClientSocket;
 use OneBot\Driver\Workerman\Socket\WSServerSocket;
-use OneBot\Driver\Workerman\TopEventListener;
-use OneBot\Driver\Workerman\UserProcess;
-use OneBot\Driver\Workerman\WebSocketClient;
-use OneBot\Driver\Workerman\Worker;
 use OneBot\Http\Client\CurlClient;
 use OneBot\Http\Client\StreamClient;
 use OneBot\Util\Singleton;
 use Throwable;
-use Workerman\Events\EventInterface;
-use Workerman\Timer;
 
 class WorkermanDriver extends Driver
 {
@@ -106,6 +105,7 @@ class WorkermanDriver extends Driver
             }
             // TODO: 编写纯 WS Reverse 连接下的逻辑，就是不启动 Server 的
             if ($this->ws_socket === [] && $this->http_socket === []) {
+                /** @noinspection PhpObjectFieldsAreOnlyWrittenInspection */
                 $worker = new Worker();
                 Worker::$internal_running = true; // 加上这句就可以不需要必须输 start 命令才能启动了，直接启动
                 $worker->onWorkerStart = [TopEventListener::getInstance(), 'onWorkerStart'];
@@ -125,53 +125,19 @@ class WorkermanDriver extends Driver
 
     /**
      * {@inheritDoc}
-     */
-    public function addTimer(int $ms, callable $callable, int $times = 1, array $arguments = []): int
-    {
-        $timer_count = 0;
-        return Timer::add($ms / 1000, function () use (&$timer_id, &$timer_count, $callable, $times, $arguments) {
-            if ($times > 0) {
-                ++$timer_count;
-                if ($timer_count > $times) {
-                    Timer::del($timer_id);
-                    return;
-                }
-            }
-            $callable($timer_id, ...$arguments);
-        }, $arguments);
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    public function clearTimer(int $timer_id)
-    {
-        Timer::del($timer_id);
-    }
-
-    /**
-     * {@inheritDoc}
      *
      * @throws Exception
      */
     public function initWSReverseClients(array $headers = [])
     {
-        foreach ($this->ws_reverse_socket as $v) {
+        foreach ($this->ws_client_socket as $v) {
             $v->setClient(WebSocketClient::createFromAddress($v->getUrl(), array_merge($headers, $v->getHeaders())));
         }
     }
 
-    /**
-     * {@inheritDoc}
-     */
-    public function addReadEvent($fd, callable $callable)
+    public function getEventLoop(): DriverEventLoopBase
     {
-        Worker::getEventLoop()->add($fd, EventInterface::EV_READ, $callable);
-    }
-
-    public function delReadEvent($fd)
-    {
-        Worker::getEventLoop()->del($fd, EventInterface::EV_READ);
+        return EventLoop::getInstance();
     }
 
     /**
@@ -257,11 +223,11 @@ class WorkermanDriver extends Driver
         }
         /* @noinspection DuplicatedCode */
         foreach ($http_webhook as $v) {
-            $this->http_webhook_socket[] = (new HttpWebhookSocket($v['url'], $v['header'] ?? [], $v['access_token'] ?? '', $v['timeout'] ?? 5))->setFlag(1);
+            $this->http_client_socket[] = (new HttpClientSocket($v['url'], $v['header'] ?? [], $v['access_token'] ?? '', $v['timeout'] ?? 5))->setFlag(1);
         }
         foreach ($ws_reverse as $v) {
-            $this->ws_reverse_socket[] = (new WSReverseSocket($v['url'], $v['header'] ?? [], $v['access_token'] ?? '', $v['reconnect_interval'] ?? 5))->setFlag(1);
+            $this->ws_client_socket[] = (new WSClientSocket($v['url'], $v['header'] ?? [], $v['access_token'] ?? '', $v['reconnect_interval'] ?? 5))->setFlag(1);
         }
-        return [$this->http_socket !== [], $this->http_webhook_socket !== [], $this->ws_socket !== [], $this->ws_reverse_socket !== []];
+        return [$this->http_socket !== [], $this->http_client_socket !== [], $this->ws_socket !== [], $this->ws_client_socket !== []];
     }
 }

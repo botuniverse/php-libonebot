@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace OneBot\V12;
 
 use OneBot\Driver\Driver;
-use OneBot\Driver\DriverInitPolicy;
 use OneBot\Driver\Event\DriverInitEvent;
 use OneBot\Driver\Event\EventProvider;
 use OneBot\Driver\Event\Http\HttpRequestEvent;
@@ -15,10 +14,11 @@ use OneBot\Driver\Event\Process\WorkerStartEvent;
 use OneBot\Driver\Event\Process\WorkerStopEvent;
 use OneBot\Driver\Event\WebSocket\WebSocketMessageEvent;
 use OneBot\Driver\Event\WebSocket\WebSocketOpenEvent;
+use OneBot\Driver\Interfaces\DriverInitPolicy;
 use OneBot\Http\WebSocket\FrameFactory;
 use OneBot\Util\ObjectQueue;
 use OneBot\Util\Singleton;
-use OneBot\V12\Action\ActionBase;
+use OneBot\V12\Action\ActionHandlerBase;
 use OneBot\V12\Config\ConfigInterface;
 use OneBot\V12\Exception\OneBotException;
 use OneBot\V12\Object\Event\Meta\MetaEvent;
@@ -54,7 +54,7 @@ class OneBot
     /** @var Driver 驱动实例 */
     private $driver;
 
-    /** @var null|ActionBase 动作处理器 */
+    /** @var null|ActionHandlerBase 动作处理器 */
     private $base_action_handler;
 
     /** @var array 动作处理回调们 */
@@ -118,9 +118,9 @@ class OneBot
     }
 
     /**
-     * @param string $self_id
+     * @param int|string $self_id
      */
-    public function setSelfId(mixed $self_id): void
+    public function setSelfId($self_id): void
     {
         $this->self_id = $self_id;
     }
@@ -144,7 +144,7 @@ class OneBot
     /**
      * 获取动作处理器实例
      */
-    public function getBaseActionHandler(): ?ActionBase
+    public function getBaseActionHandler(): ?ActionHandlerBase
     {
         return $this->base_action_handler;
     }
@@ -152,17 +152,17 @@ class OneBot
     /**
      * 设置动作处理器，用于处理 Action 的类（继承自 ActionBase 的类）
      *
-     * @param  ActionBase|string $handler 动作处理器
+     * @param  ActionHandlerBase|string $handler 动作处理器
      * @throws OneBotException
      */
     public function setActionHandlerClass($handler): OneBot
     {
-        if (is_string($handler) && is_a($handler, ActionBase::class, true)) {
+        if (is_string($handler) && is_a($handler, ActionHandlerBase::class, true)) {
             $this->base_action_handler = new $handler();
-        } elseif ($handler instanceof ActionBase) {
+        } elseif ($handler instanceof ActionHandlerBase) {
             $this->base_action_handler = $handler;
         } else {
-            throw new OneBotException('CoreActionHandler必须extends ' . ActionBase::class);
+            throw new OneBotException('CoreActionHandler必须extends ' . ActionHandlerBase::class);
         }
         return $this;
     }
