@@ -10,6 +10,7 @@ namespace OneBot\Http;
 
 use InvalidArgumentException;
 use Psr\Http\Message\UriInterface;
+
 use function is_string;
 use function ltrim;
 use function parse_url;

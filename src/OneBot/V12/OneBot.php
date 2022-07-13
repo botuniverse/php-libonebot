@@ -239,7 +239,7 @@ class OneBot
     public function dispatchEvent(OneBotEvent $event): void
     {
         ob_logger()->info('Dispatching event: ' . $event->type);
-        if (!($event instanceof MetaEvent)) { // 排除 meta_event，要不然队列速度爆炸
+        if (!$event instanceof MetaEvent) { // 排除 meta_event，要不然队列速度爆炸
             ObjectQueue::enqueue('ob_event', $event);
         }
         foreach ($this->driver->getHttpWebhookSockets() as $socket) {
@@ -247,7 +247,7 @@ class OneBot
                 continue;
             }
             $socket->post(json_encode($event->jsonSerialize()), $this->getRequestHeaders(), function (ResponseInterface $response) {
-                // TODO：编写 HTTP Webhook 响应的处理逻辑
+            // TODO：编写 HTTP Webhook 响应的处理逻辑
             }, function (RequestInterface $request) {});
         }
         $frame_str = FrameFactory::createTextFrame(json_encode($event->jsonSerialize())); // 创建文本帧

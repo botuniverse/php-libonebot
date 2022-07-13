@@ -10,6 +10,7 @@ use Closure;
 use Exception;
 use Workerman\Events\EventInterface;
 use Workerman\Lib\Timer;
+
 use function count;
 use function debug_backtrace;
 use function is_file;
@@ -21,6 +22,7 @@ use function set_error_handler;
 use function str_replace;
 use function time;
 use function unlink;
+
 use const OS_TYPE_LINUX;
 use const SIG_IGN;
 use const SIGHUP;
@@ -219,7 +221,7 @@ class Worker extends \Workerman\Worker
                     }
                     static::safeEcho("\nPress Ctrl+C to quit.\n\n");
                 }
-            // no break
+                // no break
             case 'connections':
                 if (is_file($statistics_file) && is_writable($statistics_file)) {
                     unlink($statistics_file);

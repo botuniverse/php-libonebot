@@ -79,7 +79,7 @@ class Utils
         if (isset(ActionHandlerBase::$ext_cache[$action])) {
             return ActionHandlerBase::$ext_cache[$action];
         }
-        if (strpos($action, (OneBot::getInstance()->getPlatform() . '.')) === 0) {
+        if (strpos($action, OneBot::getInstance()->getPlatform() . '.') === 0) {
             $func = self::separatorToCamel('ext_' . substr($action, strlen(OneBot::getInstance()->getPlatform()) + 1));
             if (method_exists($handler, $func)) {
                 return ActionHandlerBase::$ext_cache[$action] = $func;
