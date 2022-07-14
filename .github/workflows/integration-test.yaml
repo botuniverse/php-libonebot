@@ -54,3 +54,6 @@ jobs:
 
       - name: Run Static Analysis
         run: "composer analyse"
+
+      - name: Run PHPUnit Tests
+        run: "composer test"
