@@ -14,7 +14,7 @@ use OneBot\Driver\Event\WebSocket\WebSocketCloseEvent;
 use OneBot\Driver\Event\WebSocket\WebSocketMessageEvent;
 use OneBot\Driver\Event\WebSocket\WebSocketOpenEvent;
 use OneBot\Driver\ExceptionHandler;
-use OneBot\Driver\ProcessManager;
+use OneBot\Driver\Process\ProcessManager;
 use OneBot\Http\HttpFactory;
 use OneBot\Http\WebSocket\FrameInterface;
 use OneBot\Util\Singleton;

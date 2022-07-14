@@ -8,7 +8,7 @@ namespace OneBot\Driver\Workerman;
 
 use Exception;
 use OneBot\Driver\Interfaces\ProcessInterface;
-use OneBot\Driver\ProcessManager;
+use OneBot\Driver\Process\ProcessManager;
 use Throwable;
 
 class UserProcess implements ProcessInterface

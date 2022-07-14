@@ -4,20 +4,22 @@
 
 declare(strict_types=1);
 
-namespace OneBot\Driver;
+namespace OneBot\Driver\Swoole;
 
 use Exception;
+use OneBot\Driver\Driver;
+use OneBot\Driver\DriverEventLoopBase;
 use OneBot\Driver\Event\DriverInitEvent;
 use OneBot\Driver\Event\EventDispatcher;
 use OneBot\Driver\Event\EventProvider;
 use OneBot\Driver\Event\Process\UserProcessStartEvent;
+use OneBot\Driver\ExceptionHandler;
+use OneBot\Driver\Interfaces\DriverInitPolicy;
+use OneBot\Driver\Process\ProcessManager;
+use OneBot\Driver\Swoole\Socket\HttpClientSocket;
 use OneBot\Driver\Swoole\Socket\HttpServerSocket;
-use OneBot\Driver\Swoole\Socket\HttpWebhookSocket;
-use OneBot\Driver\Swoole\Socket\WSReverseSocket;
+use OneBot\Driver\Swoole\Socket\WSClientSocket;
 use OneBot\Driver\Swoole\Socket\WSServerSocket;
-use OneBot\Driver\Swoole\TopEventListener;
-use OneBot\Driver\Swoole\UserProcess;
-use OneBot\Driver\Swoole\WebSocketClient;
 use OneBot\Http\Client\Exception\ClientException;
 use OneBot\Http\Client\SwooleClient;
 use OneBot\Util\Singleton;
@@ -25,7 +27,6 @@ use Swoole\Event;
 use Swoole\Http\Server as SwooleHttpServer;
 use Swoole\Server;
 use Swoole\Server\Port;
-use Swoole\Timer;
 use Swoole\WebSocket\Server as SwooleWebSocketServer;
 use Throwable;
 
@@ -50,6 +51,11 @@ class SwooleDriver extends Driver
         }
         static::$instance = $this;
         parent::__construct($params);
+    }
+
+    public function getEventLoop(): DriverEventLoopBase
+    {
+        return EventLoop::getInstance();
     }
 
     /**
@@ -87,12 +93,12 @@ class SwooleDriver extends Driver
         }
         /* @noinspection DuplicatedCode */
         foreach ($http_webhook as $v) {
-            $this->http_webhook_socket[] = (new HttpWebhookSocket($v['url'], $v['header'] ?? [], $v['access_token'] ?? '', $v['timeout'] ?? 5))->setFlag($v['flag'] ?? 1);
+            $this->http_client_socket[] = (new HttpClientSocket($v['url'], $v['header'] ?? [], $v['access_token'] ?? '', $v['timeout'] ?? 5))->setFlag($v['flag'] ?? 1);
         }
         foreach ($ws_reverse as $v) {
-            $this->ws_reverse_socket[] = (new WSReverseSocket($v['url'], $v['header'] ?? [], $v['access_token'] ?? '', $v['reconnect_interval'] ?? 5))->setFlag($v['flag'] ?? 1);
+            $this->ws_client_socket[] = (new WSClientSocket($v['url'], $v['header'] ?? [], $v['access_token'] ?? '', $v['reconnect_interval'] ?? 5))->setFlag($v['flag'] ?? 1);
         }
-        return [$this->http_socket !== [], $this->http_webhook_socket !== [], $this->ws_socket !== [], $this->ws_reverse_socket !== []];
+        return [$this->http_socket !== [], $this->http_client_socket !== [], $this->ws_socket !== [], $this->ws_client_socket !== []];
     }
 
     /**
@@ -152,57 +158,13 @@ class SwooleDriver extends Driver
     }
 
     /**
-     * {@inheritDoc}
-     */
-    public function addTimer(int $ms, callable $callable, int $times = 1, array $arguments = []): int
-    {
-        $timer_count = 0;
-        return Timer::tick($ms, function ($timer_id, ...$params) use (&$timer_count, $callable, $times) {
-            if ($times > 0) {
-                ++$timer_count;
-                if ($timer_count > $times) {
-                    Timer::clear($timer_id);
-                    return;
-                }
-            }
-            $callable($timer_id, ...$params);
-        }, ...$arguments);
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    public function clearTimer(int $timer_id)
-    {
-        Timer::clear($timer_id);
-    }
-
-    /**
-     * {@inheritDoc}
-     *
      * @throws ClientException
      */
     public function initWSReverseClients(array $headers = [])
     {
-        foreach ($this->ws_reverse_socket as $v) {
+        foreach ($this->ws_client_socket as $v) {
             $v->setClient(WebSocketClient::createFromAddress($v->getUrl(), array_merge($headers, $v->getHeaders()), $this->getParam('swoole_ws_client_set', ['websocket_mask' => true])));
         }
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    public function addReadEvent($fd, callable $callable)
-    {
-        Event::add($fd, $callable);
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    public function delReadEvent($fd)
-    {
-        Event::del($fd);
     }
 
     /**

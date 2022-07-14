@@ -4,10 +4,9 @@ declare(strict_types=1);
 
 use OneBot\Driver\Event\EventProvider;
 use OneBot\Driver\Event\Http\HttpRequestEvent;
-use OneBot\Driver\SwooleDriver;
+use OneBot\Driver\Swoole\SwooleDriver;
 use OneBot\Http\HttpFactory;
 use OneBot\Logger\Console\ConsoleLogger;
-use OneBot\Util\Validator;
 use OneBot\V12\Action\ActionResponse;
 use OneBot\V12\Object\Action;
 use OneBot\V12\Object\Event\Message\PrivateMessageEvent;
@@ -15,6 +14,7 @@ use OneBot\V12\Object\MessageSegment;
 use OneBot\V12\OneBot;
 use OneBot\V12\OneBotBuilder;
 use OneBot\V12\RetCode;
+use OneBot\V12\Validator;
 use Swoole\Coroutine\Channel;
 
 require_once __DIR__ . '/../vendor/autoload.php';
@@ -240,14 +240,14 @@ EventProvider::addEventListener(HttpRequestEvent::getName(), function (HttpReque
         }
     } elseif ($ob->getDriver()->getName() === 'workerman') { // Workerman 使用异步模式，直接把回调存起来，然后等触发
         $event->setAsyncSend(); // 标记为异步发送
-        $timer_id = $ob->getDriver()->addTimer(4500, function () use ($event, $self_id, $user_id) {
+        $timer_id = $ob->getDriver()->getEventLoop()->addTimer(4500, function () use ($event, $self_id, $user_id) {
             $event->getAsyncSendCallable()(HttpFactory::getInstance()->createResponse(204));
             wx_global_unset($self_id . ':' . $user_id);
         });
         wx_global_set($self_id . ':' . $user_id, function (Action $action) use ($ob, $event, $timer_id, $self_id) {
             $xml = wx_make_xml_reply($action, $self_id);
             $event->getAsyncSendCallable()(HttpFactory::getInstance()->createResponse(200, null, ['Content-Type' => 'application/xml'], $xml));
-            $ob->getDriver()->clearTimer($timer_id);
+            $ob->getDriver()->getEventLoop()->clearTimer($timer_id);
         });
         OneBot::getInstance()->dispatchEvent($msg_event);
     } else {

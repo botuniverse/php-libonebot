@@ -42,11 +42,12 @@ class ServerRequest implements ServerRequestInterface
      * @param null|resource|StreamInterface|string $body    Request body
      * @param string                               $version Protocol version
      */
-    public function __construct(string $method, $uri, array $headers = [], $body = null, string $version = '1.1', array $serverParams = [])
+    public function __construct(string $method, $uri, array $headers = [], $body = null, string $version = '1.1', array $serverParams = [], array $queryParams = [])
     {
         $this->serverParams = $serverParams;
+        $this->queryParams = $queryParams;
 
-        if (!($uri instanceof UriInterface)) {
+        if (!$uri instanceof UriInterface) {
             $uri = new Uri($uri);
         }
 

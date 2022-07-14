@@ -2,7 +2,10 @@
 
 declare(strict_types=1);
 
-namespace OneBot\Driver;
+namespace OneBot\Driver\Process;
+
+use OneBot\Driver\Driver;
+use OneBot\Driver\Workerman\WorkermanDriver;
 
 class ProcessManager
 {

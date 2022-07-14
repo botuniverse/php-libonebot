@@ -6,7 +6,7 @@ use OneBot\V12\OneBot;
 use Psr\Log\LoggerInterface;
 
 const ONEBOT_VERSION = '12';
-const ONEBOT_LIBOB_VERSION = '0.3.0';
+const ONEBOT_LIBOB_VERSION = '0.4.0';
 
 const ONEBOT_JSON = 1;
 const ONEBOT_MSGPACK = 2;
