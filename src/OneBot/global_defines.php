@@ -2,8 +2,10 @@
 
 declare(strict_types=1);
 
+use OneBot\Driver\Process\ProcessManager;
 use OneBot\V12\OneBot;
 use Psr\Log\LoggerInterface;
+use ZM\Logger\ConsoleLogger;
 
 const ONEBOT_VERSION = '12';
 const ONEBOT_LIBOB_VERSION = '0.4.0';
@@ -53,7 +55,26 @@ function ob_dump($var, ...$moreVars)
  */
 function ob_logger(): LoggerInterface
 {
-    return OneBot::getInstance()->getLogger();
+    global $ob_logger;
+    return $ob_logger;
+}
+
+function ob_logger_register(LoggerInterface $logger): void
+{
+    global $ob_logger;
+    if ($logger instanceof ConsoleLogger) {
+        $type = ProcessManager::getProcessType();
+        $map = [
+            ONEBOT_PROCESS_MASTER => 'MST',
+            ONEBOT_PROCESS_MANAGER => 'MAN',
+            ONEBOT_PROCESS_WORKER => '#' . ProcessManager::getProcessId(),
+            ONEBOT_PROCESS_USER => 'USR',
+            ONEBOT_PROCESS_TASKWORKER => '#' . ProcessManager::getProcessId(),
+        ];
+        $logger::$format = '[%date%] [%level%] [' . $map[$type] . '] %body%';
+        $logger::$date_format = 'Y-m-d H:i:s';
+    }
+    $ob_logger = $logger;
 }
 
 /**

@@ -25,7 +25,7 @@ $config = [
     'self_id' => 'REPL-1',
     'db' => true,
     'logger' => [
-        'class' => \OneBot\Logger\Console\ConsoleLogger::class,
+        'class' => \ZM\Logger\ConsoleLogger::class,
         'level' => 'info',
     ],
     'driver' => [

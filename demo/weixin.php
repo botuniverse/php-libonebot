@@ -6,7 +6,6 @@ use OneBot\Driver\Event\EventProvider;
 use OneBot\Driver\Event\Http\HttpRequestEvent;
 use OneBot\Driver\Swoole\SwooleDriver;
 use OneBot\Http\HttpFactory;
-use OneBot\Logger\Console\ConsoleLogger;
 use OneBot\V12\Action\ActionResponse;
 use OneBot\V12\Object\Action;
 use OneBot\V12\Object\Event\Message\PrivateMessageEvent;
@@ -25,7 +24,7 @@ $config = [
     'self_id' => '', // 后续会自动获取
     'db' => true,
     'logger' => [
-        'class' => ConsoleLogger::class,
+        'class' => \ZM\Logger\ConsoleLogger::class,
         'level' => 'info',
     ],
     'driver' => [
