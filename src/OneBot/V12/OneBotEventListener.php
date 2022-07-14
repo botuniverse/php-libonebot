@@ -261,7 +261,6 @@ class OneBotEventListener
                 throw new OneBotFailureException(RetCode::INTERNAL_HANDLER_ERROR);
         }
 
-        Validator::validateParamsByAction($action_obj, ['detail_type' => true]);
         if (($handler = OneBot::getInstance()->getActionHandler($action_obj->action)) !== null) {
             $response_obj = call_user_func($handler[0], $action_obj);
         } else {

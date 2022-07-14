@@ -3,8 +3,8 @@
 declare(strict_types=1);
 
 use OneBot\Driver\Workerman\WorkermanDriver;
-use OneBot\Logger\Console\ConsoleLogger;
 use OneBot\V12\OneBotBuilder;
+use ZM\Logger\ConsoleLogger;
 
 require_once __DIR__ . '/../vendor/autoload.php';
 
