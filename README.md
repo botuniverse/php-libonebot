@@ -15,6 +15,8 @@ PHP 的 LibOneBot 库。LibOneBot 可以帮助 OneBot 实现者快速在新的�
 基于 LibOneBot 实现 OneBot 时，OneBot 实现者只需专注于编写与聊天机器人平台对接的逻辑，包括通过长轮询或 webhook 方式从机器人平台获得事件，并将其转换为 OneBot 事件，以及处理 OneBot
 动作请求，并将其转换为对机器人平台 API 的调用。
 
+此外，内部的通信方式有相应的抽象方法，你可以在 libob 的基础上开发或整合其他 Web 框架。
+
 **当前版本还在开发中，在发布正式版之前此库内的接口可能会发生较大变动。**
 
 开发进度见 [更新日志](/docs/update.md)。

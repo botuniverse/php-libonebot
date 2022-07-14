@@ -103,7 +103,7 @@ class WorkermanDriver extends Driver
                     Worker::$user_process->run();
                 }
             }
-            // TODO: 编写纯 WS Reverse 连接下的逻辑，就是不启动 Server 的
+            // 编写纯 WS Reverse 连接下的逻辑，就是不启动 Server 的
             if ($this->ws_socket === [] && $this->http_socket === []) {
                 /** @noinspection PhpObjectFieldsAreOnlyWrittenInspection */
                 $worker = new Worker();
@@ -160,11 +160,6 @@ class WorkermanDriver extends Driver
             $worker->onWorkerStop = [TopEventListener::getInstance(), 'onWorkerStop'];
             $worker->token = ob_uuidgen();
             $worker->flag = $ws_0['flag'] ?? 1;
-            // 将剩下的 ws 协议配置加入到 worker 中
-            if (DIRECTORY_SEPARATOR === '\\') {
-                ob_logger()->warning('Workerman 在 Windows 下只支持一个 Worker。');
-                // Windows 下，Workerman 只支持一个 Worker，所以需要把剩下的 ws 协议配置加入到 worker 中
-            }
             if (!empty($ws)) {
                 EventProvider::addEventListener(WorkerStartEvent::getName(), function () use ($ws) {
                     ob_logger()->info('Workerman 开始加载 WS 协议配置');

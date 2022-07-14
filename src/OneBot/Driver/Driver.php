@@ -113,16 +113,16 @@ abstract class Driver
         }
         [$http, $webhook, $ws, $ws_reverse] = $this->initInternalDriverClasses($http_index, $has_http_webhook, $ws_index, $has_ws_reverse);
         if ($ws) {
-            ob_logger()->info('已开启正向 WebSocket');
+            ob_logger()->debug('已开启正向 WebSocket');
         }
         if ($http) {
-            ob_logger()->info('已开启 HTTP');
+            ob_logger()->debug('已开启 HTTP');
         }
         if ($webhook) {
-            ob_logger()->info('已开启 HTTP Webhook');
+            ob_logger()->debug('已开启 HTTP Webhook');
         }
         if ($ws_reverse) {
-            ob_logger()->info('已开启反向 WebSocket');
+            ob_logger()->debug('已开启反向 WebSocket');
         }
     }
 

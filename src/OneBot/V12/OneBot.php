@@ -39,9 +39,6 @@ class OneBot
     /** @var ConfigInterface 配置实例 */
     private $config;
 
-    /** @var LoggerInterface 日志实例 */
-    private $logger;
-
     /** @var string 实现名称 */
     private $implement_name;
 
@@ -74,7 +71,7 @@ class OneBot
         $this->self_id = $config->get('self_id');
         $this->platform = $config->get('platform');
 
-        $this->logger = $config->get('logger');
+        ob_logger_register($config->get('logger'));
         $config->set('logger', null);
         $this->driver = $config->get('driver');
         $config->set('driver', null);
@@ -87,7 +84,7 @@ class OneBot
      */
     public function getLogger(): LoggerInterface
     {
-        return $this->logger;
+        return ob_logger();
     }
 
     /**

@@ -51,6 +51,7 @@ class OneBotEventListener
                 $event->withResponse(HttpFactory::getInstance()->createResponse(404));
                 return;
             }
+            // OneBot 12 只接受 POST 请求
             if ($request->getMethod() === 'GET') {
                 $event->withResponse(HttpFactory::getInstance()->createResponse(200, 'OK', [], 'Hello OneBot!'));
                 return;
@@ -119,6 +120,7 @@ class OneBotEventListener
     public function onWorkerStart(): void
     {
         ob_logger()->debug('Worker #' . ProcessManager::getProcessId() . ' started');
+        ob_logger_register(ob_logger());
     }
 
     /**
@@ -135,6 +137,7 @@ class OneBotEventListener
     public function onManagerStart(): void
     {
         ob_logger()->debug('Manager started');
+        ob_logger_register(ob_logger());
     }
 
     /**
