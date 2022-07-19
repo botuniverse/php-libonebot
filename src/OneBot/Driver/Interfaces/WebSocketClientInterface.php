@@ -108,4 +108,9 @@ interface WebSocketClientInterface
      * @return int 返回连接 ID
      */
     public function getFd(): int;
+
+    /**
+     * 检测当前 Client 是否已连接
+     */
+    public function isConnected(): bool;
 }

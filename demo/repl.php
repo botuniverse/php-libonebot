@@ -3,7 +3,6 @@
 declare(strict_types=1);
 
 use OneBot\Driver\Event\DriverInitEvent;
-use OneBot\Driver\Event\EventProvider;
 use OneBot\Util\Utils;
 use OneBot\V12\Action\ActionResponse;
 use OneBot\V12\Object\Action;
@@ -75,7 +74,7 @@ $ob->addActionHandler('send_message', function (Action $obj) { // 写一个动�
 });
 
 // 下面是一个简单的 REPL 实现，每次输入一行，就会触发一次 private.message 事件并通过设定的通信方式发送
-EventProvider::addEventListener(DriverInitEvent::getName(), function (DriverInitEvent $event) {
+ob_event_provider()->addEventListener(DriverInitEvent::getName(), function (DriverInitEvent $event) {
     ob_logger()->info('Init 进程启动！' . $event->getDriver()->getName());
     $event->getDriver()->getEventLoop()->addReadEvent(STDIN, function ($x) use ($event) {
         $s = fgets($x);

@@ -10,8 +10,6 @@ use Exception;
 use OneBot\Driver\Driver;
 use OneBot\Driver\DriverEventLoopBase;
 use OneBot\Driver\Event\DriverInitEvent;
-use OneBot\Driver\Event\EventDispatcher;
-use OneBot\Driver\Event\EventProvider;
 use OneBot\Driver\Event\Process\UserProcessStartEvent;
 use OneBot\Driver\ExceptionHandler;
 use OneBot\Driver\Interfaces\DriverInitPolicy;
@@ -114,12 +112,12 @@ class SwooleDriver extends Driver
             switch ($this->getDriverInitPolicy()) {
                 case DriverInitPolicy::MULTI_PROCESS_INIT_IN_MASTER:
                     $event = new DriverInitEvent($this);
-                    (new EventDispatcher())->dispatch($event);
+                    ob_event_dispatcher()->dispatch($event);
                     break;
                 case DriverInitPolicy::MULTI_PROCESS_INIT_IN_USER_PROCESS:
-                    EventProvider::addEventListener(UserProcessStartEvent::getName(), function () {
+                    ob_event_provider()->addEventListener(UserProcessStartEvent::getName(), function () {
                         $event = new DriverInitEvent($this);
-                        (new EventDispatcher())->dispatch($event);
+                        ob_event_dispatcher()->dispatch($event);
                         if ($this->getParam('init_in_user_process_block', true) === true) {
                             /* @phpstan-ignore-next-line */
                             while (true) {
@@ -130,13 +128,13 @@ class SwooleDriver extends Driver
                     break;
             }
             // 添加插入用户进程的启动仪式
-            if (!empty(EventProvider::getEventListeners(UserProcessStartEvent::getName()))) {
+            if (!empty(ob_event_provider()->getEventListeners(UserProcessStartEvent::getName()))) {
                 $process = new UserProcess(function () use (&$process) {
                     ProcessManager::initProcess(ONEBOT_PROCESS_USER, 0);
                     ob_logger()->debug('新建UserProcess');
                     try {
                         $event = new UserProcessStartEvent($process);
-                        (new EventDispatcher())->dispatch($event);
+                        ob_event_dispatcher()->dispatch($event);
                     } catch (Throwable $e) {
                         ExceptionHandler::getInstance()->handle($e);
                     }
@@ -146,7 +144,7 @@ class SwooleDriver extends Driver
             $this->server->start();
         } else {
             go(function () {
-                EventDispatcher::dispatchWithHandler(new DriverInitEvent($this, self::SINGLE_PROCESS));
+                ob_event_dispatcher()->dispatchWithHandler(new DriverInitEvent($this, self::SINGLE_PROCESS));
             });
             Event::wait();
         }
