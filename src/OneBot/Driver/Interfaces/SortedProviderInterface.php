@@ -19,10 +19,9 @@ interface SortedProviderInterface extends ListenerProviderInterface
     /**
      * 添加事件监听器
      *
-     * @param object|string $name     事件名称或事件对象
+     * @param object|string $event    事件名称或事件对象
      * @param callable      $callback 事件回调
      * @param int           $level    事件等级
-     * @param mixed         $event
      */
     public function addEventListener($event, callable $callback, int $level = 20);
 }
