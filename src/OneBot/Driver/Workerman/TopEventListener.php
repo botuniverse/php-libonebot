@@ -157,6 +157,5 @@ class TopEventListener
             $response->withBody('Internal Server Error');
             $connection->send($response);
         }
-        ob_dump($response);
     }
 }

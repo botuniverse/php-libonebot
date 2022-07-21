@@ -93,7 +93,6 @@ class TopEventListener
                         $response->setHeader($header, implode(';', $value));
                     }
                 }
-                ob_dump($psr_response);
                 $response->setStatusCode($psr_response->getStatusCode());
                 $response->end($psr_response->getBody());
             }
