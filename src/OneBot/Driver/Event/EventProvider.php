@@ -19,11 +19,11 @@ class EventProvider implements SortedProviderInterface
     /**
      * 添加事件监听器
      *
-     * @param string   $name     事件名称
-     * @param callable $callback 事件回调
-     * @param int      $level    事件等级
+     * @param object|string $event    事件名称
+     * @param callable      $callback 事件回调
+     * @param int           $level    事件等级
      */
-    public function addEventListener(string $name, callable $callback, int $level = 20)
+    public function addEventListener($event, callable $callback, int $level = 20)
     {
         /*
          * TODO: 尝试同时支持类名和自定义名称作为事件名
@@ -32,8 +32,11 @@ class EventProvider implements SortedProviderInterface
          * NOTE: 如果使用自定义名称，则需要在事件处理器中使用 `$event->getName()` 获取事件名
          * NOTE: 或者是否由其他可能的方法支持自定义名称，从而避免频繁的 new EventDispatcher
          */
-        self::$_events[$name][] = [$level, $callback];
-        $this->sortEvents($name);
+        if (!is_object($event)) {
+            $event = get_class($event);
+        }
+        self::$_events[$event][] = [$level, $callback];
+        $this->sortEvents($event);
     }
 
     /**
