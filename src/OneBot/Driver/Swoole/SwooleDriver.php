@@ -39,6 +39,9 @@ class SwooleDriver extends Driver
     /** @var SwooleHttpServer|SwooleWebSocketServer 服务端实例 */
     protected $server;
 
+    /** @var array Swoole Server 的配置项 */
+    protected $server_set;
+
     /**
      * @throws Exception
      */
@@ -141,6 +144,7 @@ class SwooleDriver extends Driver
                 }, false);
                 $this->server->addProcess($process);
             }
+            $this->server->set($this->server_set);
             $this->server->start();
         } else {
             go(function () {
@@ -163,6 +167,24 @@ class SwooleDriver extends Driver
         foreach ($this->ws_client_socket as $v) {
             $v->setClient(WebSocketClient::createFromAddress($v->getUrl(), array_merge($headers, $v->getHeaders()), $this->getParam('swoole_ws_client_set', ['websocket_mask' => true])));
         }
+    }
+
+    /**
+     * 重设 Server Set 参数列表
+     *
+     * @param mixed $server_set
+     */
+    public function setServerSet($server_set): void
+    {
+        $this->server_set = $server_set;
+    }
+
+    /**
+     * 获取 Server Set 参数列表
+     */
+    public function getServerSet(): array
+    {
+        return $this->server_set;
     }
 
     /**
@@ -189,10 +211,10 @@ class SwooleDriver extends Driver
      */
     private function initServer(): void
     {
-        $this->server->set($this->getParam('swoole_set', [
+        $this->server_set = $this->getParam('swoole_set', [
             'max_coroutine' => 300000, // 默认如果不手动设置 Swoole 的话，提供的协程数量尽量多一些，保证并发性能（反正协程不要钱）
             'max_wait_time' => 5,      // 安全 shutdown 时候，让 Swoole 等待 Worker 进程响应的最大时间
-        ]));
+        ]);
         $this->server->on('workerstart', [TopEventListener::getInstance(), 'onWorkerStart']);
         $this->server->on('managerstart', [TopEventListener::getInstance(), 'onManagerStart']);
         $this->server->on('managerstop', [TopEventListener::getInstance(), 'onManagerStop']);
