@@ -51,6 +51,17 @@ class Worker extends \Workerman\Worker
     public static $user_process;
 
     /**
+     * Available event loops.
+     *
+     * @var array
+     */
+    protected static $_availableEventLoops = [
+        'event' => '\Workerman\Events\Event',
+        'libevent' => '\Workerman\Events\Libevent',
+        'swoole' => '\Workerman\Events\Swoole',
+    ];
+
+    /**
      * @throws Exception
      */
     public static function runAll(): void
@@ -60,7 +71,7 @@ class Worker extends \Workerman\Worker
         static::parseCommand();     // 解析命令行，但好像 libob 不太需要
         static::daemonize();        // 创建守护进程，但 libob 好像也不太需要
         static::initWorkers();      // 初始化 Worker 进程
-        static::installSignal();    // 安装信号处理函数
+        // static::installSignal();    // 安装信号处理函数
         // static::saveMasterPid();    // 保存 Master PID
         // static::displayUI();      // 显示开头的启动信息 UI，但 Swoole 没有，所以这里注释掉，以统一
         static::forkWorkers();      // 创建 Worker 进程
@@ -74,7 +85,7 @@ class Worker extends \Workerman\Worker
      */
     public static function log($msg)
     {
-        ob_logger()->debug($msg);
+        ob_logger()->warning($msg);
     }
 
     /**
@@ -292,25 +303,26 @@ class Worker extends \Workerman\Worker
      */
     protected static function installSignal()
     {
-        if (static::$_OS !== OS_TYPE_LINUX) {
+        if (static::$_OS === OS_TYPE_WINDOWS) {
             return;
         }
+        echo "设置监听器\n";
         $signalHandler = '\Workerman\Worker::signalHandler';
-        // stop
+        // // stop
         // \pcntl_signal(\SIGINT, $signalHandler, false);
-        // stop
-        pcntl_signal(SIGTERM, $signalHandler, false);
-        // graceful stop
+        // // stop
+        // pcntl_signal(SIGTERM, $signalHandler, false);
+        // // graceful stop
         // \pcntl_signal(\SIGHUP, $signalHandler, false);
-        // reload
+        // // reload
         pcntl_signal(SIGUSR1, $signalHandler, false);
-        // graceful reload
+        // // graceful reload
         // \pcntl_signal(\SIGQUIT, $signalHandler, false);
-        // status
+        // // status
         // \pcntl_signal(\SIGUSR2, $signalHandler, false);
-        // connection status
+        // // connection status
         // \pcntl_signal(\SIGIO, $signalHandler, false);
-        // ignore
+        // // ignore
         // \pcntl_signal(\SIGPIPE, \SIG_IGN, false);
     }
 
@@ -319,35 +331,35 @@ class Worker extends \Workerman\Worker
      */
     protected static function reinstallSignal()
     {
-        if (static::$_OS !== OS_TYPE_LINUX) {
+        if (static::$_OS === OS_TYPE_WINDOWS) {
             return;
         }
         $signalHandler = '\Workerman\Worker::signalHandler';
-        // uninstall stop signal handler
+        // // uninstall stop signal handler
         // \pcntl_signal(\SIGINT, \SIG_IGN, false);
-        // uninstall stop signal handler
-        pcntl_signal(SIGTERM, SIG_IGN, false);
-        // uninstall graceful stop signal handler
+        // // uninstall stop signal handler
+        // pcntl_signal(SIGTERM, SIG_IGN, false);
+        // // uninstall graceful stop signal handler
         // \pcntl_signal(\SIGHUP, \SIG_IGN, false);
-        // uninstall reload signal handler
-        pcntl_signal(SIGUSR1, SIG_IGN, false);
-        // uninstall graceful reload signal handler
+        // // uninstall reload signal handler
+        // pcntl_signal(SIGUSR1, SIG_IGN, false);
+        // // uninstall graceful reload signal handler
         // \pcntl_signal(\SIGQUIT, \SIG_IGN, false);
-        // uninstall status signal handler
+        // // uninstall status signal handler
         // \pcntl_signal(\SIGUSR2, \SIG_IGN, false);
-        // uninstall connections status signal handler
+        // // uninstall connections status signal handler
         // \pcntl_signal(\SIGIO, \SIG_IGN, false);
-        // reinstall stop signal handler
+        // // reinstall stop signal handler
         // static::$globalEvent->add(\SIGINT, EventInterface::EV_SIGNAL, $signalHandler);
-        // reinstall graceful stop signal handler
+        // // reinstall graceful stop signal handler
         // static::$globalEvent->add(\SIGHUP, EventInterface::EV_SIGNAL, $signalHandler);
-        // reinstall reload signal handler
-        static::$globalEvent->add(SIGUSR1, EventInterface::EV_SIGNAL, $signalHandler);
-        // reinstall graceful reload signal handler
+        // // reinstall reload signal handler
+        // static::$globalEvent->add(SIGUSR1, EventInterface::EV_SIGNAL, $signalHandler);
+        // // reinstall graceful reload signal handler
         // static::$globalEvent->add(\SIGQUIT, EventInterface::EV_SIGNAL, $signalHandler);
-        // reinstall status signal handler
+        // // reinstall status signal handler
         // static::$globalEvent->add(\SIGUSR2, EventInterface::EV_SIGNAL, $signalHandler);
-        // reinstall connection status signal handler
+        // // reinstall connection status signal handler
         // static::$globalEvent->add(\SIGIO, EventInterface::EV_SIGNAL, $signalHandler);
     }
 
