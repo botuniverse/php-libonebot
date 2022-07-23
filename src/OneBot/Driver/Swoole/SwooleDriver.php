@@ -188,6 +188,16 @@ class SwooleDriver extends Driver
     }
 
     /**
+     * 返回 Swoole 的 Server 对象
+     *
+     * @return SwooleHttpServer|SwooleWebSocketServer
+     */
+    public function getSwooleServer()
+    {
+        return $this->server;
+    }
+
+    /**
      * 初始化 Websocket 服务端，注册 WS 连接、收到消息和断开连接三种事件的顶层回调
      *
      * @param Port|Server $obj  Server 或 Port 对象
