@@ -8,7 +8,7 @@ namespace OneBot\Driver\Workerman;
 
 use Closure;
 use Exception;
-use Workerman\Events\EventInterface;
+use Workerman\Connection\ConnectionInterface;
 use Workerman\Lib\Timer;
 use function count;
 use function debug_backtrace;
@@ -21,14 +21,6 @@ use function set_error_handler;
 use function str_replace;
 use function time;
 use function unlink;
-use const OS_TYPE_LINUX;
-use const SIG_IGN;
-use const SIGHUP;
-use const SIGINT;
-use const SIGQUIT;
-use const SIGTERM;
-use const SIGUSR1;
-use const WUNTRACED;
 
 /**
  * @property callable|Closure $onWebSocketConnect
@@ -73,6 +65,9 @@ class Worker extends \Workerman\Worker
         static::initWorkers();      // 初始化 Worker 进程
         // static::installSignal();    // 安装信号处理函数
         // static::saveMasterPid();    // 保存 Master PID
+        if (static::$_OS === OS_TYPE_LINUX) { // 此处替代上方的 saveMasterPid() 功能
+            static::$_masterPid = posix_getpid();
+        }
         // static::displayUI();      // 显示开头的启动信息 UI，但 Swoole 没有，所以这里注释掉，以统一
         static::forkWorkers();      // 创建 Worker 进程
         static::resetStd();         // 重置标准输入输出
@@ -81,11 +76,83 @@ class Worker extends \Workerman\Worker
 
     /**
      * 防止 Workerman 输出了自己的东西
+     *
      * @param string $msg
      */
     public static function log($msg)
     {
         ob_logger()->warning($msg);
+    }
+
+    /**
+     * Workerman没有暴露开放的重载接口，我们暴露一个
+     */
+    public static function reloadSelf()
+    {
+        ob_logger()->notice('Reloading...');
+        static::$_pidsToRestart = static::getAllWorkerPids();
+        static::reload();
+    }
+
+    /**
+     * Stop all.
+     *
+     * 这里只把退出信号从SIGINT改成了SIGTERM，因为SIGINT在Linux系统中会穿透，导致一系列问题
+     *
+     * @param int    $code
+     * @param string $log
+     */
+    public static function stopAll($code = 0, $log = '')
+    {
+        if ($log) {
+            static::log($log);
+        }
+
+        static::$_status = static::STATUS_SHUTDOWN;
+        // For master process.
+        if (\DIRECTORY_SEPARATOR === '/' && static::$_masterPid === \posix_getpid()) {
+            static::log('Workerman[' . \basename(static::$_startFile) . '] stopping ...');
+            $worker_pid_array = static::getAllWorkerPids();
+            // Send stop signal to all child processes.
+            if (static::$_gracefulStop) {
+                $sig = \SIGQUIT;
+            } else {
+                $sig = \SIGTERM;
+            }
+            foreach ($worker_pid_array as $worker_pid) {
+                \posix_kill($worker_pid, $sig);
+                if (!static::$_gracefulStop){
+                    Timer::add(static::$stopTimeout, '\posix_kill', [$worker_pid, \SIGKILL], false);
+                }
+            }
+            Timer::add(1, '\\Workerman\\Worker::checkIfChildRunning');
+            // Remove statistics file.
+            if (\is_file(static::$_statisticsFile)) {
+                @\unlink(static::$_statisticsFile);
+            }
+        } // For child processes.
+        else {
+            // Execute exit.
+            foreach (static::$_workers as $worker) {
+                if (!$worker->stopping){
+                    $worker->stop();
+                    $worker->stopping = true;
+                }
+            }
+            if (!static::$_gracefulStop || ConnectionInterface::$statistics['connection_count'] <= 0) {
+                static::$_workers = [];
+                if (static::$globalEvent !== null) {
+                    static::$globalEvent->destroy();
+                }
+
+                try {
+                    exit($code);
+                    /* @phpstan-ignore-next-line */
+                } catch (Exception $e) {
+                    // nocode
+                }
+            }
+        }
     }
 
     /**
@@ -300,6 +367,8 @@ class Worker extends \Workerman\Worker
 
     /**
      * Install signal handler.
+     *
+     * 不需要 Workerman 挂载自己的信号处理器
      */
     protected static function installSignal()
     {
@@ -328,6 +397,8 @@ class Worker extends \Workerman\Worker
 
     /**
      * Reinstall signal handler.
+     *
+     * 不需要 Workerman 自己挂载自己的信号处理器
      */
     protected static function reinstallSignal()
     {
@@ -451,5 +522,28 @@ class Worker extends \Workerman\Worker
                 static::exitAndClearAll();
             }
         }
+    }
+
+    /**
+     * Exit current process.
+     *
+     * 这里只对pidFile进行修改，因为libob不需要workerman自作主张记录pid，所以就重载了一下手动记录
+     */
+    protected static function exitAndClearAll()
+    {
+        foreach (static::$_workers as $worker) {
+            $socket_name = $worker->getSocketName();
+            if ($worker->transport === 'unix' && $socket_name) {
+                [, $address] = \explode(':', $socket_name, 2);
+                $address = substr($address, strpos($address, '/') + 2);
+                @\unlink($address);
+            }
+        }
+        // @\unlink(static::$pidFile);
+        static::log('Workerman[' . \basename(static::$_startFile) . '] has been stopped');
+        if (static::$onMasterStop !== null) {
+            \call_user_func(static::$onMasterStop);
+        }
+        exit(0);
     }
 }

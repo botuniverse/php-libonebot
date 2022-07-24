@@ -160,7 +160,6 @@ class WorkermanDriver extends Driver
             $worker->flag = $ws_0['flag'] ?? 1;
             if (!empty($ws)) {
                 ob_event_provider()->addEventListener(WorkerStartEvent::getName(), function () use ($ws) {
-                    ob_logger()->info('Workerman 开始加载 WS 协议配置');
                     foreach ($ws as $ws_1) {
                         $worker = new Worker('websocket://' . $ws_1['host'] . ':' . $ws_1['port']);
                         $worker->reusePort = true;
@@ -200,7 +199,6 @@ class WorkermanDriver extends Driver
             }
             if (!empty($http_pending)) {
                 ob_event_provider()->addEventListener(WorkerStartEvent::getName(), function () use ($http_pending) {
-                    ob_logger()->info('Workerman 开始加载 HTTP 协议配置');
                     foreach ($http_pending as $http_1) {
                         $worker = new Worker('http://' . $http_1['host'] . ':' . $http_1['port']);
                         $worker->reusePort = true;
