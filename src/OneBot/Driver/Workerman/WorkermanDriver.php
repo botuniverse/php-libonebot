@@ -109,7 +109,7 @@ class WorkermanDriver extends Driver
                 $worker->onWorkerStart = [TopEventListener::getInstance(), 'onWorkerStart'];
                 $worker->onWorkerStop = [TopEventListener::getInstance(), 'onWorkerStop'];
             }
-            // 启动 Workerman 下的 Worker 们
+            ob_logger()->debug('启动 Workerman 下的 Worker 们');
             Worker::runAll();
         } catch (Throwable $e) {
             ExceptionHandler::getInstance()->handle($e);
@@ -185,6 +185,7 @@ class WorkermanDriver extends Driver
             } else {
                 $http_0 = array_shift($http);
                 $http_pending = $http;
+                ob_logger()->debug('在 Worker 中初始化 HTTP 服务器，端口：' . $http_0['port']);
                 $worker = new Worker('http://' . $http_0['host'] . ':' . $http_0['port']);
                 $worker->count = $this->getParam('workerman_worker_num', 1);
                 Worker::$internal_running = true;
@@ -208,6 +209,7 @@ class WorkermanDriver extends Driver
                         // http server 相关事件
                         $worker->onMessage = [TopEventListener::getInstance(), 'onHttpRequest'];
                         $worker->listen();
+                        ob_logger()->debug('在 Worker 中初始化 HTTP 服务器，端口：' . $http_1['port']);
                     }
                 }, 998);
             }

@@ -70,7 +70,9 @@ class Worker extends \Workerman\Worker
         }
         // static::displayUI();      // 显示开头的启动信息 UI，但 Swoole 没有，所以这里注释掉，以统一
         static::forkWorkers();      // 创建 Worker 进程
+        ob_logger()->debug('重置输入输出');
         static::resetStd();         // 重置标准输入输出
+        ob_logger()->debug('监听Worker进程ing');
         static::monitorWorkers();   // 监控 Worker 进程，这里是一个 while(1) 来等待的
     }
 
@@ -82,6 +84,12 @@ class Worker extends \Workerman\Worker
     public static function log($msg)
     {
         ob_logger()->warning($msg);
+    }
+
+    public static function safeEcho($msg, $decorated = false)
+    {
+        ob_logger()->debug($msg);
+        return true;
     }
 
     /**
@@ -156,6 +164,15 @@ class Worker extends \Workerman\Worker
     }
 
     /**
+     * Get start files for windows.
+     *
+     * @return array
+     */
+    public static function getStartFilesForWindows() {
+        return [''];
+    }
+
+    /**
      * Init.（重写）
      * 因为需要重写覆盖掉 Workerman 下面的 safeEcho 统一输出格式
      */
@@ -202,7 +219,7 @@ class Worker extends \Workerman\Worker
 
         // Init data for worker id.
         static::initId();
-
+        ob_logger()->debug('接着初始化计时器');
         // Timer init.
         Timer::init();
     }
