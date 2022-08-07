@@ -2,13 +2,17 @@
 
 declare(strict_types=1);
 
+use OneBot\Driver\Event\EventDispatcher;
+use OneBot\Driver\Event\EventProvider;
+use OneBot\Driver\Interfaces\HandledDispatcherInterface;
+use OneBot\Driver\Interfaces\SortedProviderInterface;
 use OneBot\Driver\Process\ProcessManager;
 use OneBot\V12\OneBot;
 use Psr\Log\LoggerInterface;
 use ZM\Logger\ConsoleLogger;
 
 const ONEBOT_VERSION = '12';
-const ONEBOT_LIBOB_VERSION = '0.4.0';
+const ONEBOT_LIBOB_VERSION = '0.4.1';
 
 const ONEBOT_JSON = 1;
 const ONEBOT_MSGPACK = 2;
@@ -59,6 +63,18 @@ function ob_logger(): LoggerInterface
     return $ob_logger;
 }
 
+/**
+ * 检查是否已经初始化了 Logger 对象，如果没有的话，返回 False
+ */
+function ob_logger_registered(): bool
+{
+    global $ob_logger;
+    return isset($ob_logger);
+}
+
+/**
+ * 注册一个 Logger 对象到 OneBot 中，如果已经注册了将会覆盖
+ */
 function ob_logger_register(LoggerInterface $logger): void
 {
     global $ob_logger;
@@ -70,6 +86,7 @@ function ob_logger_register(LoggerInterface $logger): void
             ONEBOT_PROCESS_WORKER => '#' . ProcessManager::getProcessId(),
             ONEBOT_PROCESS_USER => 'USR',
             ONEBOT_PROCESS_TASKWORKER => '#' . ProcessManager::getProcessId(),
+            ONEBOT_PROCESS_MASTER | ONEBOT_PROCESS_WORKER => 'MST#' . ProcessManager::getProcessId(),
         ];
         $logger::$format = '[%date%] [%level%] [' . $map[$type] . '] %body%';
         $logger::$date_format = 'Y-m-d H:i:s';
@@ -108,6 +125,24 @@ function ob_uuidgen(bool $uppercase = false): string
     $data[8] = chr(ord($data[8]) & 0x3F | 0x80);
     return $uppercase ? strtoupper(vsprintf('%s%s-%s-%s-%s-%s%s%s', str_split(bin2hex($data), 4))) :
         vsprintf('%s%s-%s-%s-%s-%s%s%s', str_split(bin2hex($data), 4));
+}
+
+function ob_event_dispatcher(): HandledDispatcherInterface
+{
+    global $ob_event_dispatcher;
+    if ($ob_event_dispatcher === null) {
+        $ob_event_dispatcher = new EventDispatcher();
+    }
+    return $ob_event_dispatcher;
+}
+
+function ob_event_provider(): SortedProviderInterface
+{
+    global $ob_event_provider;
+    if ($ob_event_provider === null) {
+        $ob_event_provider = EventProvider::getInstance();
+    }
+    return $ob_event_provider;
 }
 
 /**

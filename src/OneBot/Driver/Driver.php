@@ -146,6 +146,11 @@ abstract class Driver
         return $this->params[$key] ?? $default;
     }
 
+    public function setParams(array $params): void
+    {
+        $this->params = $params;
+    }
+
     public function getSupportedClients(): array
     {
         return static::SUPPORTED_CLIENTS;

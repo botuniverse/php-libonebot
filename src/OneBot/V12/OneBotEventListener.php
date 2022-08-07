@@ -7,7 +7,6 @@ namespace OneBot\V12;
 use MessagePack\Exception\UnpackingFailedException;
 use MessagePack\MessagePack;
 use OneBot\Driver\Event\DriverInitEvent;
-use OneBot\Driver\Event\EventDispatcher;
 use OneBot\Driver\Event\Http\HttpRequestEvent;
 use OneBot\Driver\Event\WebSocket\WebSocketMessageEvent;
 use OneBot\Driver\Event\WebSocket\WebSocketOpenEvent;
@@ -194,7 +193,7 @@ class OneBotEventListener
     public function onFirstWorkerInit()
     {
         if (ProcessManager::getProcessId() === 0) {
-            EventDispatcher::dispatchWithHandler(new DriverInitEvent(OneBot::getInstance()->getDriver()));
+            ob_event_dispatcher()->dispatchWithHandler(new DriverInitEvent(OneBot::getInstance()->getDriver()));
         }
     }
 
@@ -214,7 +213,7 @@ class OneBotEventListener
             }
             return $client->push($data);
         });
-        EventDispatcher::dispatchWithHandler($event);
+        ob_event_dispatcher()->dispatchWithHandler($event);
     }
 
     /**

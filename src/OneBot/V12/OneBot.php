@@ -6,7 +6,6 @@ namespace OneBot\V12;
 
 use OneBot\Driver\Driver;
 use OneBot\Driver\Event\DriverInitEvent;
-use OneBot\Driver\Event\EventProvider;
 use OneBot\Driver\Event\Http\HttpRequestEvent;
 use OneBot\Driver\Event\Process\ManagerStartEvent;
 use OneBot\Driver\Event\Process\ManagerStopEvent;
@@ -71,8 +70,10 @@ class OneBot
         $this->self_id = $config->get('self_id');
         $this->platform = $config->get('platform');
 
-        ob_logger_register($config->get('logger'));
-        $config->set('logger', null);
+        if (!ob_logger_registered()) {
+            ob_logger_register($config->get('logger'));
+            $config->set('logger', null);
+        }
         $this->driver = $config->get('driver');
         $config->set('driver', null);
 
@@ -255,7 +256,7 @@ class OneBot
             $socket->sendAll($frame_str);
         }
         foreach ($this->driver->getWSReverseSockets() as $socket) {
-            if ($socket->getFlag() !== 1) {
+            if ($socket->getFlag() !== 1 || !$socket->getClient()->isConnected()) {
                 continue;
             }
             $socket->send($frame_str);
@@ -286,22 +287,22 @@ class OneBot
             define('ONEBOT_EVENT_LEVEL', 15);
         }
         // 监听 HTTP 服务器收到的请求事件
-        EventProvider::addEventListener(HttpRequestEvent::getName(), [OneBotEventListener::getInstance(), 'onHttpRequest'], ONEBOT_EVENT_LEVEL);
+        ob_event_provider()->addEventListener(HttpRequestEvent::getName(), [OneBotEventListener::getInstance(), 'onHttpRequest'], ONEBOT_EVENT_LEVEL);
         // 监听 WS 服务器相关事件
-        EventProvider::addEventListener(WebSocketOpenEvent::getName(), [OneBotEventListener::getInstance(), 'onWebSocketOpen'], ONEBOT_EVENT_LEVEL);
-        EventProvider::addEventListener(WebSocketMessageEvent::getName(), [OneBotEventListener::getInstance(), 'onWebSocketMessage'], ONEBOT_EVENT_LEVEL);
+        ob_event_provider()->addEventListener(WebSocketOpenEvent::getName(), [OneBotEventListener::getInstance(), 'onWebSocketOpen'], ONEBOT_EVENT_LEVEL);
+        ob_event_provider()->addEventListener(WebSocketMessageEvent::getName(), [OneBotEventListener::getInstance(), 'onWebSocketMessage'], ONEBOT_EVENT_LEVEL);
         // 监听 Worker 进程退出或启动的事件
-        EventProvider::addEventListener(WorkerStartEvent::getName(), [OneBotEventListener::getInstance(), 'onWorkerStart'], ONEBOT_EVENT_LEVEL);
-        EventProvider::addEventListener(WorkerStopEvent::getName(), [OneBotEventListener::getInstance(), 'onWorkerStop'], ONEBOT_EVENT_LEVEL);
+        ob_event_provider()->addEventListener(WorkerStartEvent::getName(), [OneBotEventListener::getInstance(), 'onWorkerStart'], ONEBOT_EVENT_LEVEL);
+        ob_event_provider()->addEventListener(WorkerStopEvent::getName(), [OneBotEventListener::getInstance(), 'onWorkerStop'], ONEBOT_EVENT_LEVEL);
         // 监听 Manager 进程退出或启动事件（仅限 Swoole 驱动下的 SWOOLE_PROCESS 模式才能触发）
-        EventProvider::addEventListener(ManagerStartEvent::getName(), [OneBotEventListener::getInstance(), 'onManagerStart'], ONEBOT_EVENT_LEVEL);
-        EventProvider::addEventListener(ManagerStopEvent::getName(), [OneBotEventListener::getInstance(), 'onManagerStop'], ONEBOT_EVENT_LEVEL);
+        ob_event_provider()->addEventListener(ManagerStartEvent::getName(), [OneBotEventListener::getInstance(), 'onManagerStart'], ONEBOT_EVENT_LEVEL);
+        ob_event_provider()->addEventListener(ManagerStopEvent::getName(), [OneBotEventListener::getInstance(), 'onManagerStop'], ONEBOT_EVENT_LEVEL);
         // 监听单进程无 Server 模式的相关事件（如纯 Client 情况下的启动模式）
-        EventProvider::addEventListener(DriverInitEvent::getName(), [OneBotEventListener::getInstance(), 'onDriverInit'], ONEBOT_EVENT_LEVEL);
+        ob_event_provider()->addEventListener(DriverInitEvent::getName(), [OneBotEventListener::getInstance(), 'onDriverInit'], ONEBOT_EVENT_LEVEL);
         // 如果Init策略是FirstWorker，则给WorkerStart添加添加相关事件，让WorkerStart事件（#0）中再套娃执行DriverInit事件
         switch ($this->driver->getDriverInitPolicy()) {
             case DriverInitPolicy::MULTI_PROCESS_INIT_IN_FIRST_WORKER:
-                EventProvider::addEventListener(WorkerStartEvent::getName(), [OneBotEventListener::getInstance(), 'onFirstWorkerInit'], ONEBOT_EVENT_LEVEL);
+                ob_event_provider()->addEventListener(WorkerStartEvent::getName(), [OneBotEventListener::getInstance(), 'onFirstWorkerInit'], ONEBOT_EVENT_LEVEL);
                 break;
         }
     }

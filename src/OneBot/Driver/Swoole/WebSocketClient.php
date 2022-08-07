@@ -149,4 +149,9 @@ class WebSocketClient implements WebSocketClientInterface
     {
         return $this->fd;
     }
+
+    public function isConnected(): bool
+    {
+        return $this->status === self::STATUS_ESTABLISHED;
+    }
 }

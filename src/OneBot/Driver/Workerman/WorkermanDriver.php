@@ -8,8 +8,6 @@ use Exception;
 use OneBot\Driver\Driver;
 use OneBot\Driver\DriverEventLoopBase;
 use OneBot\Driver\Event\DriverInitEvent;
-use OneBot\Driver\Event\EventDispatcher;
-use OneBot\Driver\Event\EventProvider;
 use OneBot\Driver\Event\Process\UserProcessStartEvent;
 use OneBot\Driver\Event\Process\WorkerStartEvent;
 use OneBot\Driver\ExceptionHandler;
@@ -73,12 +71,12 @@ class WorkermanDriver extends Driver
                     case DriverInitPolicy::MULTI_PROCESS_INIT_IN_MASTER:
                     case DriverInitPolicy::MULTI_PROCESS_INIT_IN_MANAGER:
                         $event = new DriverInitEvent($this);
-                        (new EventDispatcher())->dispatch($event);
+                        ob_event_dispatcher()->dispatch($event);
                         break;
                     case DriverInitPolicy::MULTI_PROCESS_INIT_IN_USER_PROCESS:
-                        EventProvider::addEventListener(UserProcessStartEvent::getName(), function () {
+                        ob_event_provider()->addEventListener(UserProcessStartEvent::getName(), function () {
                             $event = new DriverInitEvent($this);
-                            (new EventDispatcher())->dispatch($event);
+                            ob_event_dispatcher()->dispatch($event);
                             if ($this->getParam('init_in_user_process_block', true) === true) {
                                 /* @phpstan-ignore-next-line */
                                 while (true) {
@@ -89,13 +87,13 @@ class WorkermanDriver extends Driver
                         break;
                 }
                 // 添加插入用户进程的启动仪式
-                if (!empty(EventProvider::getEventListeners(UserProcessStartEvent::getName()))) {
+                if (!empty(ob_event_provider()->getEventListeners(UserProcessStartEvent::getName()))) {
                     $process = Worker::$user_process = new UserProcess(function () use (&$process) {
                         ProcessManager::initProcess(ONEBOT_PROCESS_USER, 0);
                         ob_logger()->debug('新建UserProcess');
                         try {
                             $event = new UserProcessStartEvent($process);
-                            (new EventDispatcher())->dispatch($event);
+                            ob_event_dispatcher()->dispatch($event);
                         } catch (Throwable $e) {
                             ExceptionHandler::getInstance()->handle($e);
                         }
@@ -111,7 +109,7 @@ class WorkermanDriver extends Driver
                 $worker->onWorkerStart = [TopEventListener::getInstance(), 'onWorkerStart'];
                 $worker->onWorkerStop = [TopEventListener::getInstance(), 'onWorkerStop'];
             }
-            // 启动 Workerman 下的 Worker 们
+            ob_logger()->debug('启动 Workerman 下的 Worker 们');
             Worker::runAll();
         } catch (Throwable $e) {
             ExceptionHandler::getInstance()->handle($e);
@@ -161,8 +159,7 @@ class WorkermanDriver extends Driver
             $worker->token = ob_uuidgen();
             $worker->flag = $ws_0['flag'] ?? 1;
             if (!empty($ws)) {
-                EventProvider::addEventListener(WorkerStartEvent::getName(), function () use ($ws) {
-                    ob_logger()->info('Workerman 开始加载 WS 协议配置');
+                ob_event_provider()->addEventListener(WorkerStartEvent::getName(), function () use ($ws) {
                     foreach ($ws as $ws_1) {
                         $worker = new Worker('websocket://' . $ws_1['host'] . ':' . $ws_1['port']);
                         $worker->reusePort = true;
@@ -188,6 +185,7 @@ class WorkermanDriver extends Driver
             } else {
                 $http_0 = array_shift($http);
                 $http_pending = $http;
+                ob_logger()->debug('在 Worker 中初始化 HTTP 服务器，端口：' . $http_0['port']);
                 $worker = new Worker('http://' . $http_0['host'] . ':' . $http_0['port']);
                 $worker->count = $this->getParam('workerman_worker_num', 1);
                 Worker::$internal_running = true;
@@ -201,8 +199,7 @@ class WorkermanDriver extends Driver
                 $this->http_socket[] = (new HttpServerSocket($worker, $http_0['port']))->setFlag(1);
             }
             if (!empty($http_pending)) {
-                EventProvider::addEventListener(WorkerStartEvent::getName(), function () use ($http_pending) {
-                    ob_logger()->info('Workerman 开始加载 HTTP 协议配置');
+                ob_event_provider()->addEventListener(WorkerStartEvent::getName(), function () use ($http_pending) {
                     foreach ($http_pending as $http_1) {
                         $worker = new Worker('http://' . $http_1['host'] . ':' . $http_1['port']);
                         $worker->reusePort = true;
@@ -212,6 +209,7 @@ class WorkermanDriver extends Driver
                         // http server 相关事件
                         $worker->onMessage = [TopEventListener::getInstance(), 'onHttpRequest'];
                         $worker->listen();
+                        ob_logger()->debug('在 Worker 中初始化 HTTP 服务器，端口：' . $http_1['port']);
                     }
                 }, 998);
             }

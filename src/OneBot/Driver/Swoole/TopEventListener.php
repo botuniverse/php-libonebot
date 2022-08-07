@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace OneBot\Driver\Swoole;
 
-use OneBot\Driver\Event\EventDispatcher;
 use OneBot\Driver\Event\Http\HttpRequestEvent;
 use OneBot\Driver\Event\Process\ManagerStartEvent;
 use OneBot\Driver\Event\Process\ManagerStopEvent;
@@ -35,8 +34,12 @@ class TopEventListener
      */
     public function onWorkerStart(Server $server)
     {
-        ProcessManager::initProcess(ONEBOT_PROCESS_WORKER, $server->worker_id);
-        EventDispatcher::dispatchWithHandler(new WorkerStartEvent());
+        if ($server->master_pid === $server->worker_pid) {
+            ProcessManager::initProcess(ONEBOT_PROCESS_MASTER | ONEBOT_PROCESS_WORKER, $server->worker_id);
+        } else {
+            ProcessManager::initProcess(ONEBOT_PROCESS_WORKER, $server->worker_id);
+        }
+        ob_event_dispatcher()->dispatchWithHandler(new WorkerStartEvent());
     }
 
     /**
@@ -45,7 +48,7 @@ class TopEventListener
     public function onManagerStart()
     {
         ProcessManager::initProcess(ONEBOT_PROCESS_MANAGER, -1);
-        EventDispatcher::dispatchWithHandler(new ManagerStartEvent());
+        ob_event_dispatcher()->dispatchWithHandler(new ManagerStartEvent());
     }
 
     /**
@@ -53,7 +56,7 @@ class TopEventListener
      */
     public function onManagerStop()
     {
-        EventDispatcher::dispatchWithHandler(new ManagerStopEvent());
+        ob_event_dispatcher()->dispatchWithHandler(new ManagerStopEvent());
     }
 
     /**
@@ -61,7 +64,7 @@ class TopEventListener
      */
     public function onWorkerStop()
     {
-        EventDispatcher::dispatchWithHandler(new WorkerStopEvent());
+        ob_event_dispatcher()->dispatchWithHandler(new WorkerStopEvent());
     }
 
     /**
@@ -83,14 +86,13 @@ class TopEventListener
         $event = new HttpRequestEvent($req);
         try {
             $event->setSocketFlag($flag);
-            (new EventDispatcher())->dispatch($event);
+            ob_event_dispatcher()->dispatch($event);
             if (($psr_response = $event->getResponse()) !== null) {
                 foreach ($psr_response->getHeaders() as $header => $value) {
                     if (is_array($value)) {
                         $response->setHeader($header, implode(';', $value));
                     }
                 }
-                ob_dump($psr_response);
                 $response->setStatusCode($psr_response->getStatusCode());
                 $response->end($psr_response->getBody());
             }
@@ -124,7 +126,7 @@ class TopEventListener
         ob_logger()->debug('WebSocket closed from: ' . $fd);
         $event = new WebSocketCloseEvent($fd);
         $event->setSocketFlag($flag);
-        EventDispatcher::dispatchWithHandler($event);
+        ob_event_dispatcher()->dispatchWithHandler($event);
     }
 
     /**
@@ -143,7 +145,7 @@ class TopEventListener
             $content
         ), $request->fd);
         $event->setSocketFlag($flag);
-        EventDispatcher::dispatchWithHandler($event);
+        ob_event_dispatcher()->dispatchWithHandler($event);
     }
 
     /**
@@ -161,6 +163,6 @@ class TopEventListener
         });
         $event->setOriginFrame($frame);
         $event->setSocketFlag($flag);
-        EventDispatcher::dispatchWithHandler($event);
+        ob_event_dispatcher()->dispatchWithHandler($event);
     }
 }
