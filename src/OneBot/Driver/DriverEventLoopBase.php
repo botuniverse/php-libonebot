@@ -26,6 +26,20 @@ abstract class DriverEventLoopBase
     abstract public function delReadEvent($fd);
 
     /**
+     * 驱动必须提供一个可以添加到对应驱动 EventLoop 的写接口
+     * @param resource $fd       文件描述符或资源 int
+     * @param callable $callable 回调函数
+     */
+    abstract public function addWriteEvent($fd, callable $callable);
+
+    /**
+     * 驱动必须提供一个可以删除对应驱动 EventLoop 的写接口
+     *
+     * @param resource $fd 文件描述符或资源 int
+     */
+    abstract public function delWriteEvent($fd);
+
+    /**
      * 添加一个定时器
      *
      * @param int      $ms        间隔时间（单位为毫秒）
