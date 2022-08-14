@@ -6,3 +6,4 @@ parameters:
     - ./src/
   ignoreErrors:
     - '#OS_TYPE_(LINUX|WINDOWS) not found#'
+    - '#class Fiber#'
