@@ -51,4 +51,20 @@ class EventLoop extends DriverEventLoopBase
     {
         Worker::getEventLoop()->del($fd, EventInterface::EV_READ);
     }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function addWriteEvent($fd, callable $callable)
+    {
+        Worker::getEventLoop()->add($fd, EventInterface::EV_WRITE, $callable);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function delWriteEvent($fd)
+    {
+        Worker::getEventLoop()->del($fd, EventInterface::EV_WRITE);
+    }
 }
