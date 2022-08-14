@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace OneBot\Driver\Coroutine;
 
-use Co\System;
 use OneBot\Driver\Driver;
 use OneBot\Driver\Process\ExecutionResult;
 use OneBot\Driver\Workerman\WorkermanDriver;
@@ -74,7 +73,7 @@ class Adaptive
             goto default_exec;
         }
         if (self::$coroutine instanceof SwooleCoroutine) {
-            $result = System::exec($cmd);
+            $result = Coroutine\System::exec($cmd);
             return new ExecutionResult($result['code'], $result['output']);
         }
         if (self::$coroutine instanceof FiberCoroutine) {
