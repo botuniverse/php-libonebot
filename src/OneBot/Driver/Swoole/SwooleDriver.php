@@ -7,6 +7,7 @@ declare(strict_types=1);
 namespace OneBot\Driver\Swoole;
 
 use Exception;
+use OneBot\Driver\Coroutine\Adaptive;
 use OneBot\Driver\Driver;
 use OneBot\Driver\DriverEventLoopBase;
 use OneBot\Driver\Event\DriverInitEvent;
@@ -52,6 +53,8 @@ class SwooleDriver extends Driver
         }
         static::$instance = $this;
         parent::__construct($params);
+        // 初始化协程栈
+        Adaptive::initWithDriver($this);
     }
 
     public function getEventLoop(): DriverEventLoopBase

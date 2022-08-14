@@ -32,6 +32,8 @@ class Adaptive
         } elseif ($driver->getName() === 'workerman' && PHP_VERSION_ID >= 80100) {
             // 只有 PHP >= 8.1 才能使用 Fiber 协程接口
             self::$coroutine = FiberCoroutine::getInstance();
+        } else {
+            self::$coroutine = FalseCoroutine::getInstance();
         }
     }
 

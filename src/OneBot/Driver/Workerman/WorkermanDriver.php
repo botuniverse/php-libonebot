@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace OneBot\Driver\Workerman;
 
 use Exception;
+use OneBot\Driver\Coroutine\Adaptive;
 use OneBot\Driver\Driver;
 use OneBot\Driver\DriverEventLoopBase;
 use OneBot\Driver\Event\DriverInitEvent;
@@ -41,6 +42,8 @@ class WorkermanDriver extends Driver
         }
         static::$instance = $this;
         parent::__construct($params);
+        // 初始化协程栈
+        Adaptive::initWithDriver($this);
     }
 
     /**

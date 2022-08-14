@@ -69,6 +69,7 @@ class FiberCoroutine implements CoroutineInterface
     {
         try {
             $v = self::$fiber_stacks->pop();
+            self::$fiber_stacks->push($v);
         } catch (RuntimeException $e) {
             return -1;
         }
