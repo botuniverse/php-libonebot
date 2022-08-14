@@ -82,7 +82,7 @@ class Adaptive
                 1 => ['pipe', 'w'],  // 标准输出，子进程向此管道中写入数据
                 2 => STDERR, // 标准错误
             ];
-            $res = proc_open('echo 456 && sleep 10 && echo 123', $descriptorspec, $pipes, getcwd());
+            $res = proc_open($cmd, $descriptorspec, $pipes, getcwd());
             if (is_resource($res)) {
                 $cid = self::$coroutine->getCid();
                 WorkermanDriver::getInstance()->getEventLoop()->addReadEvent($pipes[1], function ($x) use ($cid, $res, $pipes) {
