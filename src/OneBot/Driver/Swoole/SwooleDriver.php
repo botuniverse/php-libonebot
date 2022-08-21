@@ -21,6 +21,7 @@ use OneBot\Driver\Swoole\Socket\WSServerSocket;
 use OneBot\Http\Client\Exception\ClientException;
 use OneBot\Http\Client\SwooleClient;
 use OneBot\Util\Singleton;
+use Swoole\Atomic;
 use Swoole\Event;
 use Swoole\Http\Server as SwooleHttpServer;
 use Swoole\Server;
@@ -145,6 +146,9 @@ class SwooleDriver extends Driver
                 $this->server->addProcess($process);
             }
             $this->server->set($this->server_set);
+            // 插入一个退出的 exitcode 全局 atomic
+            global $_swoole_exit;
+            $_swoole_exit = new Atomic();
             $this->server->start();
         } else {
             go(function () {

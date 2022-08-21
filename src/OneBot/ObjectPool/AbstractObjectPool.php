@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace OneBot\ObjectPool;
 
+use OneBot\Driver\Driver;
 use OneBot\Driver\Swoole\SwooleDriver;
 use OneBot\Driver\Workerman\WorkermanDriver;
 use RuntimeException;
@@ -23,12 +24,12 @@ abstract class AbstractObjectPool
 
     public function __construct()
     {
-        // TODO: 添加更多可配置项
-        if (ob_driver_is(SwooleDriver::class)) {
+        if (Driver::getActiveDriverClass() === SwooleDriver::class) {
             $this->queue = new Channel(swoole_cpu_num());
-        } elseif (ob_driver_is(WorkermanDriver::class)) {
+        } else {
             $this->queue = new SplQueue();
         }
+        // TODO: 添加更多可配置项
     }
 
     /**
