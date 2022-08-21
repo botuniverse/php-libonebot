@@ -29,4 +29,9 @@ class HttpServerSocket extends HttpServerSocketBase
     {
         return $this->port;
     }
+
+    public function getWorker(): Worker
+    {
+        return $this->worker;
+    }
 }

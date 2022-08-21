@@ -54,4 +54,9 @@ class WSServerSocket extends WSServerSocketBase
         unset($this->connections[$id]);
         return true;
     }
+
+    public function getWorker(): Worker
+    {
+        return $this->worker;
+    }
 }
