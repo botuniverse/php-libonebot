@@ -94,6 +94,8 @@ class ObjectPool implements PoolInterface
 
     protected function makeObject(): object
     {
-        return new ($this->class)(...$this->args);
+        $class = $this->class;
+        $args = $this->args;
+        return new $class(...$args);
     }
 }
