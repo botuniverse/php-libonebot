@@ -3,14 +3,13 @@
 declare(strict_types=1);
 
 use OneBot\Driver\Event\DriverInitEvent;
-use OneBot\Driver\Event\EventProvider;
 use OneBot\Util\Utils;
-use OneBot\Util\Validator;
 use OneBot\V12\Action\ActionResponse;
 use OneBot\V12\Object\Action;
 use OneBot\V12\Object\Event\Message\PrivateMessageEvent;
 use OneBot\V12\OneBot;
 use OneBot\V12\OneBotBuilder;
+use OneBot\V12\Validator;
 
 require_once __DIR__ . '/../vendor/autoload.php';
 
@@ -25,11 +24,11 @@ $config = [
     'self_id' => 'REPL-1',
     'db' => true,
     'logger' => [
-        'class' => \OneBot\Logger\Console\ConsoleLogger::class,
+        'class' => \ZM\Logger\ConsoleLogger::class,
         'level' => 'info',
     ],
     'driver' => [
-        'class' => \OneBot\Driver\SwooleDriver::class,
+        'class' => \OneBot\Driver\Swoole\SwooleDriver::class,
         'config' => [
             'init_in_user_process_block' => true,
         ],
@@ -75,12 +74,12 @@ $ob->addActionHandler('send_message', function (Action $obj) { // 写一个动�
 });
 
 // 下面是一个简单的 REPL 实现，每次输入一行，就会触发一次 private.message 事件并通过设定的通信方式发送
-EventProvider::addEventListener(DriverInitEvent::getName(), function ($event) {
+ob_event_provider()->addEventListener(DriverInitEvent::getName(), function (DriverInitEvent $event) {
     ob_logger()->info('Init 进程启动！' . $event->getDriver()->getName());
-    $event->getDriver()->addReadEvent(STDIN, function ($x) use ($event) {
+    $event->getDriver()->getEventLoop()->addReadEvent(STDIN, function ($x) use ($event) {
         $s = fgets($x);
         if ($s === false) {
-            $event->getDriver()->delReadEvent($x);
+            $event->getDriver()->getEventLoop()->delReadEvent($x);
             return;
         }
         $event = new PrivateMessageEvent('tty', trim($s));

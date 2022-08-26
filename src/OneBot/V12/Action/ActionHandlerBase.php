@@ -10,7 +10,7 @@ use OneBot\V12\OneBot;
 use OneBot\V12\RetCode;
 use ReflectionClass;
 
-abstract class ActionBase
+abstract class ActionHandlerBase
 {
     /** @internal 内部使用的缓存 */
     public static $core_cache;

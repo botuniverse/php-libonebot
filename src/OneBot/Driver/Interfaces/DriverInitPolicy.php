@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace OneBot\Driver;
+namespace OneBot\Driver\Interfaces;
 
 interface DriverInitPolicy
 {

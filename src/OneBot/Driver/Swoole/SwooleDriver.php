@@ -4,28 +4,28 @@
 
 declare(strict_types=1);
 
-namespace OneBot\Driver;
+namespace OneBot\Driver\Swoole;
 
 use Exception;
+use OneBot\Driver\Driver;
+use OneBot\Driver\DriverEventLoopBase;
 use OneBot\Driver\Event\DriverInitEvent;
-use OneBot\Driver\Event\EventDispatcher;
-use OneBot\Driver\Event\EventProvider;
 use OneBot\Driver\Event\Process\UserProcessStartEvent;
+use OneBot\Driver\ExceptionHandler;
+use OneBot\Driver\Interfaces\DriverInitPolicy;
+use OneBot\Driver\Process\ProcessManager;
+use OneBot\Driver\Swoole\Socket\HttpClientSocket;
 use OneBot\Driver\Swoole\Socket\HttpServerSocket;
-use OneBot\Driver\Swoole\Socket\HttpWebhookSocket;
-use OneBot\Driver\Swoole\Socket\WSReverseSocket;
+use OneBot\Driver\Swoole\Socket\WSClientSocket;
 use OneBot\Driver\Swoole\Socket\WSServerSocket;
-use OneBot\Driver\Swoole\TopEventListener;
-use OneBot\Driver\Swoole\UserProcess;
-use OneBot\Driver\Swoole\WebSocketClient;
 use OneBot\Http\Client\Exception\ClientException;
 use OneBot\Http\Client\SwooleClient;
 use OneBot\Util\Singleton;
+use Swoole\Atomic;
 use Swoole\Event;
 use Swoole\Http\Server as SwooleHttpServer;
 use Swoole\Server;
 use Swoole\Server\Port;
-use Swoole\Timer;
 use Swoole\WebSocket\Server as SwooleWebSocketServer;
 use Throwable;
 
@@ -40,6 +40,9 @@ class SwooleDriver extends Driver
     /** @var SwooleHttpServer|SwooleWebSocketServer 服务端实例 */
     protected $server;
 
+    /** @var array Swoole Server 的配置项 */
+    protected $server_set;
+
     /**
      * @throws Exception
      */
@@ -50,6 +53,11 @@ class SwooleDriver extends Driver
         }
         static::$instance = $this;
         parent::__construct($params);
+    }
+
+    public function getEventLoop(): DriverEventLoopBase
+    {
+        return EventLoop::getInstance();
     }
 
     /**
@@ -87,12 +95,12 @@ class SwooleDriver extends Driver
         }
         /* @noinspection DuplicatedCode */
         foreach ($http_webhook as $v) {
-            $this->http_webhook_socket[] = (new HttpWebhookSocket($v['url'], $v['header'] ?? [], $v['access_token'] ?? '', $v['timeout'] ?? 5))->setFlag($v['flag'] ?? 1);
+            $this->http_client_socket[] = (new HttpClientSocket($v['url'], $v['header'] ?? [], $v['access_token'] ?? '', $v['timeout'] ?? 5))->setFlag($v['flag'] ?? 1);
         }
         foreach ($ws_reverse as $v) {
-            $this->ws_reverse_socket[] = (new WSReverseSocket($v['url'], $v['header'] ?? [], $v['access_token'] ?? '', $v['reconnect_interval'] ?? 5))->setFlag($v['flag'] ?? 1);
+            $this->ws_client_socket[] = (new WSClientSocket($v['url'], $v['header'] ?? [], $v['access_token'] ?? '', $v['reconnect_interval'] ?? 5))->setFlag($v['flag'] ?? 1);
         }
-        return [$this->http_socket !== [], $this->http_webhook_socket !== [], $this->ws_socket !== [], $this->ws_reverse_socket !== []];
+        return [$this->http_socket !== [], $this->http_client_socket !== [], $this->ws_socket !== [], $this->ws_client_socket !== []];
     }
 
     /**
@@ -108,12 +116,12 @@ class SwooleDriver extends Driver
             switch ($this->getDriverInitPolicy()) {
                 case DriverInitPolicy::MULTI_PROCESS_INIT_IN_MASTER:
                     $event = new DriverInitEvent($this);
-                    (new EventDispatcher())->dispatch($event);
+                    ob_event_dispatcher()->dispatch($event);
                     break;
                 case DriverInitPolicy::MULTI_PROCESS_INIT_IN_USER_PROCESS:
-                    EventProvider::addEventListener(UserProcessStartEvent::getName(), function () {
+                    ob_event_provider()->addEventListener(UserProcessStartEvent::getName(), function () {
                         $event = new DriverInitEvent($this);
-                        (new EventDispatcher())->dispatch($event);
+                        ob_event_dispatcher()->dispatch($event);
                         if ($this->getParam('init_in_user_process_block', true) === true) {
                             /* @phpstan-ignore-next-line */
                             while (true) {
@@ -124,23 +132,27 @@ class SwooleDriver extends Driver
                     break;
             }
             // 添加插入用户进程的启动仪式
-            if (!empty(EventProvider::getEventListeners(UserProcessStartEvent::getName()))) {
+            if (!empty(ob_event_provider()->getEventListeners(UserProcessStartEvent::getName()))) {
                 $process = new UserProcess(function () use (&$process) {
                     ProcessManager::initProcess(ONEBOT_PROCESS_USER, 0);
                     ob_logger()->debug('新建UserProcess');
                     try {
                         $event = new UserProcessStartEvent($process);
-                        (new EventDispatcher())->dispatch($event);
+                        ob_event_dispatcher()->dispatch($event);
                     } catch (Throwable $e) {
                         ExceptionHandler::getInstance()->handle($e);
                     }
                 }, false);
                 $this->server->addProcess($process);
             }
+            $this->server->set($this->server_set);
+            // 插入一个退出的 exitcode 全局 atomic
+            global $_swoole_exit;
+            $_swoole_exit = new Atomic();
             $this->server->start();
         } else {
             go(function () {
-                EventDispatcher::dispatchWithHandler(new DriverInitEvent($this, self::SINGLE_PROCESS));
+                ob_event_dispatcher()->dispatchWithHandler(new DriverInitEvent($this, self::SINGLE_PROCESS));
             });
             Event::wait();
         }
@@ -152,57 +164,41 @@ class SwooleDriver extends Driver
     }
 
     /**
-     * {@inheritDoc}
-     */
-    public function addTimer(int $ms, callable $callable, int $times = 1, array $arguments = []): int
-    {
-        $timer_count = 0;
-        return Timer::tick($ms, function ($timer_id, ...$params) use (&$timer_count, $callable, $times) {
-            if ($times > 0) {
-                ++$timer_count;
-                if ($timer_count > $times) {
-                    Timer::clear($timer_id);
-                    return;
-                }
-            }
-            $callable($timer_id, ...$params);
-        }, ...$arguments);
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    public function clearTimer(int $timer_id)
-    {
-        Timer::clear($timer_id);
-    }
-
-    /**
-     * {@inheritDoc}
-     *
      * @throws ClientException
      */
     public function initWSReverseClients(array $headers = [])
     {
-        foreach ($this->ws_reverse_socket as $v) {
+        foreach ($this->ws_client_socket as $v) {
             $v->setClient(WebSocketClient::createFromAddress($v->getUrl(), array_merge($headers, $v->getHeaders()), $this->getParam('swoole_ws_client_set', ['websocket_mask' => true])));
         }
     }
 
     /**
-     * {@inheritDoc}
+     * 重设 Server Set 参数列表
+     *
+     * @param mixed $server_set
      */
-    public function addReadEvent($fd, callable $callable)
+    public function setServerSet($server_set): void
     {
-        Event::add($fd, $callable);
+        $this->server_set = $server_set;
     }
 
     /**
-     * {@inheritDoc}
+     * 获取 Server Set 参数列表
      */
-    public function delReadEvent($fd)
+    public function getServerSet(): array
     {
-        Event::del($fd);
+        return $this->server_set;
+    }
+
+    /**
+     * 返回 Swoole 的 Server 对象
+     *
+     * @return SwooleHttpServer|SwooleWebSocketServer
+     */
+    public function getSwooleServer()
+    {
+        return $this->server;
     }
 
     /**
@@ -229,10 +225,10 @@ class SwooleDriver extends Driver
      */
     private function initServer(): void
     {
-        $this->server->set($this->getParam('swoole_set', [
+        $this->server_set = $this->getParam('swoole_set', [
             'max_coroutine' => 300000, // 默认如果不手动设置 Swoole 的话，提供的协程数量尽量多一些，保证并发性能（反正协程不要钱）
             'max_wait_time' => 5,      // 安全 shutdown 时候，让 Swoole 等待 Worker 进程响应的最大时间
-        ]));
+        ]);
         $this->server->on('workerstart', [TopEventListener::getInstance(), 'onWorkerStart']);
         $this->server->on('managerstart', [TopEventListener::getInstance(), 'onManagerStart']);
         $this->server->on('managerstop', [TopEventListener::getInstance(), 'onManagerStop']);

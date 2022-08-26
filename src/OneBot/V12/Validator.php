@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace OneBot\Util;
+namespace OneBot\V12;
 
+use OneBot\Util\Utils;
 use OneBot\V12\Exception\OneBotFailureException;
 use OneBot\V12\Object\Action;
-use OneBot\V12\RetCode;
 
 class Validator
 {

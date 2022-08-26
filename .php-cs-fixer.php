@@ -68,6 +68,8 @@ return (new PhpCsFixer\Config())
         'multiline_comment_opening_closing' => true,
         'phpdoc_summary' => false,
         'types_spaces' => false,
+        'braces' => false,
+        'blank_line_between_import_groups' => false,
     ])
     ->setFinder(
         PhpCsFixer\Finder::create()

@@ -9,7 +9,7 @@ use OneBot\Driver\Interfaces\WebSocketClientInterface;
 use OneBot\Driver\Interfaces\WebSocketInterface;
 use OneBot\Http\WebSocket\FrameInterface;
 
-abstract class WSReverseSocketBase implements SocketInterface, WebSocketInterface
+abstract class WSClientSocketBase implements SocketInterface, WebSocketInterface
 {
     use SocketFlag;
 

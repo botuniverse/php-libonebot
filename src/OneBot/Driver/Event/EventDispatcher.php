@@ -5,18 +5,18 @@ declare(strict_types=1);
 namespace OneBot\Driver\Event;
 
 use OneBot\Driver\ExceptionHandler;
-use Psr\EventDispatcher\EventDispatcherInterface;
+use OneBot\Driver\Interfaces\HandledDispatcherInterface;
 use Throwable;
 
 // TODO: 尝试把 EventDispatcher 全局唯一，以避免频繁的 new EventDispatcher
-class EventDispatcher implements EventDispatcherInterface
+class EventDispatcher implements HandledDispatcherInterface
 {
     /**
      * 分发事件
      */
     public function dispatch(object $event): object
     {
-        foreach (EventProvider::getEventListeners($event->getName()) as $listener) {
+        foreach (ob_event_provider()->getEventListeners($event->getName()) as $listener) {
             try {
                 // TODO: 允许 Listener 修改 $event
                 // TODO: 在调用 listener 前先判断 isPropagationStopped
@@ -35,7 +35,7 @@ class EventDispatcher implements EventDispatcherInterface
     /**
      * 一键分发事件，并handle错误
      */
-    public static function dispatchWithHandler(object $event)
+    public function dispatchWithHandler(object $event)
     {
         try {
             (new self())->dispatch($event);

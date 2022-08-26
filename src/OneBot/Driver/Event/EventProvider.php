@@ -4,10 +4,13 @@ declare(strict_types=1);
 
 namespace OneBot\Driver\Event;
 
-use Psr\EventDispatcher\ListenerProviderInterface;
+use OneBot\Driver\Interfaces\SortedProviderInterface;
+use OneBot\Util\Singleton;
 
-class EventProvider implements ListenerProviderInterface
+class EventProvider implements SortedProviderInterface
 {
+    use Singleton;
+
     /**
      * @var array<string, array<array<int, callable>>> 已注册的事件监听器
      */
@@ -16,11 +19,11 @@ class EventProvider implements ListenerProviderInterface
     /**
      * 添加事件监听器
      *
-     * @param string   $name     事件名称
-     * @param callable $callback 事件回调
-     * @param int      $level    事件等级
+     * @param object|string $event    事件名称
+     * @param callable      $callback 事件回调
+     * @param int           $level    事件等级
      */
-    public static function addEventListener(string $name, callable $callback, int $level = 20)
+    public function addEventListener($event, callable $callback, int $level = 20)
     {
         /*
          * TODO: 尝试同时支持类名和自定义名称作为事件名
@@ -29,8 +32,11 @@ class EventProvider implements ListenerProviderInterface
          * NOTE: 如果使用自定义名称，则需要在事件处理器中使用 `$event->getName()` 获取事件名
          * NOTE: 或者是否由其他可能的方法支持自定义名称，从而避免频繁的 new EventDispatcher
          */
-        self::$_events[$name][] = [$level, $callback];
-        self::sortEvents($name);
+        if (!is_object($event)) {
+            $event = get_class($event);
+        }
+        self::$_events[$event][] = [$level, $callback];
+        $this->sortEvents($event);
     }
 
     /**
@@ -39,7 +45,7 @@ class EventProvider implements ListenerProviderInterface
      * @param  string          $event_name 事件名称
      * @return array<callable>
      */
-    public static function getEventListeners(string $event_name): array
+    public function getEventListeners(string $event_name): array
     {
         return self::$_events[$event_name] ?? [];
     }
@@ -55,7 +61,7 @@ class EventProvider implements ListenerProviderInterface
         return self::getEventListeners($event->getName());
     }
 
-    private static function sortEvents($name)
+    private function sortEvents($name)
     {
         usort(self::$_events[$name], function ($a, $b) {
             return $a[0] <= $b[0] ? -1 : 1;

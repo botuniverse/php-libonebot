@@ -14,11 +14,11 @@ trait SocketTrait
     /** @var HttpServerSocketBase[] */
     protected $http_socket = [];
 
-    /** @var HttpWebhookSocketBase[] */
-    protected $http_webhook_socket = [];
+    /** @var HttpClientSocketBase[] */
+    protected $http_client_socket = [];
 
-    /** @var WSReverseSocketBase[] */
-    protected $ws_reverse_socket = [];
+    /** @var WSClientSocketBase[] */
+    protected $ws_client_socket = [];
 
     /* ======================== Getter by flags ======================== */
 
@@ -47,11 +47,11 @@ trait SocketTrait
     }
 
     /**
-     * @return Generator|HttpWebhookSocketBase[]
+     * @return Generator|HttpClientSocketBase[]
      */
     public function getHttpWebhookSocketsByFlag(int $flag = 0): Generator
     {
-        foreach ($this->http_webhook_socket as $socket) {
+        foreach ($this->http_client_socket as $socket) {
             if ($socket->getFlag() === $flag) {
                 yield $socket;
             }
@@ -59,11 +59,11 @@ trait SocketTrait
     }
 
     /**
-     * @return Generator|WSReverseSocketBase[]
+     * @return Generator|WSClientSocketBase[]
      */
     public function getWSReverseSocketsByFlag(int $flag = 0): Generator
     {
-        foreach ($this->ws_reverse_socket as $socket) {
+        foreach ($this->ws_client_socket as $socket) {
             if ($socket->getFlag() === $flag) {
                 yield $socket;
             }
@@ -89,19 +89,19 @@ trait SocketTrait
     }
 
     /**
-     * @return HttpWebhookSocketBase[]
+     * @return HttpClientSocketBase[]
      */
     public function getHttpWebhookSockets(): array
     {
-        return $this->http_webhook_socket;
+        return $this->http_client_socket;
     }
 
     /**
-     * @return WSReverseSocketBase[]
+     * @return WSClientSocketBase[]
      */
     public function getWSReverseSockets(): array
     {
-        return $this->ws_reverse_socket;
+        return $this->ws_client_socket;
     }
 
     /* ======================== Adder ======================== */
@@ -116,13 +116,13 @@ trait SocketTrait
         $this->http_socket[] = $socket;
     }
 
-    public function addHttpWebhookSocket(HttpWebhookSocketBase $socket): void
+    public function addHttpWebhookSocket(HttpClientSocketBase $socket): void
     {
-        $this->http_webhook_socket[] = $socket;
+        $this->http_client_socket[] = $socket;
     }
 
-    public function addWSReverseSocket(WSReverseSocketBase $socket): void
+    public function addWSReverseSocket(WSClientSocketBase $socket): void
     {
-        $this->ws_reverse_socket[] = $socket;
+        $this->ws_client_socket[] = $socket;
     }
 }

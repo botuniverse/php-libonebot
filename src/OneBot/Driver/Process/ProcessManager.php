@@ -2,7 +2,10 @@
 
 declare(strict_types=1);
 
-namespace OneBot\Driver;
+namespace OneBot\Driver\Process;
+
+use OneBot\Driver\Driver;
+use OneBot\Driver\Workerman\WorkermanDriver;
 
 class ProcessManager
 {
@@ -38,24 +41,6 @@ class ProcessManager
     public static function getProcessType(): int
     {
         return self::$process_type;
-    }
-
-    /**
-     * 获取进程日志前缀
-     */
-    public static function getProcessLogName(): string
-    {
-        switch (self::$process_type) {
-            case ONEBOT_PROCESS_MANAGER:
-                return '[MANAGER] ';
-            case ONEBOT_PROCESS_WORKER:
-            case ONEBOT_PROCESS_TASKWORKER:
-                return '[#' . self::$process_id . '] ';
-            case ONEBOT_PROCESS_USER:
-                return '[USER] ';
-            default:
-                return '';
-        }
     }
 
     /**

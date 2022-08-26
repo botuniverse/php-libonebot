@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace OneBot\Driver;
 
+use OneBot\Driver\Interfaces\DriverInitPolicy;
 use OneBot\Driver\Interfaces\WebSocketClientInterface;
 use OneBot\Driver\Socket\SocketTrait;
+use OneBot\Driver\Workerman\WorkermanDriver;
 use OneBot\V12\Config\ConfigInterface;
 
 abstract class Driver
@@ -111,16 +113,16 @@ abstract class Driver
         }
         [$http, $webhook, $ws, $ws_reverse] = $this->initInternalDriverClasses($http_index, $has_http_webhook, $ws_index, $has_ws_reverse);
         if ($ws) {
-            ob_logger()->info('已开启正向 WebSocket');
+            ob_logger()->debug('已开启正向 WebSocket');
         }
         if ($http) {
-            ob_logger()->info('已开启 HTTP');
+            ob_logger()->debug('已开启 HTTP');
         }
         if ($webhook) {
-            ob_logger()->info('已开启 HTTP Webhook');
+            ob_logger()->debug('已开启 HTTP Webhook');
         }
         if ($ws_reverse) {
-            ob_logger()->info('已开启反向 WebSocket');
+            ob_logger()->debug('已开启反向 WebSocket');
         }
     }
 
@@ -144,6 +146,11 @@ abstract class Driver
         return $this->params[$key] ?? $default;
     }
 
+    public function setParams(array $params): void
+    {
+        $this->params = $params;
+    }
+
     public function getSupportedClients(): array
     {
         return static::SUPPORTED_CLIENTS;
@@ -160,21 +167,9 @@ abstract class Driver
     abstract public function getName(): string;
 
     /**
-     * 添加一个定时器
-     *
-     * @param int      $ms        间隔时间（单位为毫秒）
-     * @param callable $callable  回调函数
-     * @param int      $times     运行次数（默认只运行一次，如果为0或-1，则将会永久运行）
-     * @param array    $arguments 回调要调用的参数
+     * 获取 Driver 相关的底层事件循环接口
      */
-    abstract public function addTimer(int $ms, callable $callable, int $times = 1, array $arguments = []): int;
-
-    /**
-     * 删除 Driver 的计时器
-     *
-     * @param int $timer_id 通过 addTimer() 方法返回的计时器 ID
-     */
-    abstract public function clearTimer(int $timer_id);
+    abstract public function getEventLoop(): DriverEventLoopBase;
 
     /**
      * 初始化驱动的 WS Reverse Client 连接
@@ -182,21 +177,6 @@ abstract class Driver
      * @param array $headers 请求头
      */
     abstract public function initWSReverseClients(array $headers = []);
-
-    /**
-     * 驱动必须提供一个可以添加到对应驱动 EventLoop 的读接口
-     *
-     * @param resource $fd       文件描述符或资源 int
-     * @param callable $callable 回调函数
-     */
-    abstract public function addReadEvent($fd, callable $callable);
-
-    /**
-     * 驱动必须提供一个可以删除对应驱动 EventLoop 的读接口
-     *
-     * @param resource $fd 文件描述符或资源 int
-     */
-    abstract public function delReadEvent($fd);
 
     /**
      * 通过解析的配置，让 Driver 初始化不同的通信方式

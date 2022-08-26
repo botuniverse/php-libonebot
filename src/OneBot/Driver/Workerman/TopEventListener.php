@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace OneBot\Driver\Workerman;
 
-use OneBot\Driver\Event\EventDispatcher;
 use OneBot\Driver\Event\Http\HttpRequestEvent;
 use OneBot\Driver\Event\Process\WorkerStartEvent;
 use OneBot\Driver\Event\Process\WorkerStopEvent;
@@ -12,8 +11,7 @@ use OneBot\Driver\Event\WebSocket\WebSocketCloseEvent;
 use OneBot\Driver\Event\WebSocket\WebSocketMessageEvent;
 use OneBot\Driver\Event\WebSocket\WebSocketOpenEvent;
 use OneBot\Driver\ExceptionHandler;
-use OneBot\Driver\ProcessManager;
-use OneBot\Driver\WorkermanDriver;
+use OneBot\Driver\Process\ProcessManager;
 use OneBot\Http\HttpFactory;
 use OneBot\Http\WebSocket\FrameFactory;
 use OneBot\Http\WebSocket\FrameInterface;
@@ -35,7 +33,7 @@ class TopEventListener
     public function onWorkerStart(Worker $worker)
     {
         ProcessManager::initProcess(ONEBOT_PROCESS_WORKER, $worker->id);
-        EventDispatcher::dispatchWithHandler(new WorkerStartEvent());
+        ob_event_dispatcher()->dispatchWithHandler(new WorkerStartEvent());
     }
 
     /**
@@ -43,7 +41,7 @@ class TopEventListener
      */
     public function onWorkerStop()
     {
-        EventDispatcher::dispatchWithHandler(new WorkerStopEvent());
+        ob_event_dispatcher()->dispatchWithHandler(new WorkerStopEvent());
     }
 
     /**
@@ -63,9 +61,10 @@ class TopEventListener
                 'http://' . $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI'],
                 $headers
             );
+            $server_request = $server_request->withQueryParams($_GET);
             $event = new WebSocketOpenEvent($server_request, $connection->id);
             $event->setSocketFlag($connection->worker->flag ?? 0);
-            (new EventDispatcher())->dispatch($event);
+            ob_event_dispatcher()->dispatch($event);
             if (is_object($event->getResponse()) && method_exists($event->getResponse(), '__toString')) {
                 $connection->close((string) $event->getResponse());
                 return;
@@ -95,7 +94,7 @@ class TopEventListener
         }
         $event = new WebSocketCloseEvent($connection->id);
         $event->setSocketFlag($connection->worker->flag ?? 0);
-        (new EventDispatcher())->dispatch($event);
+        ob_event_dispatcher()->dispatch($event);
     }
 
     /**
@@ -118,7 +117,7 @@ class TopEventListener
                 return $connection->send($data);
             });
             $event->setSocketFlag($connection->worker->flag ?? 0);
-            (new EventDispatcher())->dispatch($event);
+            ob_event_dispatcher()->dispatch($event);
         } catch (Throwable $e) {
             ExceptionHandler::getInstance()->handle($e);
         }
@@ -145,7 +144,7 @@ class TopEventListener
         $response = new WorkermanResponse();
         try {
             $event->setSocketFlag($connection->worker->flag ?? 0);
-            (new EventDispatcher())->dispatch($event);
+            ob_event_dispatcher()->dispatch($event);
             if (($psr_response = $event->getResponse()) !== null) {
                 $response->withStatus($psr_response->getStatusCode());
                 $response->withHeaders($psr_response->getHeaders());
@@ -158,6 +157,5 @@ class TopEventListener
             $response->withBody('Internal Server Error');
             $connection->send($response);
         }
-        ob_dump($response);
     }
 }

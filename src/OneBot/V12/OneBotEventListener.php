@@ -7,12 +7,11 @@ namespace OneBot\V12;
 use MessagePack\Exception\UnpackingFailedException;
 use MessagePack\MessagePack;
 use OneBot\Driver\Event\DriverInitEvent;
-use OneBot\Driver\Event\EventDispatcher;
 use OneBot\Driver\Event\Http\HttpRequestEvent;
 use OneBot\Driver\Event\WebSocket\WebSocketMessageEvent;
 use OneBot\Driver\Event\WebSocket\WebSocketOpenEvent;
 use OneBot\Driver\Interfaces\WebSocketClientInterface;
-use OneBot\Driver\ProcessManager;
+use OneBot\Driver\Process\ProcessManager;
 use OneBot\Http\Client\Exception\NetworkException;
 use OneBot\Http\HttpFactory;
 use OneBot\Http\WebSocket\CloseFrameInterface;
@@ -20,7 +19,6 @@ use OneBot\Http\WebSocket\FrameInterface;
 use OneBot\Http\WebSocket\Opcode;
 use OneBot\Util\Singleton;
 use OneBot\Util\Utils;
-use OneBot\Util\Validator;
 use OneBot\V12\Action\ActionResponse;
 use OneBot\V12\Action\DefaultActionHandler;
 use OneBot\V12\Exception\OneBotFailureException;
@@ -52,6 +50,7 @@ class OneBotEventListener
                 $event->withResponse(HttpFactory::getInstance()->createResponse(404));
                 return;
             }
+            // OneBot 12 只接受 POST 请求
             if ($request->getMethod() === 'GET') {
                 $event->withResponse(HttpFactory::getInstance()->createResponse(200, 'OK', [], 'Hello OneBot!'));
                 return;
@@ -108,7 +107,7 @@ class OneBotEventListener
             $event->send(json_encode($response_obj));
             ob_logger()->warning('OneBot Failure: ' . RetCode::getMessage($e->getRetCode()) . '(' . $e->getRetCode() . ') at ' . $e->getFile() . ':' . $e->getLine());
         } catch (Throwable $e) {
-            $response_obj = ActionResponse::create($response_obj->echo ?? null)->fail(RetCode::INTERNAL_HANDLER_ERROR);
+            $response_obj = ActionResponse::create()->fail(RetCode::INTERNAL_HANDLER_ERROR);
             $event->send(json_encode($response_obj));
             ob_logger()->error('Unhandled ' . get_class($e) . ': ' . $e->getMessage() . "\nStack trace:\n" . $e->getTraceAsString());
         }
@@ -120,6 +119,7 @@ class OneBotEventListener
     public function onWorkerStart(): void
     {
         ob_logger()->debug('Worker #' . ProcessManager::getProcessId() . ' started');
+        ob_logger_register(ob_logger());
     }
 
     /**
@@ -136,6 +136,7 @@ class OneBotEventListener
     public function onManagerStart(): void
     {
         ob_logger()->debug('Manager started');
+        ob_logger_register(ob_logger());
     }
 
     /**
@@ -160,26 +161,26 @@ class OneBotEventListener
                 try {
                     if ($v->getClient()->reconnect() !== true) {
                         ob_logger()->error('ws_reverse_client连接失败：无法建立连接');
-                        $event->getDriver()->addTimer($v->getReconnectInterval(), $reconnect);
+                        $event->getDriver()->getEventLoop()->addTimer($v->getReconnectInterval(), $reconnect);
                     }
                 } catch (NetworkException $e) {
                     ob_logger()->error('ws_reverse_client连接失败：' . $e->getMessage());
-                    $event->getDriver()->addTimer($v->getReconnectInterval(), $reconnect);
+                    $event->getDriver()->getEventLoop()->addTimer($v->getReconnectInterval(), $reconnect);
                 }
             };
             $v->getClient()->setMessageCallback([$this, 'onClientMessage']);
             $v->getClient()->setCloseCallback(function () use ($event, $reconnect, $v) {
                 ob_logger()->error('WS Reverse 服务端断开连接！');
-                $event->getDriver()->addTimer($v->getReconnectInterval(), $reconnect);
+                $event->getDriver()->getEventLoop()->addTimer($v->getReconnectInterval(), $reconnect);
             });
             try {
                 if ($v->getClient()->connect() !== true) {
                     ob_logger()->error('ws_reverse_client连接失败：首次无法建立连接');
-                    $event->getDriver()->addTimer($v->getReconnectInterval(), $reconnect);
+                    $event->getDriver()->getEventLoop()->addTimer($v->getReconnectInterval(), $reconnect);
                 }
             } catch (NetworkException $e) {
                 ob_logger()->error('ws_reverse_client连接失败：' . $e->getMessage());
-                $event->getDriver()->addTimer($v->getReconnectInterval(), $reconnect);
+                $event->getDriver()->getEventLoop()->addTimer($v->getReconnectInterval(), $reconnect);
             }
         }
     }
@@ -192,7 +193,7 @@ class OneBotEventListener
     public function onFirstWorkerInit()
     {
         if (ProcessManager::getProcessId() === 0) {
-            EventDispatcher::dispatchWithHandler(new DriverInitEvent(OneBot::getInstance()->getDriver()));
+            ob_event_dispatcher()->dispatchWithHandler(new DriverInitEvent(OneBot::getInstance()->getDriver()));
         }
     }
 
@@ -212,7 +213,7 @@ class OneBotEventListener
             }
             return $client->push($data);
         });
-        EventDispatcher::dispatchWithHandler($event);
+        ob_event_dispatcher()->dispatchWithHandler($event);
     }
 
     /**
@@ -259,7 +260,6 @@ class OneBotEventListener
                 throw new OneBotFailureException(RetCode::INTERNAL_HANDLER_ERROR);
         }
 
-        Validator::validateParamsByAction($action_obj, ['detail_type' => true]);
         if (($handler = OneBot::getInstance()->getActionHandler($action_obj->action)) !== null) {
             $response_obj = call_user_func($handler[0], $action_obj);
         } else {

@@ -8,7 +8,7 @@ namespace OneBot\Driver\Workerman;
 
 use Closure;
 use Exception;
-use Workerman\Events\EventInterface;
+use Workerman\Connection\ConnectionInterface;
 use Workerman\Lib\Timer;
 use function count;
 use function debug_backtrace;
@@ -21,14 +21,6 @@ use function set_error_handler;
 use function str_replace;
 use function time;
 use function unlink;
-use const OS_TYPE_LINUX;
-use const SIG_IGN;
-use const SIGHUP;
-use const SIGINT;
-use const SIGQUIT;
-use const SIGTERM;
-use const SIGUSR1;
-use const WUNTRACED;
 
 /**
  * @property callable|Closure $onWebSocketConnect
@@ -51,6 +43,17 @@ class Worker extends \Workerman\Worker
     public static $user_process;
 
     /**
+     * Available event loops.
+     *
+     * @var array
+     */
+    protected static $_availableEventLoops = [
+        'event' => '\Workerman\Events\Event',
+        'libevent' => '\Workerman\Events\Libevent',
+        'swoole' => '\Workerman\Events\Swoole',
+    ];
+
+    /**
      * @throws Exception
      */
     public static function runAll(): void
@@ -60,21 +63,113 @@ class Worker extends \Workerman\Worker
         static::parseCommand();     // 解析命令行，但好像 libob 不太需要
         static::daemonize();        // 创建守护进程，但 libob 好像也不太需要
         static::initWorkers();      // 初始化 Worker 进程
-        static::installSignal();    // 安装信号处理函数
+        // static::installSignal();    // 安装信号处理函数
         // static::saveMasterPid();    // 保存 Master PID
+        if (static::$_OS === OS_TYPE_LINUX) { // 此处替代上方的 saveMasterPid() 功能
+            static::$_masterPid = posix_getpid();
+        }
         // static::displayUI();      // 显示开头的启动信息 UI，但 Swoole 没有，所以这里注释掉，以统一
         static::forkWorkers();      // 创建 Worker 进程
+        ob_logger()->debug('重置输入输出');
         static::resetStd();         // 重置标准输入输出
+        ob_logger()->debug('监听Worker进程ing');
         static::monitorWorkers();   // 监控 Worker 进程，这里是一个 while(1) 来等待的
     }
 
     /**
      * 防止 Workerman 输出了自己的东西
+     *
      * @param string $msg
      */
     public static function log($msg)
     {
+        ob_logger()->warning($msg);
+    }
+
+    public static function safeEcho($msg, $decorated = false)
+    {
         ob_logger()->debug($msg);
+        return true;
+    }
+
+    /**
+     * Workerman没有暴露开放的重载接口，我们暴露一个
+     */
+    public static function reloadSelf()
+    {
+        ob_logger()->notice('Reloading...');
+        static::$_pidsToRestart = static::getAllWorkerPids();
+        static::reload();
+    }
+
+    /**
+     * Stop all.
+     *
+     * 这里只把退出信号从SIGINT改成了SIGTERM，因为SIGINT在Linux系统中会穿透，导致一系列问题
+     *
+     * @param int    $code
+     * @param string $log
+     */
+    public static function stopAll($code = 0, $log = '')
+    {
+        if ($log) {
+            static::log($log);
+        }
+
+        static::$_status = static::STATUS_SHUTDOWN;
+        // For master process.
+        if (\DIRECTORY_SEPARATOR === '/' && static::$_masterPid === \posix_getpid()) {
+            static::log('Workerman[' . \basename(static::$_startFile) . '] stopping ...');
+            $worker_pid_array = static::getAllWorkerPids();
+            // Send stop signal to all child processes.
+            if (static::$_gracefulStop) {
+                $sig = \SIGQUIT;
+            } else {
+                $sig = \SIGTERM;
+            }
+            foreach ($worker_pid_array as $worker_pid) {
+                \posix_kill($worker_pid, $sig);
+                if (!static::$_gracefulStop){
+                    Timer::add(static::$stopTimeout, '\posix_kill', [$worker_pid, \SIGKILL], false);
+                }
+            }
+            Timer::add(1, '\\Workerman\\Worker::checkIfChildRunning');
+            // Remove statistics file.
+            if (\is_file(static::$_statisticsFile)) {
+                @\unlink(static::$_statisticsFile);
+            }
+        } // For child processes.
+        else {
+            // Execute exit.
+            foreach (static::$_workers as $worker) {
+                if (!$worker->stopping){
+                    $worker->stop();
+                    $worker->stopping = true;
+                }
+            }
+            if (!static::$_gracefulStop || ConnectionInterface::$statistics['connection_count'] <= 0) {
+                static::$_workers = [];
+                if (static::$globalEvent !== null) {
+                    static::$globalEvent->destroy();
+                }
+
+                try {
+                    exit($code);
+                    /* @phpstan-ignore-next-line */
+                } catch (Exception $e) {
+                    // nocode
+                }
+            }
+        }
+    }
+
+    /**
+     * Get start files for windows.
+     *
+     * @return array
+     */
+    public static function getStartFilesForWindows() {
+        return [''];
     }
 
     /**
@@ -124,7 +219,7 @@ class Worker extends \Workerman\Worker
 
         // Init data for worker id.
         static::initId();
-
+        ob_logger()->debug('接着初始化计时器');
         // Timer init.
         Timer::init();
     }
@@ -289,65 +384,70 @@ class Worker extends \Workerman\Worker
 
     /**
      * Install signal handler.
+     *
+     * 不需要 Workerman 挂载自己的信号处理器
      */
     protected static function installSignal()
     {
-        if (static::$_OS !== OS_TYPE_LINUX) {
+        if (static::$_OS === OS_TYPE_WINDOWS) {
             return;
         }
+        echo "设置监听器\n";
         $signalHandler = '\Workerman\Worker::signalHandler';
-        // stop
+        // // stop
         // \pcntl_signal(\SIGINT, $signalHandler, false);
-        // stop
-        pcntl_signal(SIGTERM, $signalHandler, false);
-        // graceful stop
+        // // stop
+        // pcntl_signal(SIGTERM, $signalHandler, false);
+        // // graceful stop
         // \pcntl_signal(\SIGHUP, $signalHandler, false);
-        // reload
+        // // reload
         pcntl_signal(SIGUSR1, $signalHandler, false);
-        // graceful reload
+        // // graceful reload
         // \pcntl_signal(\SIGQUIT, $signalHandler, false);
-        // status
+        // // status
         // \pcntl_signal(\SIGUSR2, $signalHandler, false);
-        // connection status
+        // // connection status
         // \pcntl_signal(\SIGIO, $signalHandler, false);
-        // ignore
+        // // ignore
         // \pcntl_signal(\SIGPIPE, \SIG_IGN, false);
     }
 
     /**
      * Reinstall signal handler.
+     *
+     * 不需要 Workerman 自己挂载自己的信号处理器
      */
     protected static function reinstallSignal()
     {
-        if (static::$_OS !== OS_TYPE_LINUX) {
+        if (static::$_OS === OS_TYPE_WINDOWS) {
             return;
         }
         $signalHandler = '\Workerman\Worker::signalHandler';
-        // uninstall stop signal handler
+        // // uninstall stop signal handler
         // \pcntl_signal(\SIGINT, \SIG_IGN, false);
-        // uninstall stop signal handler
-        pcntl_signal(SIGTERM, SIG_IGN, false);
-        // uninstall graceful stop signal handler
+        // // uninstall stop signal handler
+        // pcntl_signal(SIGTERM, SIG_IGN, false);
+        // // uninstall graceful stop signal handler
         // \pcntl_signal(\SIGHUP, \SIG_IGN, false);
-        // uninstall reload signal handler
-        pcntl_signal(SIGUSR1, SIG_IGN, false);
-        // uninstall graceful reload signal handler
+        // // uninstall reload signal handler
+        // pcntl_signal(SIGUSR1, SIG_IGN, false);
+        // // uninstall graceful reload signal handler
         // \pcntl_signal(\SIGQUIT, \SIG_IGN, false);
-        // uninstall status signal handler
+        // // uninstall status signal handler
         // \pcntl_signal(\SIGUSR2, \SIG_IGN, false);
-        // uninstall connections status signal handler
+        // // uninstall connections status signal handler
         // \pcntl_signal(\SIGIO, \SIG_IGN, false);
-        // reinstall stop signal handler
+        // // reinstall stop signal handler
         // static::$globalEvent->add(\SIGINT, EventInterface::EV_SIGNAL, $signalHandler);
-        // reinstall graceful stop signal handler
+        // // reinstall graceful stop signal handler
         // static::$globalEvent->add(\SIGHUP, EventInterface::EV_SIGNAL, $signalHandler);
-        // reinstall reload signal handler
-        static::$globalEvent->add(SIGUSR1, EventInterface::EV_SIGNAL, $signalHandler);
-        // reinstall graceful reload signal handler
+        // // reinstall reload signal handler
+        // static::$globalEvent->add(SIGUSR1, EventInterface::EV_SIGNAL, $signalHandler);
+        // // reinstall graceful reload signal handler
         // static::$globalEvent->add(\SIGQUIT, EventInterface::EV_SIGNAL, $signalHandler);
-        // reinstall status signal handler
+        // // reinstall status signal handler
         // static::$globalEvent->add(\SIGUSR2, EventInterface::EV_SIGNAL, $signalHandler);
-        // reinstall connection status signal handler
+        // // reinstall connection status signal handler
         // static::$globalEvent->add(\SIGIO, EventInterface::EV_SIGNAL, $signalHandler);
     }
 
@@ -439,5 +539,28 @@ class Worker extends \Workerman\Worker
                 static::exitAndClearAll();
             }
         }
+    }
+
+    /**
+     * Exit current process.
+     *
+     * 这里只对pidFile进行修改，因为libob不需要workerman自作主张记录pid，所以就重载了一下手动记录
+     */
+    protected static function exitAndClearAll()
+    {
+        foreach (static::$_workers as $worker) {
+            $socket_name = $worker->getSocketName();
+            if ($worker->transport === 'unix' && $socket_name) {
+                [, $address] = \explode(':', $socket_name, 2);
+                $address = substr($address, strpos($address, '/') + 2);
+                @\unlink($address);
+            }
+        }
+        // @\unlink(static::$pidFile);
+        static::log('Workerman[' . \basename(static::$_startFile) . '] has been stopped');
+        if (static::$onMasterStop !== null) {
+            \call_user_func(static::$onMasterStop);
+        }
+        exit(0);
     }
 }
