@@ -52,7 +52,7 @@ class OneBot
     private Driver $driver;
 
     /** @var null|ActionHandlerBase 动作处理器 */
-    private ?ActionHandlerBase $base_action_handler;
+    private ?ActionHandlerBase $base_action_handler = null;
 
     /** @var array 动作处理回调们 */
     private array $action_handlers = [];
