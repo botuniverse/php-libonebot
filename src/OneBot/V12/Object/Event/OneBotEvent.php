@@ -46,6 +46,9 @@ abstract class OneBotEvent implements JsonSerializable, IteratorAggregate
     /** @var array 扩展数据 */
     private array $extended_data = [];
 
+    /** @var string 扩展字段前缀 */
+    private string $extended_prefix = '';
+
     /**
      * @param string                     $type        事件类型
      * @param string                     $detail_type 事件详细类型
@@ -138,6 +141,18 @@ abstract class OneBotEvent implements JsonSerializable, IteratorAggregate
         return $this;
     }
 
+    /**
+     * 设置扩展字段前缀
+     *
+     * @param  string $prefix 前缀，可以是机器人平台名称、平台名称缩写、实现名称、实现名称缩写或其他自定义字符串，格式必须符合 `[_a-z]+`
+     * @return $this
+     */
+    public function setExtendedPrefix(string $prefix): self
+    {
+        $this->extended_prefix = $prefix;
+        return $this;
+    }
+
     public function jsonSerialize(): array
     {
         $data = [];
@@ -147,7 +162,11 @@ abstract class OneBotEvent implements JsonSerializable, IteratorAggregate
             }
             $data[$k] = $v;
             if ($k === 'detail_type') {
-                $data[$k] = empty($this->extended_data) ? $this->detail_type : "{$this->impl}.{$this->detail_type}";
+                if (empty($this->extended_prefix) || empty($this->getExtendedData())) {
+                    $data[$k] = $this->detail_type;
+                } else {
+                    $data[$k] = "{$this->extended_prefix}.{$this->detail_type}";
+                }
             }
         }
         return $data;
