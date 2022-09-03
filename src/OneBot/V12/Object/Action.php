@@ -15,10 +15,10 @@ use ReturnTypeWillChange;
 class Action implements JsonSerializable, IteratorAggregate
 {
     /** @var string 动作名称 */
-    public $action = '';
+    public string $action = '';
 
     /** @var array 动作参数 */
-    public $params = [];
+    public array $params = [];
 
     /** @var mixed 回包消息 */
     public $echo;

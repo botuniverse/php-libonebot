@@ -12,10 +12,10 @@ use ReturnTypeWillChange;
 class MessageSegment implements JsonSerializable, IteratorAggregate
 {
     /** @var string 类型 */
-    public $type;
+    public string $type;
 
     /** @var array 数据 */
-    public $data;
+    public array $data;
 
     /**
      * 创建新的消息段

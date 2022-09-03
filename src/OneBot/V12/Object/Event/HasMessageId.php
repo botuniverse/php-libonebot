@@ -8,8 +8,6 @@ trait HasMessageId
 {
     /**
      * 消息 ID
-     *
-     * @var string
      */
-    public $message_id;
+    public string $message_id;
 }

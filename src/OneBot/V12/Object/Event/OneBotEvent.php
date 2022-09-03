@@ -20,31 +20,31 @@ use ReturnTypeWillChange;
 abstract class OneBotEvent implements JsonSerializable, IteratorAggregate
 {
     /** @var string 事件ID */
-    public $id;
+    public string $id;
 
     /** @var string OneBot实现名称 */
-    public $impl;
+    public string $impl;
 
     /** @var string OneBot实现平台名称 */
-    public $platform;
+    public string $platform;
 
     /** @var string 机器人ID */
-    public $self_id;
+    public string $self_id;
 
     /** @var int 事件发生时间 */
-    public $time;
+    public int $time;
 
     /** @var string 事件类型 */
-    public $type;
+    public string $type;
 
     /** @var string 事件详细类型 */
-    public $detail_type;
+    public string $detail_type;
 
     /** @var string 事件子类型 */
-    public $sub_type;
+    public string $sub_type;
 
     /** @var array 扩展数据 */
-    private $extended_data = [];
+    private array $extended_data = [];
 
     /**
      * @param string                     $type        事件类型
@@ -63,13 +63,13 @@ abstract class OneBotEvent implements JsonSerializable, IteratorAggregate
         if ($time === null) {
             $time = time();
         } elseif ($time instanceof DateTimeInterface) {
-            /** @var false|int $tmpTime */
-            $tmpTime = $time->getTimestamp();
+            /** @var false|int $tmp_time */
+            $tmp_time = $time->getTimestamp();
             // 在 PHP 8.0 前，DateTime::getTimestamp() 会在失败时返回 false
-            if ($tmpTime === false) {
+            if ($tmp_time === false) {
                 throw new OneBotException('传入的时间无法转换为时间戳');
             }
-            $time = $tmpTime;
+            $time = $tmp_time;
         }
 
         $ob = OneBot::getInstance();
