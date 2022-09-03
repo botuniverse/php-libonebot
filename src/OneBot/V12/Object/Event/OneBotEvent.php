@@ -22,9 +22,6 @@ abstract class OneBotEvent implements JsonSerializable, IteratorAggregate
     /** @var string 事件ID */
     public string $id;
 
-    /** @var string OneBot实现名称 */
-    public string $impl;
-
     /** @var string OneBot实现平台名称 */
     public string $platform;
 
@@ -78,7 +75,6 @@ abstract class OneBotEvent implements JsonSerializable, IteratorAggregate
         $ob = OneBot::getInstance();
 
         $this->id = ob_uuidgen();
-        $this->impl = $ob->getImplementName();
         $this->platform = $ob->getPlatform();
         $this->self_id = $ob->getSelfId();
         $this->time = $time;
