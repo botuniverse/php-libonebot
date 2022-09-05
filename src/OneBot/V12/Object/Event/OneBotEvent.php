@@ -20,31 +20,31 @@ use ReturnTypeWillChange;
 abstract class OneBotEvent implements JsonSerializable, IteratorAggregate
 {
     /** @var string 事件ID */
-    public $id;
-
-    /** @var string OneBot实现名称 */
-    public $impl;
+    public string $id;
 
     /** @var string OneBot实现平台名称 */
-    public $platform;
+    public string $platform;
 
     /** @var string 机器人ID */
-    public $self_id;
+    public string $self_id;
 
     /** @var int 事件发生时间 */
-    public $time;
+    public int $time;
 
     /** @var string 事件类型 */
-    public $type;
+    public string $type;
 
     /** @var string 事件详细类型 */
-    public $detail_type;
+    public string $detail_type;
 
     /** @var string 事件子类型 */
-    public $sub_type;
+    public string $sub_type;
 
     /** @var array 扩展数据 */
-    private $extended_data = [];
+    private array $extended_data = [];
+
+    /** @var string 扩展字段前缀 */
+    private string $extended_prefix = '';
 
     /**
      * @param string                     $type        事件类型
@@ -63,19 +63,18 @@ abstract class OneBotEvent implements JsonSerializable, IteratorAggregate
         if ($time === null) {
             $time = time();
         } elseif ($time instanceof DateTimeInterface) {
-            /** @var false|int $tmpTime */
-            $tmpTime = $time->getTimestamp();
+            /** @var false|int $tmp_time */
+            $tmp_time = $time->getTimestamp();
             // 在 PHP 8.0 前，DateTime::getTimestamp() 会在失败时返回 false
-            if ($tmpTime === false) {
+            if ($tmp_time === false) {
                 throw new OneBotException('传入的时间无法转换为时间戳');
             }
-            $time = $tmpTime;
+            $time = $tmp_time;
         }
 
         $ob = OneBot::getInstance();
 
         $this->id = ob_uuidgen();
-        $this->impl = $ob->getImplementName();
         $this->platform = $ob->getPlatform();
         $this->self_id = $ob->getSelfId();
         $this->time = $time;
@@ -138,6 +137,18 @@ abstract class OneBotEvent implements JsonSerializable, IteratorAggregate
         return $this;
     }
 
+    /**
+     * 设置扩展字段前缀
+     *
+     * @param  string $prefix 前缀，可以是机器人平台名称、平台名称缩写、实现名称、实现名称缩写或其他自定义字符串，格式必须符合 `[_a-z]+`
+     * @return $this
+     */
+    public function setExtendedPrefix(string $prefix): self
+    {
+        $this->extended_prefix = $prefix;
+        return $this;
+    }
+
     public function jsonSerialize(): array
     {
         $data = [];
@@ -147,7 +158,11 @@ abstract class OneBotEvent implements JsonSerializable, IteratorAggregate
             }
             $data[$k] = $v;
             if ($k === 'detail_type') {
-                $data[$k] = empty($this->extended_data) ? $this->detail_type : "{$this->impl}.{$this->detail_type}";
+                if (empty($this->extended_prefix) || empty($this->getExtendedData())) {
+                    $data[$k] = $this->detail_type;
+                } else {
+                    $data[$k] = "{$this->extended_prefix}.{$this->detail_type}";
+                }
             }
         }
         return $data;

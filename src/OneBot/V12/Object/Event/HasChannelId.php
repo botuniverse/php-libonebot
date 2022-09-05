@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace OneBot\V12\Object\Event;
 
-trait HasMessageId
+trait HasChannelId
 {
     /**
-     * 消息 ID
+     * @var string 频道 ID
      */
-    public string $message_id;
+    public string $channel_id;
 }

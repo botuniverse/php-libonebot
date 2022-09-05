@@ -14,17 +14,13 @@ class HeartbeatEvent extends MetaEvent
 {
     /**
      * 与下次心跳的间隔，单位毫秒
-     *
-     * @var int
      */
-    public $interval;
+    public int $interval;
 
     /**
      * OneBot 状态
-     *
-     * @var array
      */
-    public $status;
+    public array $status;
 
     /**
      * @param null|DateTimeInterface|int $time 事件发生时间，可为DateTime对象或时间戳，不传或为null则使用当前时间

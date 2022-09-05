@@ -30,10 +30,8 @@ abstract class MessageEvent extends OneBotEvent
 
     /**
      * 消息内容的替代表示
-     *
-     * @var null|string
      */
-    public $alt_message;
+    public ?string $alt_message;
 
     /**
      * @param string                                 $detail_type 事件详细类型

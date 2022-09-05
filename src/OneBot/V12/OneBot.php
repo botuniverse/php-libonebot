@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace OneBot\V12;
 
+use InvalidArgumentException;
 use OneBot\Driver\Driver;
 use OneBot\Driver\Event\DriverInitEvent;
 use OneBot\Driver\Event\Http\HttpRequestEvent;
@@ -36,25 +37,25 @@ class OneBot
     use Singleton;
 
     /** @var ConfigInterface 配置实例 */
-    private $config;
+    private ConfigInterface $config;
 
     /** @var string 实现名称 */
-    private $implement_name;
+    private string $implement_name;
 
     /** @var string 实现平台 */
-    private $platform;
+    private string $platform;
 
     /** @var string 机器人 ID */
-    private $self_id;
+    private string $self_id;
 
     /** @var Driver 驱动实例 */
-    private $driver;
+    private Driver $driver;
 
     /** @var null|ActionHandlerBase 动作处理器 */
-    private $base_action_handler;
+    private ?ActionHandlerBase $base_action_handler = null;
 
     /** @var array 动作处理回调们 */
-    private $action_handlers = [];
+    private array $action_handlers = [];
 
     /**
      * 创建一个 OneBot 实例
@@ -64,6 +65,8 @@ class OneBot
         if (self::$instance !== null) {
             throw new RuntimeException('只能有一个OneBot实例！');
         }
+
+        $this->validateConfig($config);
 
         $this->config = $config;
         $this->implement_name = $config->get('name');
@@ -246,7 +249,8 @@ class OneBot
             }
             $socket->post(json_encode($event->jsonSerialize()), $this->getRequestHeaders(), function (ResponseInterface $response) {
                 // TODO：编写 HTTP Webhook 响应的处理逻辑
-            }, function (RequestInterface $request) {});
+            }, function (RequestInterface $request) {
+            });
         }
         $frame_str = FrameFactory::createTextFrame(json_encode($event->jsonSerialize())); // 创建文本帧
         foreach ($this->driver->getWSServerSockets() as $socket) {
@@ -304,6 +308,17 @@ class OneBot
             case DriverInitPolicy::MULTI_PROCESS_INIT_IN_FIRST_WORKER:
                 ob_event_provider()->addEventListener(WorkerStartEvent::getName(), [OneBotEventListener::getInstance(), 'onFirstWorkerInit'], ONEBOT_EVENT_LEVEL);
                 break;
+        }
+    }
+
+    protected function validateConfig(ConfigInterface $config): void
+    {
+        if (!preg_match('/[a-z][\-a-z0-9]*(\.[\-a-z0-9]+)*/', $config->get('platform'))) {
+            throw new InvalidArgumentException('配置的平台名称不合法，请参阅文档');
+        }
+
+        if (!preg_match('/[a-z][\-a-z0-9]*(\.[\-a-z0-9]+)*/', $config->get('name'))) {
+            throw new InvalidArgumentException('配置的实现名称不合法，请参阅文档');
         }
     }
 }

@@ -8,8 +8,6 @@ trait HasGroupId
 {
     /**
      * 群 ID
-     *
-     * @var string
      */
-    public $group_id;
+    public string $group_id;
 }

@@ -8,8 +8,6 @@ trait HasOperatorId
 {
     /**
      * 操作者 ID
-     *
-     * @var string
      */
-    public $operator_id;
+    public string $operator_id;
 }

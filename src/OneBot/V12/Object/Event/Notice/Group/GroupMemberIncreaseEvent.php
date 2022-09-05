@@ -2,19 +2,17 @@
 
 declare(strict_types=1);
 
-namespace OneBot\V12\Object\Event\Notice;
+namespace OneBot\V12\Object\Event\Notice\Group;
 
 use DateTimeInterface;
 use OneBot\V12\Exception\OneBotException;
-use OneBot\V12\Object\Event\HasGroupId;
 use OneBot\V12\Object\Event\HasOperatorId;
 
 /**
  * OneBot 群成员增加事件
  */
-class GroupMemberIncreaseEvent extends NoticeEvent
+class GroupMemberIncreaseEvent extends GroupNoticeEvent
 {
-    use HasGroupId;
     use HasOperatorId;
 
     /**
@@ -28,9 +26,8 @@ class GroupMemberIncreaseEvent extends NoticeEvent
      */
     public function __construct(string $sub_type, string $group_id, string $user_id, string $operator_id, $time = null)
     {
-        parent::__construct('group_member_increase', $sub_type, $user_id, $time);
+        parent::__construct('group_member_increase', $sub_type, $user_id, $group_id, $time);
 
-        $this->group_id = $group_id;
         $this->operator_id = $operator_id;
     }
 }

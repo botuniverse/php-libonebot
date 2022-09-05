@@ -8,8 +8,6 @@ trait HasUserId
 {
     /**
      * 用户 ID
-     *
-     * @var string
      */
-    public $user_id;
+    public string $user_id;
 }

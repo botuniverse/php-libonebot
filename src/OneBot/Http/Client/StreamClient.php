@@ -133,8 +133,8 @@ class StreamClient extends ClientBase implements ClientInterface, AsyncClientInt
      * @param string           $remote  Entrypoint for the connection
      * @param bool             $useSsl  Whether to use ssl or not
      *
-     * @throws NetworkException
      * @return resource         Socket resource
+     * @throws NetworkException
      */
     protected function createSocket(RequestInterface $request, string $remote, bool $useSsl)
     {
