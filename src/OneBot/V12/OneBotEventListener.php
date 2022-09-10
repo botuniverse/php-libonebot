@@ -45,11 +45,6 @@ class OneBotEventListener
         }
         try {
             $request = $event->getRequest();
-            // 排除掉 Chrome 浏览器的多余请求
-            if ($request->getUri() == '/favicon.ico') {
-                $event->withResponse(HttpFactory::getInstance()->createResponse(404));
-                return;
-            }
             // OneBot 12 只接受 POST 请求
             if ($request->getMethod() !== 'POST') {
                 $event->withResponse(HttpFactory::getInstance()->createResponse(405, 'Not Allowed'));
