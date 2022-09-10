@@ -14,20 +14,15 @@ class HttpServerSocket extends HttpServerSocketBase
      */
     public $worker;
 
-    /**
-     * @var int
-     */
-    protected $port;
-
-    public function __construct(Worker $worker, int $port)
+    public function __construct(Worker $worker, array $config)
     {
         $this->worker = $worker;
-        $this->port = $port;
+        $this->config = $config;
     }
 
     public function getPort(): int
     {
-        return $this->port;
+        return $this->config['port'];
     }
 
     public function getWorker(): Worker

@@ -11,6 +11,7 @@ use OneBot\Http\WebSocket\FrameInterface;
 abstract class WSServerSocketBase implements SocketInterface, WebSocketInterface
 {
     use SocketFlag;
+    use SocketConfig;
 
     abstract public function sendAll(FrameInterface $data): array;
 

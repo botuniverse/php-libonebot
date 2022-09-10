@@ -70,7 +70,7 @@ class TopEventListener
     /**
      * Swoole 的顶层 httpRequest 事件回调
      */
-    public function onRequest(int $flag, Request $request, Response $response)
+    public function onRequest(array $config, Request $request, Response $response)
     {
         ob_logger()->debug('Http request: ' . $request->server['request_uri']);
         if (empty($content = $request->rawContent()) && $content !== '0') { // empty 遇到纯0的请求会返回true，所以这里加上 !== '0'
@@ -85,7 +85,7 @@ class TopEventListener
         $req = $req->withQueryParams($request->get ?? []);
         $event = new HttpRequestEvent($req);
         try {
-            $event->setSocketFlag($flag);
+            $event->setSocketConfig($config);
             ob_event_dispatcher()->dispatch($event);
             if (($psr_response = $event->getResponse()) !== null) {
                 foreach ($psr_response->getHeaders() as $header => $value) {
@@ -121,18 +121,18 @@ class TopEventListener
      *
      * @param int|string $fd
      */
-    public function onClose(int $flag, ?Server $server, $fd)
+    public function onClose(array $config, ?Server $server, $fd)
     {
         ob_logger()->debug('WebSocket closed from: ' . $fd);
         $event = new WebSocketCloseEvent($fd);
-        $event->setSocketFlag($flag);
+        $event->setSocketConfig($config);
         ob_event_dispatcher()->dispatchWithHandler($event);
     }
 
     /**
      * Swoole 的顶层 open 事件回调（WebSocket 连接建立事件）
      */
-    public function onOpen(int $flag, SwooleWebSocketServer $server, Request $request)
+    public function onOpen(array $config, SwooleWebSocketServer $server, Request $request)
     {
         ob_logger()->debug('WebSocket connection open: ' . $request->fd);
         if (empty($content = $request->rawContent())) {
@@ -144,14 +144,14 @@ class TopEventListener
             $request->header,
             $content
         ), $request->fd);
-        $event->setSocketFlag($flag);
+        $event->setSocketConfig($config);
         ob_event_dispatcher()->dispatchWithHandler($event);
     }
 
     /**
      * Swoole 的顶层 message 事件回调（WebSocket 消息事件）
      */
-    public function onMessage(int $flag, ?SwooleWebSocketServer $server, Frame $frame)
+    public function onMessage(array $config, ?SwooleWebSocketServer $server, Frame $frame)
     {
         ob_logger()->debug('WebSocket message from: ' . $frame->fd);
         $new_frame = new \OneBot\Http\WebSocket\Frame($frame->data, $frame->opcode, true);
@@ -162,7 +162,7 @@ class TopEventListener
             return $server->push($fd, $data);
         });
         $event->setOriginFrame($frame);
-        $event->setSocketFlag($flag);
+        $event->setSocketConfig($config);
         ob_event_dispatcher()->dispatchWithHandler($event);
     }
 }

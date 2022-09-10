@@ -13,4 +13,8 @@ interface SocketInterface
     public const TYPE_HTTP_WEBHOOK = 3;
 
     public const TYPE_WS_REVERSE = 4;
+
+    public function setConfig(array $config);
+
+    public function getConfig(): array;
 }

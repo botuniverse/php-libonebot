@@ -13,10 +13,7 @@ class WSServerSocket extends WSServerSocketBase
     /** @var Server|Server\Port|\Swoole\Http\Server|\Swoole\WebSocket\Server */
     protected $socket_obj;
 
-    /** @var array */
-    protected $config;
-
-    public function __construct($server_or_port, array $config = [])
+    public function __construct($server_or_port, array $config)
     {
         $this->socket_obj = $server_or_port;
         $this->config = $config;
