@@ -50,7 +50,6 @@ class OneBotEventListener
                 $event->withResponse(HttpFactory::getInstance()->createResponse(405, 'Not Allowed'));
                 return;
             }
-
             // OneBot 12 鉴权部分
             if (($stored_token = $event->getSocketConfig()['access_token'] ?? '') !== '') {
                 $token = $request->getHeaderLine('Authorization');
