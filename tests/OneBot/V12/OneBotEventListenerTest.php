@@ -34,7 +34,7 @@ class OneBotEventListenerTest extends TestCase
     {
         $req = HttpFactory::getInstance()->createServerRequest(...$request_params);
         $event = new HttpRequestEvent($req);
-        $event->setSocketFlag(1);
+        $event->setSocketConfig(['type' => 'http', 'host' => '127.1', 'port' => 8083]);
         OneBotEventListener::getInstance()->onHttpRequest($event);
         if ($event->getResponse()->getHeaderLine('content-type') === 'application/msgpack') {
             $obj = MessagePack::unpack($event->getResponse()->getBody()->getContents());
@@ -64,7 +64,7 @@ class OneBotEventListenerTest extends TestCase
     {
         return [
             'favicon 404' => [['GET', '/favicon.ico', [], null, '1.1', []], ['status_code' => 404]],
-            'other header 404' => [['GET', '/waefawef', ['Content-Type' => 'text/html'], null, '1.1', []], ['status_code' => 200]],
+            'other header 404' => [['GET', '/waefawef', ['Content-Type' => 'text/html'], null, '1.1', []], ['status_code' => 405]],
             'default ok action' => [['POST', '/test', ['Content-Type' => 'application/json'], '{"action":"get_supported_actions"}'], ['status_code' => 200, 'retcode' => RetCode::OK]],
             'dynamic input action' => [['POST', '/test', ['Content-Type' => 'application/json'], '{"action":"test","echo":"hello world"}'], ['status_code' => 200, 'retcode' => RetCode::OK, 'echo' => 'hello world', 'data_contains_key' => 'hello']],
             'msgpack' => [['POST', '/test', ['Content-Type' => 'application/msgpack'], MessagePack::pack(['action' => 'get_supported_actions'])], ['status_code' => 200, 'retcode' => RetCode::OK]],
