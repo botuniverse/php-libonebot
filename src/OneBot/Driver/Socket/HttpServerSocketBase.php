@@ -9,6 +9,7 @@ use OneBot\Driver\Interfaces\SocketInterface;
 abstract class HttpServerSocketBase implements SocketInterface
 {
     use SocketFlag;
+    use SocketConfig;
 
     abstract public function getPort(): int;
 }

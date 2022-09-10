@@ -150,9 +150,9 @@ class WorkermanDriver extends Driver
             $worker->count = $this->getParam('workerman_worker_num', 1);
             Worker::$internal_running = true;
             // ws server 相关事件
-            $worker->onWebSocketConnect = [TopEventListener::getInstance(), 'onWebSocketOpen'];
-            $worker->onClose = [TopEventListener::getInstance(), 'onWebSocketClose'];
-            $worker->onMessage = [TopEventListener::getInstance(), 'onWebSocketMessage'];
+            $worker->onWebSocketConnect = fn (...$args) => TopEventListener::getInstance()->onWebSocketOpen($ws_0, ...$args);
+            $worker->onClose = fn (...$args) => TopEventListener::getInstance()->onWebSocketClose($ws_0, ...$args);
+            $worker->onMessage = fn (...$args) => TopEventListener::getInstance()->onWebSocketMessage($ws_0, ...$args);
             // worker 相关事件
             $worker->onWorkerStart = [TopEventListener::getInstance(), 'onWorkerStart'];
             $worker->onWorkerStop = [TopEventListener::getInstance(), 'onWorkerStop'];
@@ -164,16 +164,16 @@ class WorkermanDriver extends Driver
                         $worker = new Worker('websocket://' . $ws_1['host'] . ':' . $ws_1['port']);
                         $worker->reusePort = true;
                         $worker->token = ob_uuidgen();
-                        $this->ws_socket[] = (new WSServerSocket($worker))->setFlag(1);
+                        $this->ws_socket[] = (new WSServerSocket($worker))->setFlag($ws_1['flag'] ?? 1);
                         // ws server 相关事件
-                        $worker->onWebSocketConnect = [TopEventListener::getInstance(), 'onWebSocketOpen'];
-                        $worker->onClose = [TopEventListener::getInstance(), 'onWebSocketClose'];
-                        $worker->onMessage = [TopEventListener::getInstance(), 'onWebSocketMessage'];
+                        $worker->onWebSocketConnect = fn (...$args) => TopEventListener::getInstance()->onWebSocketOpen($ws_1, ...$args);
+                        $worker->onClose = fn (...$args) => TopEventListener::getInstance()->onWebSocketClose($ws_1, ...$args);
+                        $worker->onMessage = fn (...$args) => TopEventListener::getInstance()->onWebSocketMessage($ws_1, ...$args);
                         $worker->listen();
                     }
                 }, 999);
             }
-            $this->ws_socket[] = (new WSServerSocket($worker))->setFlag(1);
+            $this->ws_socket[] = (new WSServerSocket($worker))->setFlag($ws_0['flag'] ?? 1);
 
             if (!empty($http)) {
                 $http_in_worker_start_init = true;
@@ -190,13 +190,13 @@ class WorkermanDriver extends Driver
                 $worker->count = $this->getParam('workerman_worker_num', 1);
                 Worker::$internal_running = true;
                 // http server 相关事件
-                $worker->onMessage = [TopEventListener::getInstance(), 'onHttpRequest'];
+                $worker->onMessage = fn (...$args) => TopEventListener::getInstance()->onHttpRequest($http_0, ...$args);
                 // worker 相关事件
                 $worker->onWorkerStart = [TopEventListener::getInstance(), 'onWorkerStart'];
                 $worker->onWorkerStop = [TopEventListener::getInstance(), 'onWorkerStop'];
                 $worker->token = ob_uuidgen();
                 $worker->flag = $http_0['flag'] ?? 1;
-                $this->http_socket[] = (new HttpServerSocket($worker, $http_0['port']))->setFlag(1);
+                $this->http_socket[] = new HttpServerSocket($worker, $http_0);
             }
             if (!empty($http_pending)) {
                 ob_event_provider()->addEventListener(WorkerStartEvent::getName(), function () use ($http_pending) {
@@ -205,9 +205,9 @@ class WorkermanDriver extends Driver
                         $worker->reusePort = true;
                         $worker->token = ob_uuidgen();
                         $worker->flag = $http_1['flag'] ?? 1;
-                        $this->http_socket[] = (new HttpServerSocket($worker, $http_1['port']))->setFlag(1);
+                        $this->http_socket[] = new HttpServerSocket($worker, $http_1);
                         // http server 相关事件
-                        $worker->onMessage = [TopEventListener::getInstance(), 'onHttpRequest'];
+                        $worker->onMessage = fn (...$args) => TopEventListener::getInstance()->onHttpRequest($http_1, ...$args);
                         $worker->listen();
                         ob_logger()->debug('在 Worker 中初始化 HTTP 服务器，端口：' . $http_1['port']);
                     }
@@ -216,10 +216,10 @@ class WorkermanDriver extends Driver
         }
         /* @noinspection DuplicatedCode */
         foreach ($http_webhook as $v) {
-            $this->http_client_socket[] = (new HttpClientSocket($v['url'], $v['header'] ?? [], $v['access_token'] ?? '', $v['timeout'] ?? 5))->setFlag(1);
+            $this->http_client_socket[] = (new HttpClientSocket($v));
         }
         foreach ($ws_reverse as $v) {
-            $this->ws_client_socket[] = (new WSClientSocket($v['url'], $v['header'] ?? [], $v['access_token'] ?? '', $v['reconnect_interval'] ?? 5))->setFlag(1);
+            $this->ws_client_socket[] = (new WSClientSocket($v));
         }
         return [$this->http_socket !== [], $this->http_client_socket !== [], $this->ws_socket !== [], $this->ws_client_socket !== []];
     }

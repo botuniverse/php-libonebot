@@ -51,9 +51,19 @@ class OneBotEventListener
                 return;
             }
             // OneBot 12 只接受 POST 请求
-            if ($request->getMethod() === 'GET') {
-                $event->withResponse(HttpFactory::getInstance()->createResponse(200, 'OK', [], 'Hello OneBot!'));
+            if ($request->getMethod() !== 'POST') {
+                $event->withResponse(HttpFactory::getInstance()->createResponse(405, 'Not Allowed'));
                 return;
+            }
+
+            // OneBot 12 鉴权部分
+            if (($stored_token = $event->getSocketConfig()['access_token'] ?? '') !== '') {
+                $token = $request->getHeaderLine('Authorization');
+                $token = explode('Bearer ', $token);
+                if (!isset($token[1]) || $token[1] !== $stored_token) { // 没有 token，鉴权失败
+                    $event->withResponse(HttpFactory::getInstance()->createResponse(401, 'Unauthorized'));
+                    return;
+                }
             }
             if ($request->getHeaderLine('content-type') === 'application/json') {
                 $response_obj = $this->processActionRequest($request->getBody());
@@ -64,7 +74,8 @@ class OneBotEventListener
                 $response = HttpFactory::getInstance()->createResponse(200, null, ['Content-Type' => 'application/msgpack'], MessagePack::pack((array) $response_obj));
                 $event->withResponse($response);
             } else {
-                throw new OneBotFailureException(RetCode::BAD_REQUEST);
+                $event->withResponse(HttpFactory::getInstance()->createResponse(415, 'Unsupported Media Type'));
+                return;
             }
         } catch (OneBotFailureException $e) {
             $response_obj = ActionResponse::create($e->getActionObject()->echo ?? null)->fail($e->getRetCode());
@@ -87,6 +98,16 @@ class OneBotEventListener
         // TODO: WebSocket 接入后的认证操作
         if ($event->getSocketFlag() !== 1) {
             return;
+        }
+        $request = $event->getRequest();
+        // OneBot 12 鉴权部分
+        if (($stored_token = $event->getSocketConfig()['access_token'] ?? '') !== '') {
+            $token = $request->getHeaderLine('Authorization');
+            $token = explode('Bearer ', $token);
+            if (!isset($token[1]) || $token[1] !== $stored_token) { // 没有 token，鉴权失败
+                $event->withResponse(HttpFactory::getInstance()->createResponse(401, 'Unauthorized'));
+                return;
+            }
         }
     }
 
@@ -156,6 +177,11 @@ class OneBotEventListener
     {
         $event->getDriver()->initWSReverseClients(OneBot::getInstance()->getRequestHeaders());
         foreach ($event->getDriver()->getWSReverseSockets() as $k => $v) {
+            $request = HttpFactory::getInstance()->createRequest('GET', $v->getUrl(), $v->getHeaders());
+            if (isset($v->getConfig()['access_token'])) {
+                $request = $request->withAddedHeader('Authorization', 'Bearer ' . $v->getConfig()['access_token']);
+            }
+            $v->getClient()->withRequest($request);
             ob_logger()->info('初始化 ws reverse 连接 ing');
             $reconnect = function () use ($v, $event, &$reconnect) {
                 try {

@@ -50,7 +50,7 @@ class TopEventListener
      * @param TcpConnection $connection 连接本身
      * @param mixed         $data       数据
      */
-    public function onWebSocketOpen(TcpConnection $connection, $data)
+    public function onWebSocketOpen(array $config, TcpConnection $connection, $data)
     {
         // WebSocket 隐藏特性： _SERVER 全局变量会在 onWebSocketConnect 中被替换为当前连接的 Header 相关信息
         try {
@@ -63,7 +63,8 @@ class TopEventListener
             );
             $server_request = $server_request->withQueryParams($_GET);
             $event = new WebSocketOpenEvent($server_request, $connection->id);
-            $event->setSocketFlag($connection->worker->flag ?? 0);
+
+            $event->setSocketConfig($config);
             ob_event_dispatcher()->dispatch($event);
             if (is_object($event->getResponse()) && method_exists($event->getResponse(), '__toString')) {
                 $connection->close((string) $event->getResponse());
@@ -84,7 +85,7 @@ class TopEventListener
     /**
      * Workerman 的顶层 onWebSocketClose 事件回调
      */
-    public function onWebSocketClose(TcpConnection $connection)
+    public function onWebSocketClose(array $config, TcpConnection $connection)
     {
         if (($connection->worker instanceof Worker) && ($socket = WorkermanDriver::getInstance()->getWSServerSocketByWorker($connection->worker)) !== null) {
             unset($socket->connections[$connection->id]);
@@ -93,7 +94,7 @@ class TopEventListener
             ob_logger()->error('WorkermanDriver::getWSServerSocketByWorker() returned null');
         }
         $event = new WebSocketCloseEvent($connection->id);
-        $event->setSocketFlag($connection->worker->flag ?? 0);
+        $event->setSocketConfig($config);
         ob_event_dispatcher()->dispatch($event);
     }
 
@@ -103,7 +104,7 @@ class TopEventListener
      * @param TcpConnection $connection 连接本身
      * @param mixed         $data
      */
-    public function onWebSocketMessage(TcpConnection $connection, $data)
+    public function onWebSocketMessage(array $config, TcpConnection $connection, $data)
     {
         try {
             ob_logger()->debug('WebSocket message from: ' . $connection->id);
@@ -116,14 +117,14 @@ class TopEventListener
                 }
                 return $connection->send($data);
             });
-            $event->setSocketFlag($connection->worker->flag ?? 0);
+            $event->setSocketConfig($config);
             ob_event_dispatcher()->dispatch($event);
         } catch (Throwable $e) {
             ExceptionHandler::getInstance()->handle($e);
         }
     }
 
-    public function onHttpRequest(TcpConnection $connection, Request $request)
+    public function onHttpRequest(array $config, TcpConnection $connection, Request $request)
     {
         $port = $connection->getLocalPort();
         ob_logger()->debug('Http request from ' . $port . ': ' . $request->uri());
@@ -133,6 +134,7 @@ class TopEventListener
             $request->header(),
             $request->rawBody()
         ));
+        $event->setSocketConfig($config);
         $send_callable = function (ResponseInterface $psr_response) use ($connection) {
             $response = new WorkermanResponse();
             $response->withStatus($psr_response->getStatusCode());
@@ -143,7 +145,6 @@ class TopEventListener
         $event->withAsyncResponseCallable($send_callable);
         $response = new WorkermanResponse();
         try {
-            $event->setSocketFlag($connection->worker->flag ?? 0);
             ob_event_dispatcher()->dispatch($event);
             if (($psr_response = $event->getResponse()) !== null) {
                 $response->withStatus($psr_response->getStatusCode());

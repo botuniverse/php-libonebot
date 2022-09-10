@@ -17,6 +17,7 @@ use Throwable;
 abstract class HttpClientSocketBase implements SocketInterface
 {
     use SocketFlag;
+    use SocketConfig;
 
     protected $url;
 
@@ -33,12 +34,13 @@ abstract class HttpClientSocketBase implements SocketInterface
 
     private $client_cache_async = false;
 
-    public function __construct(string $url, array $headers = [], string $access_token = '', int $timeout = 5)
+    public function __construct(array $config)
     {
-        $this->url = $url;
-        $this->headers = $headers;
-        $this->access_token = $access_token;
-        $this->timeout = $timeout;
+        $this->url = $config['url'];
+        $this->headers = $config['headers'] ?? [];
+        $this->access_token = $config['access_token'] ?? '';
+        $this->timeout = $config['timeout'] ?? 5;
+        $this->config = $config;
     }
 
     public function getUrl(): string
