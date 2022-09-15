@@ -22,12 +22,6 @@ abstract class OneBotEvent implements JsonSerializable, IteratorAggregate
     /** @var string 事件ID */
     public string $id;
 
-    /** @var string OneBot实现平台名称 */
-    public string $platform;
-
-    /** @var string 机器人ID */
-    public string $self_id;
-
     /** @var int 事件发生时间 */
     public int $time;
 
@@ -40,11 +34,14 @@ abstract class OneBotEvent implements JsonSerializable, IteratorAggregate
     /** @var string 事件子类型 */
     public string $sub_type;
 
+    /** @var array<string, string> 机器人自身 */
+    public array $self;
+
     /** @var array 扩展数据 */
     private array $extended_data = [];
 
-    /** @var string 扩展字段前缀 */
-    private string $extended_prefix = '';
+    /** @var null|string 扩展字段前缀 */
+    private ?string $extended_prefix = null;
 
     /**
      * @param string                     $type        事件类型
@@ -75,8 +72,10 @@ abstract class OneBotEvent implements JsonSerializable, IteratorAggregate
         $ob = OneBot::getInstance();
 
         $this->id = ob_uuidgen();
-        $this->platform = $ob->getPlatform();
-        $this->self_id = $ob->getSelfId();
+        $this->self = [
+            'platform' => $ob->getPlatform(),
+            'user_id' => $ob->getSelfId(),
+        ];
         $this->time = $time;
         $this->type = $type;
         $this->detail_type = $detail_type;
@@ -97,8 +96,9 @@ abstract class OneBotEvent implements JsonSerializable, IteratorAggregate
     public function setExtendedData(array $extended_data): self
     {
         $this->extended_data = [];
+        $prefix = $this->extended_prefix ?? $this->self['platform'];
         foreach ($extended_data as $key => $value) {
-            $this->extended_data["{$this->platform}.{$key}"] = $value;
+            $this->extended_data["{$prefix}.{$key}"] = $value;
         }
         return $this;
     }
@@ -110,7 +110,8 @@ abstract class OneBotEvent implements JsonSerializable, IteratorAggregate
      */
     public function getExtendedDatum(string $key)
     {
-        return $this->extended_data["{$this->platform}.{$key}"] ?? null;
+        $prefix = $this->extended_prefix ?? $this->self['platform'];
+        return $this->extended_data["{$prefix}.{$key}"] ?? null;
     }
 
     /**
@@ -122,7 +123,8 @@ abstract class OneBotEvent implements JsonSerializable, IteratorAggregate
      */
     public function setExtendedDatum(string $key, $value): self
     {
-        $this->extended_data["{$this->platform}.{$key}"] = $value;
+        $prefix = $this->extended_prefix ?? $this->self['platform'];
+        $this->extended_data["{$prefix}.{$key}"] = $value;
         return $this;
     }
 
@@ -133,7 +135,8 @@ abstract class OneBotEvent implements JsonSerializable, IteratorAggregate
      */
     public function unsetExtendedDatum(string $key): self
     {
-        unset($this->extended_data["{$this->platform}.{$key}"]);
+        $prefix = $this->extended_prefix ?? $this->self['platform'];
+        unset($this->extended_data["{$prefix}.{$key}"]);
         return $this;
     }
 
@@ -157,15 +160,8 @@ abstract class OneBotEvent implements JsonSerializable, IteratorAggregate
                 continue;
             }
             $data[$k] = $v;
-            if ($k === 'detail_type') {
-                if (empty($this->extended_prefix) || empty($this->getExtendedData())) {
-                    $data[$k] = $this->detail_type;
-                } else {
-                    $data[$k] = "{$this->extended_prefix}.{$this->detail_type}";
-                }
-            }
         }
-        return $data;
+        return array_merge($data, $this->getExtendedData());
     }
 
     /**

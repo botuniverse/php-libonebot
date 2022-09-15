@@ -10,6 +10,11 @@ use OneBot\V12\Object\Action;
 
 class Validator
 {
+    /**
+     * 验证传入的消息段是否合法
+     * @param  array|mixed            $message
+     * @throws OneBotFailureException
+     */
     public static function validateMessageSegment($message): void
     {
         if (!is_array($message)) {
@@ -61,6 +66,14 @@ class Validator
         }
         if (!$valid) {
             throw new OneBotFailureException(RetCode::BAD_PARAM, $action_obj);
+        }
+    }
+
+    public static function validateHttpUrl(string $url): void
+    {
+        $parse = parse_url($url);
+        if (!isset($parse['scheme']) || $parse['scheme'] !== 'http' && $parse['scheme'] !== 'https') {
+            throw new OneBotFailureException(RetCode::NETWORK_ERROR);
         }
     }
 }

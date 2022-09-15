@@ -7,6 +7,7 @@ namespace OneBot\V12\Object\Event\Notice;
 use DateTimeInterface;
 use OneBot\V12\Exception\OneBotException;
 use OneBot\V12\Object\Event\HasMessageId;
+use OneBot\V12\Object\Event\HasUserId;
 
 /**
  * OneBot 私聊消息删除事件
@@ -14,6 +15,7 @@ use OneBot\V12\Object\Event\HasMessageId;
 class PrivateMessageDeleteEvent extends NoticeEvent
 {
     use HasMessageId;
+    use HasUserId;
 
     /**
      * @param string                     $sub_type   事件子类型
@@ -25,7 +27,8 @@ class PrivateMessageDeleteEvent extends NoticeEvent
      */
     public function __construct(string $sub_type, string $message_id, string $user_id, $time = null)
     {
-        parent::__construct('private_message_delete', $sub_type, $user_id, $time);
+        parent::__construct('private_message_delete', $sub_type, $time);
+        $this->user_id = $user_id;
         $this->message_id = $message_id;
     }
 }

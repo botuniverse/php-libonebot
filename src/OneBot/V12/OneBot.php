@@ -57,6 +57,8 @@ class OneBot
     /** @var array 动作处理回调们 */
     private array $action_handlers = [];
 
+    private bool $bot_status = true;
+
     /**
      * 创建一个 OneBot 实例
      */
@@ -279,6 +281,16 @@ class OneBot
         $this->driver->run();
     }
 
+    public function getBotStatus(): bool
+    {
+        return $this->bot_status;
+    }
+
+    public function setBotStatus(bool $bot_status): void
+    {
+        $this->bot_status = $bot_status;
+    }
+
     /**
      * 这里是 OneBot 实现本身添加到 Driver 的事件
      * 包含 HTTP 服务器接收 Request 和 WebSocket 服务器收到连接的事件
@@ -304,10 +316,8 @@ class OneBot
         // 监听单进程无 Server 模式的相关事件（如纯 Client 情况下的启动模式）
         ob_event_provider()->addEventListener(DriverInitEvent::getName(), [OneBotEventListener::getInstance(), 'onDriverInit'], ONEBOT_EVENT_LEVEL);
         // 如果Init策略是FirstWorker，则给WorkerStart添加添加相关事件，让WorkerStart事件（#0）中再套娃执行DriverInit事件
-        switch ($this->driver->getDriverInitPolicy()) {
-            case DriverInitPolicy::MULTI_PROCESS_INIT_IN_FIRST_WORKER:
-                ob_event_provider()->addEventListener(WorkerStartEvent::getName(), [OneBotEventListener::getInstance(), 'onFirstWorkerInit'], ONEBOT_EVENT_LEVEL);
-                break;
+        if ($this->driver->getDriverInitPolicy() == DriverInitPolicy::MULTI_PROCESS_INIT_IN_FIRST_WORKER) {
+            ob_event_provider()->addEventListener(WorkerStartEvent::getName(), [OneBotEventListener::getInstance(), 'onFirstWorkerInit'], ONEBOT_EVENT_LEVEL);
         }
     }
 

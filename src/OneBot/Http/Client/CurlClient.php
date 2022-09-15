@@ -56,8 +56,8 @@ class CurlClient extends ClientBase implements ClientInterface
     }
 
     /**
-     * @return \CurlHandle|false|resource
      * @throws ClientException
+     * @return \CurlHandle|false|resource
      */
     private function createHandle(RequestInterface $request) /* @phpstan-ignore-line */
     {

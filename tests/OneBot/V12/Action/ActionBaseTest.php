@@ -53,7 +53,7 @@ class ActionBaseTest extends TestCase
 
     public function testOnGetVersion()
     {
-        $this->assertEquals(ActionResponse::create()->fail(RetCode::UNSUPPORTED_ACTION), self::$handler->onGetVersion(new Action('get_version')));
+        $this->assertEquals(0, self::$handler->onGetVersion(new Action('get_version'))->retcode);
     }
 
     public function testOnGetGroupList()
@@ -66,9 +66,19 @@ class ActionBaseTest extends TestCase
         $this->assertEquals(ActionResponse::create()->fail(RetCode::UNSUPPORTED_ACTION), self::$handler->onGetGroupMemberInfo(new Action('get_group_member_info')));
     }
 
+    public function testOnSetGroupName()
+    {
+        $this->assertEquals(ActionResponse::create()->fail(RetCode::UNSUPPORTED_ACTION), self::$handler->onSetGroupName(new Action('set_group_name')));
+    }
+
+    public function testOnLeaveGroup()
+    {
+        $this->assertEquals(ActionResponse::create()->fail(RetCode::UNSUPPORTED_ACTION), self::$handler->onLeaveGroup(new Action('leave_group')));
+    }
+
     public function testOnGetStatus()
     {
-        $this->assertEquals(ActionResponse::create()->fail(RetCode::UNSUPPORTED_ACTION), self::$handler->onGetStatus(new Action('get_status')));
+        $this->assertEquals(0, self::$handler->onGetStatus(new Action('get_status'))->retcode);
     }
 
     public function testOnGetFriendList()

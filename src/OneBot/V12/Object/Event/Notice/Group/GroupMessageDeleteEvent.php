@@ -8,6 +8,7 @@ use DateTimeInterface;
 use OneBot\V12\Exception\OneBotException;
 use OneBot\V12\Object\Event\HasMessageId;
 use OneBot\V12\Object\Event\HasOperatorId;
+use OneBot\V12\Object\Event\HasUserId;
 
 /**
  * OneBot 群消息删除事件
@@ -16,6 +17,7 @@ class GroupMessageDeleteEvent extends GroupNoticeEvent
 {
     use HasOperatorId;
     use HasMessageId;
+    use HasUserId;
 
     /**
      * @param string                     $sub_type    事件子类型
@@ -36,9 +38,10 @@ class GroupMessageDeleteEvent extends GroupNoticeEvent
         $time = null
     )
     {
-        parent::__construct('group_message_delete', $sub_type, $user_id, $group_id, $time);
+        parent::__construct('group_message_delete', $sub_type, $group_id, $time);
 
         $this->operator_id = $operator_id;
         $this->message_id = $message_id;
+        $this->user_id = $user_id;
     }
 }

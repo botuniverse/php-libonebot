@@ -6,12 +6,15 @@ namespace OneBot\V12\Object\Event\Notice;
 
 use DateTimeInterface;
 use OneBot\V12\Exception\OneBotException;
+use OneBot\V12\Object\Event\HasUserId;
 
 /**
  * OneBot 好友增加事件
  */
 class FriendIncreaseEvent extends NoticeEvent
 {
+    use HasUserId;
+
     /**
      * @param string                     $sub_type 事件子类型
      * @param string                     $user_id  用户 ID
@@ -21,6 +24,8 @@ class FriendIncreaseEvent extends NoticeEvent
      */
     public function __construct(string $sub_type, string $user_id, $time = null)
     {
-        parent::__construct('friend_increase', $sub_type, $user_id, $time);
+        parent::__construct('friend_increase', $sub_type, $time);
+
+        $this->user_id = $user_id;
     }
 }

@@ -11,9 +11,9 @@ abstract class GroupNoticeEvent extends NoticeEvent
 {
     use HasGroupId;
 
-    public function __construct(string $detail_type, string $sub_type, string $user_id, string $group_id, $time = null)
+    public function __construct(string $detail_type, string $sub_type, string $group_id, $time = null)
     {
-        parent::__construct($detail_type, $sub_type, $user_id, $time);
+        parent::__construct($detail_type, $sub_type, $time);
 
         $this->group_id = $group_id;
     }

@@ -169,14 +169,18 @@ class OneBotEventListener
      */
     public function onDriverInit(DriverInitEvent $event)
     {
-        $event->getDriver()->initWSReverseClients(OneBot::getInstance()->getRequestHeaders());
-        foreach ($event->getDriver()->getWSReverseSockets() as $k => $v) {
+        // 将 ws reverse 请求的 HTTP Client 初始化先
+        $event->getDriver()->initWSReverseClients(OneBot::getInstance()->getRequestHeaders(['Sec-WebSocket-Protocol' => '12.' . OneBot::getInstance()->getImplementName()]));
+        foreach ($event->getDriver()->getWSReverseSockets() as $v) {
+            // 根据 Socket 内的信息生成 HTTP Request 对象
             $request = HttpFactory::getInstance()->createRequest('GET', $v->getUrl(), $v->getHeaders());
             if (isset($v->getConfig()['access_token'])) {
+                // 鉴权
                 $request = $request->withAddedHeader('Authorization', 'Bearer ' . $v->getConfig()['access_token']);
             }
             $v->getClient()->withRequest($request);
             ob_logger()->info('初始化 ws reverse 连接 ing');
+            // 下面就是一堆重连的东西了
             $reconnect = function () use ($v, $event, &$reconnect) {
                 try {
                     if ($v->getClient()->reconnect() !== true) {
@@ -280,16 +284,20 @@ class OneBotEventListener
                 throw new OneBotFailureException(RetCode::INTERNAL_HANDLER_ERROR);
         }
 
-        if (($handler = OneBot::getInstance()->getActionHandler($action_obj->action)) !== null) {
-            $response_obj = call_user_func($handler[0], $action_obj);
-        } else {
-            // 解析调用action handler
-            $base_handler = OneBot::getInstance()->getBaseActionHandler();
-            if ($base_handler === null) {
-                $base_handler = OneBot::getInstance()->setActionHandlerClass(DefaultActionHandler::class)->getBaseActionHandler();
+        try {
+            if (($handler = OneBot::getInstance()->getActionHandler($action_obj->action)) !== null) {
+                $response_obj = call_user_func($handler[0], $action_obj, $type);
+            } else {
+                // 解析调用action handler
+                $base_handler = OneBot::getInstance()->getBaseActionHandler();
+                if ($base_handler === null) {
+                    $base_handler = OneBot::getInstance()->setActionHandlerClass(DefaultActionHandler::class)->getBaseActionHandler();
+                }
+                $action_call_func = Utils::getActionFuncName($base_handler, $action_obj->action);
+                $response_obj = $base_handler->{$action_call_func}($action_obj, $type);
             }
-            $action_call_func = Utils::getActionFuncName($base_handler, $action_obj->action);
-            $response_obj = $base_handler->{$action_call_func}($action_obj);
+        } catch (OneBotFailureException $e) {
+            $response_obj = ActionResponse::create($e->getActionObject()->echo ?? null)->fail($e->getRetCode());
         }
         return $response_obj instanceof ActionResponse ? $response_obj : ActionResponse::create($action_obj->echo)->fail(RetCode::BAD_HANDLER);
     }
