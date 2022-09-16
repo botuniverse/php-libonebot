@@ -4,12 +4,15 @@ declare(strict_types=1);
 
 namespace OneBot\V12\Action;
 
+use OneBot\Util\FileUtil;
 use OneBot\Util\Utils;
 use OneBot\V12\Exception\OneBotFailureException;
 use OneBot\V12\Object\Action;
+use OneBot\V12\Object\ActionResponse;
 use OneBot\V12\OneBot;
 use OneBot\V12\RetCode;
 use OneBot\V12\Validator;
+use Psr\Http\Message\ResponseInterface;
 use ReflectionClass;
 
 abstract class ActionHandlerBase
@@ -77,23 +80,59 @@ abstract class ActionHandlerBase
         return ActionResponse::create($action)->ok($list);
     }
 
-    /**
-     * @throws OneBotFailureException
-     */
     public function onUploadFile(Action $action, int $stream_type): ActionResponse
     {
+        // 验证上传文件必需的两个参数是否存在
         Validator::validateParamsByAction($action, ['type' => true, 'name' => true]);
+        if (strpos($action->params['name'], '/') !== false || strpos($action->params['name'], '..') !== false) {
+            return ActionResponse::create($action)->fail(RetCode::BAD_PARAM);
+        }
         switch ($action->params['type']) {
             case 'url':
+                // url上传类型必须包含url参数
                 Validator::validateParamsByAction($action, ['url' => true]);
+                // 验证是否指定了 Headers，为 Assoc 类型的数组
                 if (isset($action->params['headers']) && Utils::isAssocArray($action->params['headers'])) {
                     $headers = $action->params['headers'];
                 }
+                // 验证 url 是否合法（即必须保证是 http(s) 开头）
                 Validator::validateHttpUrl($action->params['url']);
-                // TODO: 继续编写上传文件的地方
-                break;
+                // 生成临时的 HttpClientSocket
+                $sock = OneBot::getInstance()->getDriver()->createHttpClientSocket([
+                    'url' => $action->params['url'],
+                    'headers' => $headers ?? [],
+                    'timeout' => 30,
+                ]);
+                // 仅允许同步执行
+                return $sock->withoutAsync()->get([], function (ResponseInterface $response) use ($action) {
+                    if ($response->getStatusCode() !== 200) {
+                        return ActionResponse::create($action)->fail(RetCode::NETWORK_ERROR, 'Return code is ' . $response->getReasonPhrase());
+                    }
+                    $path = ob_config('file_upload.path', getcwd() . '/data/files');
+                    if (FileUtil::isRelativePath($path)) {
+                        echo 'Relative path! : ' . $path . "\n";
+                        $path = FileUtil::getRealPath(getcwd() . '/' . $path);
+                    }
+                    if (!is_dir($path)) {
+                        echo $path . "\n";
+                        mkdir($path, 0755, true);
+                    }
+                    $file_id = md5($response->getBody()->getContents());
+                    $path = FileUtil::getRealPath($path . '/' . $file_id . '_' . $action->params['name']);
+                    $file_status = file_put_contents($path, $response->getBody());
+                    if ($file_status !== false) {
+                        return ActionResponse::create($action)->ok(['file_id' => $file_id]);
+                    }
+                    return ActionResponse::create($action)->fail(RetCode::FILESYSTEM_ERROR);
+                }, function ($request, $a = null) use ($action) {
+                    if ($a instanceof \Throwable) {
+                        return ActionResponse::create($action)->fail(RetCode::NETWORK_ERROR, 'Request failed with ' . get_class($a) . ': ' . $a->getMessage());
+                    }
+                    return ActionResponse::create($action)->fail(RetCode::NETWORK_ERROR, 'Request failed');
+                });
+                // TODO: 其他格式上传的编写
         }
-        return ActionResponse::create();
+        return ActionResponse::create($action)->fail(RetCode::BAD_PARAM);
     }
 
     // 下面是所有 OneBot 12 标准的动作，默认全部返回未实现

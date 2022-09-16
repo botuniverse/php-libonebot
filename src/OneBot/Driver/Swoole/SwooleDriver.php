@@ -14,6 +14,7 @@ use OneBot\Driver\Event\Process\UserProcessStartEvent;
 use OneBot\Driver\ExceptionHandler;
 use OneBot\Driver\Interfaces\DriverInitPolicy;
 use OneBot\Driver\Process\ProcessManager;
+use OneBot\Driver\Socket\HttpClientSocketBase;
 use OneBot\Driver\Swoole\Socket\HttpClientSocket;
 use OneBot\Driver\Swoole\Socket\HttpServerSocket;
 use OneBot\Driver\Swoole\Socket\WSClientSocket;
@@ -101,6 +102,11 @@ class SwooleDriver extends Driver
             $this->ws_client_socket[] = new WSClientSocket($v);
         }
         return [$this->http_socket !== [], $this->http_client_socket !== [], $this->ws_socket !== [], $this->ws_client_socket !== []];
+    }
+
+    public function createHttpClientSocket(array $config): HttpClientSocketBase
+    {
+        return new HttpClientSocket($config);
     }
 
     /**

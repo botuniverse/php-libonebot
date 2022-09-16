@@ -2,12 +2,11 @@
 
 declare(strict_types=1);
 
-namespace OneBot\V12\Action;
+namespace OneBot\V12\Object;
 
 use ArrayIterator;
 use IteratorAggregate;
 use JsonSerializable;
-use OneBot\V12\Object\Action;
 use OneBot\V12\RetCode;
 use ReturnTypeWillChange;
 

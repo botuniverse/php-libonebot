@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace Tests\OneBot\V12\Action;
 
-use OneBot\V12\Action\ActionResponse;
+use OneBot\Util\FileUtil;
 use OneBot\V12\Action\DefaultActionHandler;
 use OneBot\V12\Object\Action;
+use OneBot\V12\Object\ActionResponse;
+use OneBot\V12\OneBot;
 use OneBot\V12\RetCode;
 use PHPUnit\Framework\TestCase;
 
@@ -21,6 +23,11 @@ class ActionBaseTest extends TestCase
     public static function setUpBeforeClass(): void
     {
         self::$handler = new DefaultActionHandler();
+    }
+
+    public static function tearDownAfterClass(): void
+    {
+        FileUtil::removeDirRecursive(OneBot::getInstance()->getConfig()->get('file_upload.path'));
     }
 
     public function testOnDeleteMessage()
@@ -99,5 +106,19 @@ class ActionBaseTest extends TestCase
     public function testOnSendMessage()
     {
         $this->assertEquals(ActionResponse::create()->fail(RetCode::UNSUPPORTED_ACTION), self::$handler->onSendMessage(new Action('send_message')));
+    }
+
+    public function testOnUploadFile()
+    {
+        $resp = self::$handler->onUploadFile(new Action('upload_file', [
+            'type' => 'url',
+            'name' => 'testfile.jpg',
+            'url' => 'https://zhamao.xin/file/hello.jpg',
+        ]), ONEBOT_JSON);
+        $this->assertEquals(RetCode::OK, $resp->retcode);
+        $this->assertEquals(
+            hash('md5', file_get_contents(OneBot::getInstance()->getConfig()->get('file_upload.path') . '/' . $resp->data['file_id'] . '_testfile.jpg')),
+            $resp->data['file_id']
+        );
     }
 }

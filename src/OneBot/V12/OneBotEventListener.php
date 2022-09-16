@@ -19,10 +19,10 @@ use OneBot\Http\WebSocket\FrameInterface;
 use OneBot\Http\WebSocket\Opcode;
 use OneBot\Util\Singleton;
 use OneBot\Util\Utils;
-use OneBot\V12\Action\ActionResponse;
 use OneBot\V12\Action\DefaultActionHandler;
 use OneBot\V12\Exception\OneBotFailureException;
 use OneBot\V12\Object\Action;
+use OneBot\V12\Object\ActionResponse;
 use Throwable;
 
 /**

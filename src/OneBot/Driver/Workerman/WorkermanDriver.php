@@ -13,6 +13,7 @@ use OneBot\Driver\Event\Process\WorkerStartEvent;
 use OneBot\Driver\ExceptionHandler;
 use OneBot\Driver\Interfaces\DriverInitPolicy;
 use OneBot\Driver\Process\ProcessManager;
+use OneBot\Driver\Socket\HttpClientSocketBase;
 use OneBot\Driver\Workerman\Socket\HttpClientSocket;
 use OneBot\Driver\Workerman\Socket\HttpServerSocket;
 use OneBot\Driver\Workerman\Socket\WSClientSocket;
@@ -136,6 +137,11 @@ class WorkermanDriver extends Driver
     public function getEventLoop(): DriverEventLoopBase
     {
         return EventLoop::getInstance();
+    }
+
+    public function createHttpClientSocket(array $config): HttpClientSocketBase
+    {
+        return new HttpClientSocket($config);
     }
 
     /**

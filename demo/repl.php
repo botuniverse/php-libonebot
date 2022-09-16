@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 use OneBot\Driver\Event\DriverInitEvent;
 use OneBot\Util\Utils;
-use OneBot\V12\Action\ActionResponse;
 use OneBot\V12\Object\Action;
+use OneBot\V12\Object\ActionResponse;
 use OneBot\V12\Object\Event\Message\PrivateMessageEvent;
 use OneBot\V12\OneBot;
 use OneBot\V12\OneBotBuilder;
