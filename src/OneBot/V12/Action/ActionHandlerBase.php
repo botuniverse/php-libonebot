@@ -6,7 +6,6 @@ namespace OneBot\V12\Action;
 
 use OneBot\Util\FileUtil;
 use OneBot\Util\Utils;
-use OneBot\V12\Exception\OneBotFailureException;
 use OneBot\V12\Object\Action;
 use OneBot\V12\Object\ActionResponse;
 use OneBot\V12\OneBot;
@@ -14,6 +13,7 @@ use OneBot\V12\RetCode;
 use OneBot\V12\Validator;
 use Psr\Http\Message\ResponseInterface;
 use ReflectionClass;
+use Throwable;
 
 abstract class ActionHandlerBase
 {
@@ -22,16 +22,6 @@ abstract class ActionHandlerBase
 
     /** @internal 内部使用的缓存 */
     public static $ext_cache;
-
-    public function __call(string $name, $values)
-    {
-        $unsupported_list = [
-        ];
-        if (in_array($name, $unsupported_list) && (($values[0] ?? null) instanceof Action)) {
-            return ActionResponse::create($values[0])->fail(RetCode::UNSUPPORTED_ACTION);
-        }
-        throw new OneBotFailureException();
-    }
 
     public function onGetStatus(Action $action): ActionResponse
     {
@@ -80,12 +70,16 @@ abstract class ActionHandlerBase
         return ActionResponse::create($action)->ok($list);
     }
 
-    public function onUploadFile(Action $action, int $stream_type): ActionResponse
+    public function onUploadFile(Action $action, int $stream_type = ONEBOT_JSON): ActionResponse
     {
         // 验证上传文件必需的两个参数是否存在
         Validator::validateParamsByAction($action, ['type' => true, 'name' => true]);
         if (strpos($action->params['name'], '/') !== false || strpos($action->params['name'], '..') !== false) {
             return ActionResponse::create($action)->fail(RetCode::BAD_PARAM);
+        }
+        $path = ob_config('file_upload.path', getcwd() . '/data/files');
+        if (FileUtil::isRelativePath($path)) {
+            $path = FileUtil::getRealPath(getcwd() . '/' . $path);
         }
         switch ($action->params['type']) {
             case 'url':
@@ -104,33 +98,62 @@ abstract class ActionHandlerBase
                     'timeout' => 30,
                 ]);
                 // 仅允许同步执行
-                return $sock->withoutAsync()->get([], function (ResponseInterface $response) use ($action) {
+                return $sock->withoutAsync()->get([], function (ResponseInterface $response) use ($action, $path) {
                     if ($response->getStatusCode() !== 200) {
                         return ActionResponse::create($action)->fail(RetCode::NETWORK_ERROR, 'Return code is ' . $response->getReasonPhrase());
                     }
-                    $path = ob_config('file_upload.path', getcwd() . '/data/files');
-                    if (FileUtil::isRelativePath($path)) {
-                        echo 'Relative path! : ' . $path . "\n";
-                        $path = FileUtil::getRealPath(getcwd() . '/' . $path);
-                    }
-                    if (!is_dir($path)) {
-                        echo $path . "\n";
-                        mkdir($path, 0755, true);
-                    }
                     $file_id = md5($response->getBody()->getContents());
-                    $path = FileUtil::getRealPath($path . '/' . $file_id . '_' . $action->params['name']);
-                    $file_status = file_put_contents($path, $response->getBody());
-                    if ($file_status !== false) {
-                        return ActionResponse::create($action)->ok(['file_id' => $file_id]);
+                    $file_status = FileUtil::saveMetaFile($path, $file_id, $response->getBody(), [
+                        'name' => $action->params['name'],
+                        'url' => $action->params['url'],
+                        'sha256' => $action->params['sha256'] ?? null,
+                    ]);
+                    if ($file_status === false) {
+                        return ActionResponse::create($action)->fail(RetCode::FILESYSTEM_ERROR);
                     }
-                    return ActionResponse::create($action)->fail(RetCode::FILESYSTEM_ERROR);
+                    return ActionResponse::create($action)->ok(['file_id' => $file_id]);
                 }, function ($request, $a = null) use ($action) {
-                    if ($a instanceof \Throwable) {
-                        return ActionResponse::create($action)->fail(RetCode::NETWORK_ERROR, 'Request failed with ' . get_class($a) . ': ' . $a->getMessage());
+                    if ($a instanceof Throwable) {
+                        return ActionResponse::create($action)->fail(RetCode::NETWORK_ERROR, 'Request failed with ' . get_class($a) . ': ' . $a->getMessage() . "\n" . $a->getTraceAsString());
                     }
                     return ActionResponse::create($action)->fail(RetCode::NETWORK_ERROR, 'Request failed');
                 });
-                // TODO: 其他格式上传的编写
+            case 'path':
+                Validator::validateParamsByAction($action, ['path' => true]);
+                $from_path = $action->params['path'];
+                if (!is_string($from_path) || !file_exists($from_path = FileUtil::getRealPath($from_path))) {
+                    return ActionResponse::create($action)->fail(RetCode::FILESYSTEM_ERROR, 'file not found for path: ' . $from_path);
+                }
+                $file_id = md5_file($from_path);
+                if ($file_id === false) {
+                    return ActionResponse::create($action)->fail(RetCode::FILESYSTEM_ERROR, 'file cannot calculate md5: ' . $from_path);
+                }
+                $file_status = FileUtil::saveMetaFile($path, $file_id, null, [
+                    'name' => $action->params['name'],
+                    'sha256' => $action->params['sha256'] ?? null,
+                ]);
+                if (!copy($from_path, $path . '/' . $file_id)) {
+                    return ActionResponse::create($action)->fail(RetCode::FILESYSTEM_ERROR, 'file copy failed from ' . $from_path);
+                }
+                if ($file_status === false) {
+                    return ActionResponse::create($action)->fail(RetCode::FILESYSTEM_ERROR);
+                }
+                return ActionResponse::create($action)->ok(['file_id' => $file_id]);
+            case 'data':
+                Validator::validateParamsByAction($action, ['data' => true]);
+                $data = $stream_type === ONEBOT_JSON ? base64_decode($action->params['data']) : $action->params['data'];
+                if ($data === false) {
+                    return ActionResponse::create($action)->fail(RetCode::BAD_PARAM, 'input base64 data is invalid');
+                }
+                $file_id = md5($data);
+                $file_status = FileUtil::saveMetaFile($path, $file_id, $data, [
+                    'name' => $action->params['name'],
+                    'sha256' => $action->params['sha256'] ?? null,
+                ]);
+                if ($file_status === false) {
+                    return ActionResponse::create($action)->fail(RetCode::FILESYSTEM_ERROR);
+                }
+                return ActionResponse::create($action)->ok(['file_id' => $file_id]);
         }
         return ActionResponse::create($action)->fail(RetCode::BAD_PARAM);
     }

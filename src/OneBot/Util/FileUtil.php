@@ -121,4 +121,63 @@ class FileUtil
         rmdir($dir);
         return true;
     }
+
+    public static function mkdir(string $dir, $perm = 0755, bool $recursive = false): bool
+    {
+        if (!is_dir($dir)) {
+            return \mkdir($dir, $perm, $recursive);
+        }
+        return true;
+    }
+
+    public static function saveMetaFile(string $path, string $file_id, $data, array $config): bool
+    {
+        if (!self::mkdir($path, 0755, true)) {
+            ob_logger_registered() && ob_logger()->error('无法保存文件，因为无法创建目录: ' . $path);
+            return false;
+        }
+        $file_path = self::getRealPath($path . '/' . $file_id);
+        if ($data !== null && file_put_contents($file_path, $data) === false) {
+            ob_logger_registered() && ob_logger()->error('无法保存文件，因为无法写入文件: ' . $file_path);
+            return false;
+        }
+        if (!isset($config['name'])) {
+            ob_logger_registered() && ob_logger()->error('无法保存文件，因为元数据缺少文件名: ' . $file_path);
+            return false;
+        }
+        if ($data === null && !file_exists($file_path)) {
+            $config['nodata'] = true;
+        }
+        if (!isset($config['nodata']) && ($config['sha256'] ?? null) !== null) {
+            if (hash('sha256', $data ?? file_get_contents($file_path)) !== $config['sha256']) {
+                ob_logger_registered() && ob_logger()->error('无法保存文件，sha256值不匹配！');
+                return false;
+            }
+        }
+        $conf = json_encode($config);
+        if (file_put_contents($file_path . '.json', $conf) === false) {
+            ob_logger_registered() && ob_logger()->error('无法保存文件，因为无法写入文件: ' . $file_path . '.json');
+            return false;
+        }
+        return true;
+    }
+
+    public static function getMetaFile(string $path, string $file_id): array
+    {
+        $file_path = self::getRealPath($path . '/' . $file_id);
+        if (!file_exists($file_path . '.json')) {
+            ob_logger_registered() && ob_logger()->error('无法读取文件，因为元数据或文件不存在: ' . $file_path);
+            return [null, null];
+        }
+        $data = json_decode(file_get_contents($file_path . '.json'), true);
+        if (!isset($data['name'])) {
+            ob_logger_registered() && ob_logger()->error('无法读取文件，因为元数据缺少文件名: ' . $file_path);
+            return [null, null];
+        }
+        $content = file_get_contents($file_path);
+        if ($content === false) {
+            $content = null;
+        }
+        return [$data, $content];
+    }
 }

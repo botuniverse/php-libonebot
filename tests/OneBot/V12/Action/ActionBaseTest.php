@@ -108,7 +108,7 @@ class ActionBaseTest extends TestCase
         $this->assertEquals(ActionResponse::create()->fail(RetCode::UNSUPPORTED_ACTION), self::$handler->onSendMessage(new Action('send_message')));
     }
 
-    public function testOnUploadFile()
+    public function testOnUploadFileUrl()
     {
         $resp = self::$handler->onUploadFile(new Action('upload_file', [
             'type' => 'url',
@@ -116,9 +116,42 @@ class ActionBaseTest extends TestCase
             'url' => 'https://zhamao.xin/file/hello.jpg',
         ]), ONEBOT_JSON);
         $this->assertEquals(RetCode::OK, $resp->retcode);
-        $this->assertEquals(
-            hash('md5', file_get_contents(OneBot::getInstance()->getConfig()->get('file_upload.path') . '/' . $resp->data['file_id'] . '_testfile.jpg')),
-            $resp->data['file_id']
-        );
+        $this->assertArrayHasKey('file_id', $resp->data);
+        $path = ob_config('file_upload.path', getcwd() . '/data/files');
+        [$meta, $content] = FileUtil::getMetaFile($path, $resp->data['file_id']);
+        $this->assertEquals('testfile.jpg', $meta['name']);
+        $this->assertEquals('https://zhamao.xin/file/hello.jpg', $meta['url']);
+        $this->assertNotNull($content);
+    }
+
+    public function testOnUploadFilePath()
+    {
+        $resp = self::$handler->onUploadFile(new Action('upload_file', [
+            'type' => 'path',
+            'name' => 'a.txt',
+            'path' => __FILE__,
+        ]), ONEBOT_JSON);
+        $this->assertEquals(RetCode::OK, $resp->retcode);
+        $this->assertArrayHasKey('file_id', $resp->data);
+        $path = ob_config('file_upload.path', getcwd() . '/data/files');
+        [$meta, $content] = FileUtil::getMetaFile($path, $resp->data['file_id']);
+        $this->assertEquals('a.txt', $meta['name']);
+        $this->assertEquals(file_get_contents(__FILE__), $content);
+    }
+
+    public function testOnUploadFileData()
+    {
+        $resp = self::$handler->onUploadFile(new Action('upload_file', [
+            'type' => 'data',
+            'name' => 'b.txt',
+            'data' => base64_encode('hello world'),
+            'sha256' => hash('sha256', 'hello world'),
+        ]));
+        $this->assertEquals(RetCode::OK, $resp->retcode);
+        $this->assertArrayHasKey('file_id', $resp->data);
+        $path = ob_config('file_upload.path', getcwd() . '/data/files');
+        [$meta, $content] = FileUtil::getMetaFile($path, $resp->data['file_id']);
+        $this->assertEquals('b.txt', $meta['name']);
+        $this->assertEquals('hello world', $content);
     }
 }
