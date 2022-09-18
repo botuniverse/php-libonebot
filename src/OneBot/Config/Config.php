@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace OneBot\Config;
 
+use OneBot\Config\Loader\LoaderInterface;
+
 class Config
 {
     /**
@@ -47,6 +49,34 @@ class Config
     public function setRepository(RepositoryInterface $repository): void
     {
         $this->repository = $repository;
+    }
+
+    /**
+     * 加载配置
+     *
+     * @param mixed           $context 传递给加载器的上下文，通常是文件路径
+     * @param LoaderInterface $loader  指定的加载器
+     */
+    public function load($context, LoaderInterface $loader): void
+    {
+        $data = $loader->load($context);
+        foreach ($data as $key => $value) {
+            $this->merge($key, $value);
+        }
+    }
+
+    /**
+     * 合并传入的配置数组至指定的配置项
+     *
+     * 请注意内部实现是 array_replace_recursive，而不是 array_merge
+     *
+     * @param string $key    目标配置项，必须为数组
+     * @param array  $config 要合并的配置数组
+     */
+    public function merge(string $key, array $config): void
+    {
+        $original = $this->get($key, []);
+        $this->set($key, array_replace_recursive($original, $config));
     }
 
     /**
