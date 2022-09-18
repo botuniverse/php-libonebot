@@ -7,6 +7,7 @@ namespace OneBot\V12\Action;
 use OneBot\Http\Stream;
 use OneBot\Util\FileUtil;
 use OneBot\Util\Utils;
+use OneBot\V12\Exception\OneBotFailureException;
 use OneBot\V12\Object\Action;
 use OneBot\V12\Object\ActionResponse;
 use OneBot\V12\OneBot;
@@ -74,6 +75,9 @@ abstract class ActionHandlerBase
         return ActionResponse::create($action)->ok($list);
     }
 
+    /**
+     * @throws OneBotFailureException
+     */
     public function onUploadFile(Action $action, int $stream_type = ONEBOT_JSON): ActionResponse
     {
         // 验证上传文件必需的两个参数是否存在
@@ -89,40 +93,14 @@ abstract class ActionHandlerBase
             case 'url':
                 // url上传类型必须包含url参数
                 Validator::validateParamsByAction($action, ['url' => ONEBOT_TYPE_STRING]);
+
                 // 验证是否指定了 Headers，为 Assoc 类型的数组
                 $headers = isset($action->params['headers']) && Utils::isAssocArray($action->params['headers']) ? $action->params['headers'] : [];
-                // 验证 url 是否合法（即必须保证是 http(s) 开头）
-                Validator::validateHttpUrl($action->params['url']);
-                // 生成临时的 HttpClientSocket
-                $sock = OneBot::getInstance()->getDriver()->createHttpClientSocket([
-                    'url' => $action->params['url'],
-                    'headers' => $headers,
-                    'timeout' => 30,
-                ]);
-                // 仅允许同步执行
-                return $sock->withoutAsync()->get([], function (ResponseInterface $response) use ($action, $path, $headers) {
-                    if ($response->getStatusCode() !== 200) {
-                        // 非200状态码认为是无效的下载，返回网络错误
-                        return ActionResponse::create($action)->fail(RetCode::NETWORK_ERROR, 'Return code is ' . $response->getReasonPhrase());
-                    }
-                    // 文件ID为文件内容计算md5得来
-                    $file_id = md5($response->getBody()->getContents());
-                    $file_status = FileUtil::saveMetaFile($path, $file_id, $response->getBody(), [
-                        'name' => $action->params['name'],
-                        'url' => $action->params['url'],
-                        'headers' => $headers,
-                        'sha256' => $action->params['sha256'] ?? null,
-                    ]);
-                    if ($file_status === false) {
-                        return ActionResponse::create($action)->fail(RetCode::FILESYSTEM_ERROR);
-                    }
-                    return ActionResponse::create($action)->ok(['file_id' => $file_id]);
-                }, function ($request, $a = null) use ($action) {
-                    if ($a instanceof Throwable) {
-                        return ActionResponse::create($action)->fail(RetCode::NETWORK_ERROR, 'Request failed with ' . get_class($a) . ': ' . $a->getMessage() . "\n" . $a->getTraceAsString());
-                    }
-                    return ActionResponse::create($action)->fail(RetCode::NETWORK_ERROR, 'Request failed');
-                });
+                $resp = $this->downloadFile($action->params['url'], $action->params['name'], $path, $headers, $action->params['sha256'] ?? null);
+                if ($action->echo !== null) {
+                    $resp->echo = $action->echo;
+                }
+                return $resp;
             case 'path':
                 Validator::validateParamsByAction($action, ['path' => ONEBOT_TYPE_STRING]);
                 $from_path = $action->params['path'];
@@ -260,20 +238,8 @@ abstract class ActionHandlerBase
 
     public function onGetFile(Action $action, int $stream_type = ONEBOT_JSON): ActionResponse
     {
-        Validator::validateParamsByAction($action, ['file_id' => ONEBOT_TYPE_STRING, 'type' => ['url', 'path', 'data']]);
-        $path = ob_config('file_upload.path', getcwd() . '/data/files');
-        if (FileUtil::isRelativePath($path)) {
-            $path = FileUtil::getRealPath(getcwd() . '/' . $path);
-        }
-        // 防止任意文件读取漏洞
-        $file_id = $action->params['file_id'];
-        if (strpos($file_id, '/') !== false || strpos($file_id, '..') !== false) {
-            return ActionResponse::create($action)->fail(RetCode::BAD_PARAM);
-        }
-        [$meta, $content] = FileUtil::getMetaFile($path, $file_id);
-        if ($meta === null) {
-            return ActionResponse::create($action)->fail(RetCode::FILESYSTEM_ERROR, 'file metadata not found: ' . $file_id);
-        }
+        Validator::validateParamsByAction($action, ['type' => ['url', 'path', 'data']]);
+        [$meta, $content, $path, $file_id] = $this->makeGetFileBefore($action);
         switch ($action->params['type']) {
             case 'url':
             default:
@@ -288,35 +254,9 @@ abstract class ActionHandlerBase
                 if ($content === null && isset($meta['url'])) {
                     // 这个文件是懒加载的，我们现在下载一下
                     // 验证是否指定了 Headers，为 Assoc 类型的数组
-                    if (isset($meta['headers']) && Utils::isAssocArray($meta['headers'])) {
-                        $headers = $meta['headers'];
-                    } else {
-                        $headers = [];
-                    }
-                    // 验证 url 是否合法（即必须保证是 http(s) 开头）
-                    Validator::validateHttpUrl($meta['url']);
-                    // 生成临时的 HttpClientSocket
-                    $sock = OneBot::getInstance()->getDriver()->createHttpClientSocket([
-                        'url' => $meta['url'],
-                        'headers' => $headers,
-                        'timeout' => 30,
-                    ]);
-                    // 仅允许同步执行
-                    return $sock->withoutAsync()->get([], function (ResponseInterface $response) use ($action, $meta, $path, $file_id, $headers, $stream_type) {
-                        if ($response->getStatusCode() !== 200) {
-                            // 非200状态码认为是无效的下载，返回网络错误
-                            return ActionResponse::create($action)->fail(RetCode::NETWORK_ERROR, 'Return code is ' . $response->getReasonPhrase());
-                        }
-                        // 文件ID为文件内容计算md5得来
-                        $file_status = FileUtil::saveMetaFile($path, $file_id, $response->getBody(), [
-                            'name' => $meta['name'],
-                            'url' => $meta['url'],
-                            'headers' => $headers,
-                            'sha256' => $meta['sha256'] ?? null,
-                        ]);
-                        if ($file_status === false) {
-                            return ActionResponse::create($action)->fail(RetCode::FILESYSTEM_ERROR);
-                        }
+                    $headers = isset($meta['headers']) && Utils::isAssocArray($meta['headers']) ? $meta['headers'] : [];
+                    $resp = $this->downloadFile($meta['url'], $meta['name'], $path, $headers, $meta['sha256'] ?? null, $file_id);
+                    if ($resp->retcode === 0) {
                         if ($action->params['type'] === 'path') {
                             $final_file_path = FileUtil::getRealPath($path . '/' . $file_id);
                             $ret = ['name' => $meta['name'], 'path' => $final_file_path];
@@ -327,23 +267,63 @@ abstract class ActionHandlerBase
                         if (is_string($meta['sha256'] ?? null)) {
                             $ret['sha256'] = $meta['sha256'];
                         }
-                        return ActionResponse::create($action)->ok($ret);
-                    }, function ($request, $a = null) use ($action) {
-                        if ($a instanceof Throwable) {
-                            return ActionResponse::create($action)->fail(RetCode::NETWORK_ERROR, 'Request failed with ' . get_class($a) . ': ' . $a->getMessage() . "\n" . $a->getTraceAsString());
-                        }
-                        return ActionResponse::create($action)->fail(RetCode::NETWORK_ERROR, 'Request failed');
-                    });
-                } elseif ($content !== null) {
+                        $resp->data = $ret;
+                    }
+                    $action->echo !== null && $resp->echo = $action->echo;
+                    return $resp;
+                }
+                if ($content !== null) {
                     $final_file_path = FileUtil::getRealPath($path . '/' . $file_id);
                     $ret = ['name' => $meta['name'], 'path' => $final_file_path];
                     if (is_string($meta['sha256'] ?? null)) {
                         $ret['sha256'] = $meta['sha256'];
                     }
                     return ActionResponse::create($action)->ok($ret);
-                } else {
-                    return ActionResponse::create($action)->fail(RetCode::FILESYSTEM_ERROR, 'file source data not found');
                 }
+                return ActionResponse::create($action)->fail(RetCode::FILESYSTEM_ERROR, 'file source data not found');
+        }
+    }
+
+    public function onGetFileFragmented(Action $action, int $stream_type = ONEBOT_JSON): ActionResponse
+    {
+        [$meta, $content, $path, $file_id] = $this->makeGetFileBefore($action);
+        Validator::validateParamsByAction($action, ['stage' => ['prepare', 'transfer']]);
+        switch ($action->params['stage']) {
+            case 'prepare':
+            default:
+                if ($content === null && isset($meta['url'])) {
+                    // 这个文件是懒加载的，我们现在下载一下
+                    // 验证是否指定了 Headers，为 Assoc 类型的数组
+                    $headers = isset($meta['headers']) && Utils::isAssocArray($meta['headers']) ? $meta['headers'] : [];
+                    $resp = $this->downloadFile($meta['url'], $meta['name'], $path, $headers, $meta['sha256'] ?? null, $file_id);
+                    if ($resp->retcode === 0) {
+                        [$meta] = FileUtil::getMetaFile($path, $file_id);
+                        $resp->data = [
+                            'name' => $meta['name'],
+                            'total_size' => filesize(FileUtil::getRealPath($path . '/' . $file_id)),
+                            'sha256' => hash_file('sha256', FileUtil::getRealPath($path . '/' . $file_id)),
+                        ];
+                    }
+                    $action->echo !== null && $resp->echo = $action->echo;
+                    return $resp;
+                }
+                if ($content !== null) {
+                    $ret = [
+                        'name' => $meta['name'],
+                        'total_size' => filesize(FileUtil::getRealPath($path . '/' . $file_id)),
+                        'sha256' => hash_file('sha256', FileUtil::getRealPath($path . '/' . $file_id)),
+                    ];
+                    return ActionResponse::create($action)->ok($ret);
+                }
+                return ActionResponse::create($action)->fail(RetCode::FILESYSTEM_ERROR, 'file source data not found');
+            case 'transfer':
+                if ($content === null) {
+                    return ActionResponse::create($action)->fail(RetCode::LOGIC_ERROR, 'please prepare first');
+                }
+                Validator::validateParamsByAction($action, ['offset' => ONEBOT_TYPE_INT, 'size' => ONEBOT_TYPE_INT]);
+                $s = Stream::create($content);
+                $s->seek($action->params['offset']);
+                return ActionResponse::create($action)->ok(['data' => $stream_type === ONEBOT_JSON ? base64_encode($s->read($action->params['size'])) : $s->read($action->params['size'])]);
         }
     }
 
@@ -467,5 +447,62 @@ abstract class ActionHandlerBase
     public function onLeaveChannel(Action $action): ActionResponse
     {
         return ActionResponse::create($action)->fail(RetCode::UNSUPPORTED_ACTION);
+    }
+
+    private function makeGetFileBefore(Action $action)
+    {
+        Validator::validateParamsByAction($action, ['file_id' => ONEBOT_TYPE_STRING]);
+        $path = ob_config('file_upload.path', getcwd() . '/data/files');
+        if (FileUtil::isRelativePath($path)) {
+            $path = FileUtil::getRealPath(getcwd() . '/' . $path);
+        }
+        // 防止任意文件读取漏洞
+        $file_id = $action->params['file_id'];
+        if (strpos($file_id, '/') !== false || strpos($file_id, '..') !== false) {
+            return ActionResponse::create($action)->fail(RetCode::BAD_PARAM);
+        }
+        [$meta, $content] = FileUtil::getMetaFile($path, $file_id);
+        if ($meta === null) {
+            return ActionResponse::create($action)->fail(RetCode::FILESYSTEM_ERROR, 'file metadata not found: ' . $file_id);
+        }
+        return [$meta, $content, $path, $file_id];
+    }
+
+    private function downloadFile(string $url, string $name, string $path, array $headers = [], ?string $sha256 = null, ?string $file_id = null): ActionResponse
+    {
+        // 验证 url 是否合法（即必须保证是 http(s) 开头）
+        Validator::validateHttpUrl($url);
+        // 生成临时的 HttpClientSocket
+        $sock = OneBot::getInstance()->getDriver()->createHttpClientSocket([
+            'url' => $url,
+            'headers' => $headers,
+            'timeout' => 30,
+        ]);
+        // 仅允许同步执行
+        return $sock->withoutAsync()->get([], function (ResponseInterface $response) use ($url, $name, $path, $headers, $sha256, $file_id) {
+            if ($response->getStatusCode() !== 200) {
+                // 非200状态码认为是无效的下载，返回网络错误
+                return ActionResponse::create()->fail(RetCode::NETWORK_ERROR, 'Return code is ' . $response->getReasonPhrase());
+            }
+            // 文件ID为文件内容计算md5得来
+            if ($file_id === null) {
+                $file_id = md5($response->getBody()->getContents());
+            }
+            $file_status = FileUtil::saveMetaFile($path, $file_id, $response->getBody(), [
+                'name' => $name,
+                'url' => $url,
+                'headers' => $headers,
+                'sha256' => $sha256,
+            ]);
+            if ($file_status === false) {
+                return ActionResponse::create()->fail(RetCode::FILESYSTEM_ERROR);
+            }
+            return ActionResponse::create()->ok(['file_id' => $file_id]);
+        }, function ($request, $a = null) {
+            if ($a instanceof Throwable) {
+                return ActionResponse::create()->fail(RetCode::NETWORK_ERROR, 'Request failed with ' . get_class($a) . ': ' . $a->getMessage() . "\n" . $a->getTraceAsString());
+            }
+            return ActionResponse::create()->fail(RetCode::NETWORK_ERROR, 'Request failed');
+        });
     }
 }

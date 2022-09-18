@@ -193,4 +193,26 @@ class ActionBaseTest extends TestCase
             $this->assertEquals(0, $finish->retcode);
         }
     }
+
+    public function testOnGetFile()
+    {
+        $resp = self::$handler->onUploadFile(new Action('upload_file', [
+            'type' => 'url',
+            'name' => 'testfile.jpg',
+            'url' => 'https://zhamao.xin/file/hello.jpg',
+        ]), ONEBOT_JSON);
+        $file_hash = '390e5287fe9b552eb534222aa1c5f166f70d4b0c0c1309571dda9a25545edc18';
+        $this->assertEquals(RetCode::OK, $resp->retcode);
+        $get = self::$handler->onGetFile(new Action('get_file', [
+            'file_id' => $resp->data['file_id'],
+            'type' => 'url',
+        ]));
+        $this->assertEquals('https://zhamao.xin/file/hello.jpg', $get->data['url']);
+        $get = self::$handler->onGetFile(new Action('get_file', [
+            'file_id' => $resp->data['file_id'],
+            'type' => 'data',
+        ]), ONEBOT_JSON);
+        $path = ob_config('file_upload.path', getcwd() . '/data/files');
+        $this->assertEquals($file_hash, hash_file('sha256', FileUtil::getRealPath($path . '/' . $resp->data['file_id'])));
+    }
 }
