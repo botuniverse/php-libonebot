@@ -175,9 +175,13 @@ class FileUtil
             ob_logger_registered() && ob_logger()->error('无法读取文件，因为元数据缺少文件名: ' . $file_path);
             return [null, null];
         }
-        $content = file_get_contents($file_path);
-        if ($content === false) {
+        if (!file_exists($file_path)) {
             $content = null;
+        } else {
+            $content = file_get_contents($file_path);
+            if ($content === false) {
+                $content = null;
+            }
         }
         return [$data, $content];
     }
