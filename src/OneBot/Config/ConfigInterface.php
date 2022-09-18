@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace OneBot\V12\Config;
+namespace OneBot\Config;
 
 interface ConfigInterface
 {

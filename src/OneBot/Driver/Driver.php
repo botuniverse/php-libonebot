@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace OneBot\Driver;
 
+use OneBot\Config\ConfigInterface;
 use OneBot\Driver\Interfaces\DriverInitPolicy;
 use OneBot\Driver\Interfaces\WebSocketClientInterface;
 use OneBot\Driver\Socket\HttpClientSocketBase;
 use OneBot\Driver\Socket\SocketTrait;
 use OneBot\Driver\Workerman\WorkermanDriver;
-use OneBot\V12\Config\ConfigInterface;
 
 abstract class Driver
 {

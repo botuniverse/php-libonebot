@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace OneBot\V12;
 
 use InvalidArgumentException;
+use OneBot\Config\ConfigInterface;
 use OneBot\Driver\Driver;
-use OneBot\V12\Config\ConfigInterface;
 use Psr\Log\LoggerInterface;
 
 /**
@@ -114,7 +114,7 @@ class OneBotBuilder
             throw new InvalidArgumentException('Builder must be configured before building, missing: ' . $missing);
         }
 
-        $config = new Config\Config([
+        $config = new \OneBot\Config\Config([
             'name' => $this->components['name'],
             'platform' => $this->components['platform'],
             'self_id' => $this->components['self_id'],
@@ -136,7 +136,7 @@ class OneBotBuilder
      */
     public static function buildFromArray(array $array): OneBot
     {
-        $config = new Config\Config($array);
+        $config = new \OneBot\Config\Config($array);
         return self::buildFromConfig($config);
     }
 

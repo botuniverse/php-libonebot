@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace OneBot\V12;
 
 use InvalidArgumentException;
+use OneBot\Config\ConfigInterface;
 use OneBot\Driver\Driver;
 use OneBot\Driver\Event\DriverInitEvent;
 use OneBot\Driver\Event\Http\HttpRequestEvent;
@@ -19,7 +20,6 @@ use OneBot\Http\WebSocket\FrameFactory;
 use OneBot\Util\ObjectQueue;
 use OneBot\Util\Singleton;
 use OneBot\V12\Action\ActionHandlerBase;
-use OneBot\V12\Config\ConfigInterface;
 use OneBot\V12\Exception\OneBotException;
 use OneBot\V12\Object\Event\Meta\MetaEvent;
 use OneBot\V12\Object\Event\OneBotEvent;
