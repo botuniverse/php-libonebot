@@ -154,4 +154,43 @@ class ActionBaseTest extends TestCase
         $this->assertEquals('b.txt', $meta['name']);
         $this->assertEquals('hello world', $content);
     }
+
+    public function testOnUploadFileFragmented()
+    {
+        $file = file_get_contents(__FILE__);
+        $total = strlen($file);
+        // 多种分片形式
+        foreach ([10000, 75, 999] as $n) {
+            // 先准备
+            $prepare = self::$handler->onUploadFileFragmented(new Action('upload_file_fragmented', [
+                'stage' => 'prepare',
+                'name' => 'a.php',
+                'total_size' => $total,
+            ]));
+            $this->assertEquals(0, $prepare->retcode);
+            $this->assertIsString($prepare->data['file_id']);
+            // 第二阶段：最糟糕的倒序传输，JSON模式使用base64，每n个字节为一组
+            $file_id = $prepare->data['file_id'];
+            /* @phpstan-ignore-next-line */
+            $chunk_cnt = intval($total / $n) + ($total % $n > 0 ? 1 : 0);
+            for ($i = $chunk_cnt - 1; $i >= 0; --$i) {
+                $offset = $i * $n;
+                $chunk_data = substr($file, $offset, $n);
+                $transfer = self::$handler->onUploadFileFragmented(new Action('upload_file_fragmented', [
+                    'stage' => 'transfer',
+                    'file_id' => $file_id,
+                    'offset' => $offset,
+                    'size' => strlen($chunk_data),
+                    'data' => base64_encode($chunk_data),
+                ]), ONEBOT_JSON);
+                $this->assertEquals(0, $transfer->retcode);
+            }
+            $finish = self::$handler->onUploadFileFragmented(new Action('upload_file_fragmented', [
+                'stage' => 'finish',
+                'file_id' => $file_id,
+                'sha256' => hash('sha256', $file),
+            ]));
+            $this->assertEquals(0, $finish->retcode);
+        }
+    }
 }

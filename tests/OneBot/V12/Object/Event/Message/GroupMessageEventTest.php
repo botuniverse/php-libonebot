@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\V12\Object\Event\Message;
+namespace Tests\OneBot\V12\Object\Event\Message;
 
 use OneBot\V12\Object\Event\Message\GroupMessageEvent;
 use OneBot\V12\Object\MessageSegment;

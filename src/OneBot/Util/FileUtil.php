@@ -149,7 +149,8 @@ class FileUtil
             $config['nodata'] = true;
         }
         if (!isset($config['nodata']) && ($config['sha256'] ?? null) !== null) {
-            if (hash('sha256', $data ?? file_get_contents($file_path)) !== $config['sha256']) {
+            $data = is_null($data) ? file_get_contents($file_path) : (is_object($data) ? strval($data) : $data);
+            if (hash('sha256', $data) !== $config['sha256']) {
                 ob_logger_registered() && ob_logger()->error('无法保存文件，sha256值不匹配！');
                 return false;
             }
