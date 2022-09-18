@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace OneBot\V12;
 
 use InvalidArgumentException;
-use OneBot\Config\ConfigInterface;
+use OneBot\Config\RepositoryInterface;
 use OneBot\Driver\Driver;
 use OneBot\Driver\Event\DriverInitEvent;
 use OneBot\Driver\Event\Http\HttpRequestEvent;
@@ -36,8 +36,8 @@ class OneBot
 {
     use Singleton;
 
-    /** @var ConfigInterface 配置实例 */
-    private ConfigInterface $config;
+    /** @var RepositoryInterface 配置实例 */
+    private RepositoryInterface $config;
 
     /** @var string 实现名称 */
     private string $implement_name;
@@ -62,7 +62,7 @@ class OneBot
     /**
      * 创建一个 OneBot 实例
      */
-    public function __construct(ConfigInterface $config)
+    public function __construct(RepositoryInterface $config)
     {
         if (self::$instance !== null) {
             throw new RuntimeException('只能有一个OneBot实例！');
@@ -139,7 +139,7 @@ class OneBot
     /**
      * 获取配置实例
      */
-    public function getConfig(): ConfigInterface
+    public function getConfig(): RepositoryInterface
     {
         return $this->config;
     }
@@ -321,7 +321,7 @@ class OneBot
         }
     }
 
-    protected function validateConfig(ConfigInterface $config): void
+    protected function validateConfig(RepositoryInterface $config): void
     {
         if (!preg_match('/[a-z][\-a-z0-9]*(\.[\-a-z0-9]+)*/', $config->get('platform'))) {
             throw new InvalidArgumentException('配置的平台名称不合法，请参阅文档');

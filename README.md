@@ -43,7 +43,7 @@ $ob->setLogger(new \OneBot\Logger\Console\ConsoleLogger());
 $ob->setDriver(
     // 此处也可以在 Linux 系统下安装 swoole 扩展后使用 SwooleDriver() 拥有协程能力
     new \OneBot\Driver\Workerman\WorkermanDriver(), 
-    new \OneBot\Config\Config('demo.json')
+    new \OneBot\Config\Repository('demo.json')
 );
 $ob->setActionHandlerClass(\OneBot\V12\Action\ReplAction::class);
 $ob->run();

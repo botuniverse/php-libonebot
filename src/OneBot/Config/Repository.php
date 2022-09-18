@@ -4,14 +4,19 @@ declare(strict_types=1);
 
 namespace OneBot\Config;
 
-class Config implements ConfigInterface
+class Repository implements RepositoryInterface
 {
     /**
-     * @var array
+     * @var array 配置项
      */
-    private $config;
+    protected array $config = [];
 
-    public function __construct(array $config)
+    /**
+     * 构造新的配置类
+     *
+     * @param array $config 配置项
+     */
+    public function __construct(array $config = [])
     {
         $this->config = $config;
     }
@@ -73,9 +78,17 @@ class Config implements ConfigInterface
     /**
      * {@inheritDoc}
      */
-    public function getEnabledCommunications(): array
+    public function has(string $key): bool
     {
-        return $this->get('communications', []);
+        return $this->get($key) !== null;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function all(): array
+    {
+        return $this->config;
     }
 
     /**
