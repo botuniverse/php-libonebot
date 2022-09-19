@@ -25,7 +25,7 @@ abstract class AbstractFileLoader implements LoaderInterface
         }
         $this->ensureDataLoaded($data, $file);
 
-        return [$this->getConfigPrefix($file) => (array) $data];
+        return (array) $data;
     }
 
     /**
@@ -71,10 +71,5 @@ abstract class AbstractFileLoader implements LoaderInterface
         if (!$data instanceof stdClass && !Utils::isAssocArray($data)) {
             throw new LoadException("配置文件 '{$file}' 加载失败：配置必须为关联数组或对象");
         }
-    }
-
-    protected function getConfigPrefix(string $file): string
-    {
-        return pathinfo($file, PATHINFO_FILENAME);
     }
 }

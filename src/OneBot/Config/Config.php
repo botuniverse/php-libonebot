@@ -61,7 +61,11 @@ class Config
     {
         $data = $loader->load($context);
         foreach ($data as $key => $value) {
-            $this->merge($key, $value);
+            if (is_array($value)) {
+                $this->merge($key, $value);
+            } else {
+                $this->set($key, $value);
+            }
         }
     }
 

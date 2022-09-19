@@ -9,7 +9,7 @@ class DelegateLoader implements LoaderInterface
     /**
      * @var array{string: LoaderInterface} 加载器列表
      */
-    protected array $loaders = [];
+    protected array $loaders;
 
     /**
      * @param null|array{string: LoaderInterface} $loaders 加载器列表，null则使用默认列表

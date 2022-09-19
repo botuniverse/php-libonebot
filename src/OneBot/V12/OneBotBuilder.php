@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace OneBot\V12;
 
 use InvalidArgumentException;
+use OneBot\Config\Config;
 use OneBot\Config\RepositoryInterface;
 use OneBot\Driver\Driver;
 use Psr\Log\LoggerInterface;
@@ -114,7 +115,7 @@ class OneBotBuilder
             throw new InvalidArgumentException('Builder must be configured before building, missing: ' . $missing);
         }
 
-        $config = new \OneBot\Config\Repository([
+        $config = new Config([
             'name' => $this->components['name'],
             'platform' => $this->components['platform'],
             'self_id' => $this->components['self_id'],

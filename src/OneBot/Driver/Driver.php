@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace OneBot\Driver;
 
-use OneBot\Config\RepositoryInterface;
 use OneBot\Driver\Interfaces\DriverInitPolicy;
 use OneBot\Driver\Interfaces\WebSocketClientInterface;
 use OneBot\Driver\Socket\HttpClientSocketBase;
@@ -25,9 +24,6 @@ abstract class Driver
      * @var WebSocketClientInterface
      */
     public $ws_reverse_client;
-
-    /** @var RepositoryInterface 配置实例 */
-    protected $config;
 
     /**
      * @var string
@@ -54,24 +50,6 @@ abstract class Driver
     public static function getActiveDriverClass(): string
     {
         return self::$active_driver_class;
-    }
-
-    /**
-     * 设置配置实例
-     *
-     * @param RepositoryInterface $config 配置实例
-     */
-    public function setConfig(RepositoryInterface $config): void
-    {
-        $this->config = $config;
-    }
-
-    /**
-     * 获取配置实例
-     */
-    public function getConfig(): RepositoryInterface
-    {
-        return $this->config;
     }
 
     /**
