@@ -10,7 +10,6 @@ use PHPUnit\Framework\TestCase;
 
 /**
  * @internal
- * @coversNothing
  */
 class RepositoryTest extends TestCase
 {

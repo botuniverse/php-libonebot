@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace OneBot\Config;
 
+use OneBot\Config\Loader\DelegateLoader;
 use OneBot\Config\Loader\LoaderInterface;
 
 class Config
@@ -25,7 +26,8 @@ class Config
                 $this->repository = new Repository($context);
                 break;
             case is_string($context):
-                $this->repository = new Repository(require $context);
+                $this->repository = new Repository();
+                $this->load($context, new DelegateLoader());
                 break;
             case $context instanceof RepositoryInterface:
                 $this->repository = $context;
@@ -89,6 +91,8 @@ class Config
      * @param  string           $key     键名，使用.分割多维数组
      * @param  mixed            $default 默认值
      * @return null|array|mixed
+     *
+     * @codeCoverageIgnore 已在 RepositoryTest 中测试
      */
     public function get(string $key, $default = null)
     {
@@ -100,6 +104,8 @@ class Config
      *
      * @param string     $key   键名，使用.分割多维数组
      * @param null|mixed $value 值，null表示删除
+     *
+     * @codeCoverageIgnore 已在 RepositoryTest 中测试
      */
     public function set(string $key, $value): void
     {
@@ -111,6 +117,8 @@ class Config
      *
      * @param  string $key 键名，使用.分割多维数组
      * @return bool   是否存在
+     *
+     * @codeCoverageIgnore 已在 RepositoryTest 中测试
      */
     public function has(string $key): bool
     {
@@ -119,6 +127,8 @@ class Config
 
     /**
      * 获取所有配置项
+     *
+     * @codeCoverageIgnore 已在 RepositoryTest 中测试
      */
     public function all(): array
     {
