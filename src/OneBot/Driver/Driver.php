@@ -6,6 +6,7 @@ namespace OneBot\Driver;
 
 use OneBot\Driver\Interfaces\DriverInitPolicy;
 use OneBot\Driver\Interfaces\WebSocketClientInterface;
+use OneBot\Driver\Socket\HttpClientSocketBase;
 use OneBot\Driver\Socket\SocketTrait;
 use OneBot\Driver\Workerman\WorkermanDriver;
 use OneBot\V12\Config\ConfigInterface;
@@ -177,6 +178,13 @@ abstract class Driver
      * @param array $headers 请求头
      */
     abstract public function initWSReverseClients(array $headers = []);
+
+    /**
+     * 根据驱动类型创建一个自动化的 HTTP 请求 Socket 对象
+     *
+     * @param array $config 配置
+     */
+    abstract public function createHttpClientSocket(array $config): HttpClientSocketBase;
 
     /**
      * 通过解析的配置，让 Driver 初始化不同的通信方式

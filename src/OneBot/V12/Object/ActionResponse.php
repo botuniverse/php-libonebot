@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace OneBot\V12\Action;
+namespace OneBot\V12\Object;
 
 use ArrayIterator;
 use IteratorAggregate;
@@ -15,18 +15,20 @@ use ReturnTypeWillChange;
  */
 class ActionResponse implements JsonSerializable, IteratorAggregate
 {
-    public $status = 'ok';
+    public string $status = 'ok';
 
-    public $retcode = 0;
+    public int $retcode = 0;
 
-    public $data = [];
+    public array $data = [];
 
-    public $message = '';
+    public string $message = '';
 
     public static function create($echo = null): ActionResponse
     {
         $a = new self();
-        if ($echo !== null) {
+        if (($echo instanceof Action) && $echo->echo !== null) {
+            $a->echo = $echo->echo;
+        } elseif (is_string($echo)) {
             $a->echo = $echo;
         }
         return $a;

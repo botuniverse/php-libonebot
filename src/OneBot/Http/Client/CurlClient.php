@@ -56,8 +56,8 @@ class CurlClient extends ClientBase implements ClientInterface
     }
 
     /**
-     * @return \CurlHandle|false|resource
      * @throws ClientException
+     * @return \CurlHandle|false|resource
      */
     private function createHandle(RequestInterface $request) /* @phpstan-ignore-line */
     {
@@ -66,6 +66,8 @@ class CurlClient extends ClientBase implements ClientInterface
         $this->curl_options[CURLOPT_CUSTOMREQUEST] = $request->getMethod(); // 设置请求方式
         $this->curl_options[CURLOPT_URL] = (string) $request->getUri(); // 设置请求的URL
         $this->curl_options[CURLOPT_POSTFIELDS] = (string) $request->getBody(); // 设置请求的Body
+        $this->curl_options[CURLOPT_SSL_VERIFYHOST] = false;    // 取消认证ssl
+        $this->curl_options[CURLOPT_SSL_VERIFYPEER] = false;    // 取消认证ssl
         // 设置请求头
         foreach ($request->getHeaders() as $name => $values) {
             foreach ($values as $value) {

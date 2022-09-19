@@ -11,9 +11,9 @@ abstract class GuildNoticeEvent extends NoticeEvent
 {
     use HasGuildId;
 
-    public function __construct(string $detail_type, string $sub_type, string $user_id, string $guild_id, $time = null)
+    public function __construct(string $detail_type, string $sub_type, string $guild_id, $time = null)
     {
-        parent::__construct($detail_type, $sub_type, $user_id, $time);
+        parent::__construct($detail_type, $sub_type, $time);
 
         $this->guild_id = $guild_id;
     }

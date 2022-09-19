@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\OneBot\V12\Action;
 
-use OneBot\V12\Action\ActionResponse;
+use OneBot\V12\Object\ActionResponse;
 use OneBot\V12\RetCode;
 use PHPUnit\Framework\TestCase;
 

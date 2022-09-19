@@ -79,8 +79,8 @@ class Stream implements StreamInterface
     }
 
     /**
-     * @return string
      * @throws Throwable
+     * @return string
      */
     public function __toString()
     {

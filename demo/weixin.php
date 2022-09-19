@@ -6,8 +6,8 @@ use OneBot\Driver\Event\EventProvider;
 use OneBot\Driver\Event\Http\HttpRequestEvent;
 use OneBot\Driver\Swoole\SwooleDriver;
 use OneBot\Http\HttpFactory;
-use OneBot\V12\Action\ActionResponse;
 use OneBot\V12\Object\Action;
+use OneBot\V12\Object\ActionResponse;
 use OneBot\V12\Object\Event\Message\PrivateMessageEvent;
 use OneBot\V12\Object\MessageSegment;
 use OneBot\V12\OneBot;
@@ -161,7 +161,7 @@ EventProvider::addEventListener(HttpRequestEvent::getName(), function (HttpReque
     switch ($msg_type) {
         case 'text':
             $content = $xml_tree->getElementsByTagName('Content')->item(0)->nodeValue;
-            $msg_event = new PrivateMessageEvent($user_id, MessageSegment::createFromString($content));
+            $msg_event = new PrivateMessageEvent($user_id, MessageSegment::text($content));
             break;
         case 'image':
             $pic_url = $xml_tree->getElementsByTagName('PicUrl')->item(0)->nodeValue;
@@ -175,7 +175,7 @@ EventProvider::addEventListener(HttpRequestEvent::getName(), function (HttpReque
             break;
         case 'voice':
             $content = preg_replace('/[，。]/', '', $xml_tree->getElementsByTagName('Recognition')->item(0)->nodeValue);
-            $msg_event = new PrivateMessageEvent($user_id, MessageSegment::createFromString($content));
+            $msg_event = new PrivateMessageEvent($user_id, MessageSegment::text($content));
             break;
         default:
             echo $xml_data . PHP_EOL;
