@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace OneBot\V12;
 
 use InvalidArgumentException;
+use OneBot\Config\Config;
 use OneBot\Driver\Driver;
 use OneBot\Driver\Event\DriverInitEvent;
 use OneBot\Driver\Event\Http\HttpRequestEvent;
@@ -19,7 +20,6 @@ use OneBot\Http\WebSocket\FrameFactory;
 use OneBot\Util\ObjectQueue;
 use OneBot\Util\Singleton;
 use OneBot\V12\Action\ActionHandlerBase;
-use OneBot\V12\Config\ConfigInterface;
 use OneBot\V12\Exception\OneBotException;
 use OneBot\V12\Object\Event\Meta\MetaEvent;
 use OneBot\V12\Object\Event\OneBotEvent;
@@ -36,8 +36,8 @@ class OneBot
 {
     use Singleton;
 
-    /** @var ConfigInterface 配置实例 */
-    private ConfigInterface $config;
+    /** @var Config 配置实例 */
+    private Config $config;
 
     /** @var string 实现名称 */
     private string $implement_name;
@@ -62,7 +62,7 @@ class OneBot
     /**
      * 创建一个 OneBot 实例
      */
-    public function __construct(ConfigInterface $config)
+    public function __construct(Config $config)
     {
         if (self::$instance !== null) {
             throw new RuntimeException('只能有一个OneBot实例！');
@@ -139,7 +139,7 @@ class OneBot
     /**
      * 获取配置实例
      */
-    public function getConfig(): ConfigInterface
+    public function getConfig(): Config
     {
         return $this->config;
     }
@@ -274,7 +274,7 @@ class OneBot
      */
     public function run(): void
     {
-        $this->driver->initDriverProtocols($this->config->getEnabledCommunications());
+        $this->driver->initDriverProtocols($this->config->get('communications', []));
         $this->addOneBotEvent();
 
         ObjectQueue::limit('ob_event', 99999);
@@ -321,7 +321,7 @@ class OneBot
         }
     }
 
-    protected function validateConfig(ConfigInterface $config): void
+    protected function validateConfig(Config $config): void
     {
         if (!preg_match('/[a-z][\-a-z0-9]*(\.[\-a-z0-9]+)*/', $config->get('platform'))) {
             throw new InvalidArgumentException('配置的平台名称不合法，请参阅文档');

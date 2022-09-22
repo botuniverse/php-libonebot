@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace OneBot\V12\Config;
+namespace OneBot\Config;
 
-interface ConfigInterface
+interface RepositoryInterface
 {
     /**
      * 获取配置项
@@ -24,7 +24,15 @@ interface ConfigInterface
     public function set(string $key, $value): void;
 
     /**
-     * 获取启用的通讯方式
+     * 判断配置项是否存在
+     *
+     * @param  string $key 键名，使用.分割多维数组
+     * @return bool   是否存在
      */
-    public function getEnabledCommunications(): array;
+    public function has(string $key): bool;
+
+    /**
+     * 获取所有配置项
+     */
+    public function all(): array;
 }

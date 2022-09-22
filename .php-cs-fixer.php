@@ -71,6 +71,7 @@ return (new PhpCsFixer\Config())
         'braces' => false,
         'blank_line_between_import_groups' => false,
         'phpdoc_order' => ['order' => ['param', 'throws', 'return']],
+        'php_unit_test_class_requires_covers' => false,
     ])
     ->setFinder(
         PhpCsFixer\Finder::create()
