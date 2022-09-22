@@ -44,15 +44,11 @@ abstract class AbstractFileLoader implements LoaderInterface
      */
     protected function getAbsolutePath(string $file, string $base): string
     {
-        // From: https://github.com/zhamao-robot/zhamao-framework/blob/10a0ee91427f4d5989ebd8784e533beefdac6e89/src/ZM/Store/FileSystem.php
-        // 适配 Windows 的多盘符目录形式
-        if (DIRECTORY_SEPARATOR === '\\') {
-            $is_relative = strlen($file) > 2 && ctype_alpha($file[0]) && $file[1] === ':';
-        } else {
-            $is_relative = $file !== '' && $file[0] !== '/';
+        if (str_starts_with($file, '/') || str_contains($file, ':')) {
+            return $file;
         }
 
-        return $is_relative ? $base . DIRECTORY_SEPARATOR . $file : $file;
+        return $base . DIRECTORY_SEPARATOR . $file;
     }
 
     protected function ensureFileExists(string $file): void
