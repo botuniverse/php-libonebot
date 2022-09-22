@@ -64,7 +64,7 @@ abstract class AbstractFileLoader implements LoaderInterface
             throw new LoadException("配置文件 '{$file}' 加载失败");
         }
 
-        if (!$data instanceof stdClass && !Utils::isAssocArray($data)) {
+        if (!$data instanceof stdClass && !Utils::isAssocArray((array) $data)) {
             throw new LoadException("配置文件 '{$file}' 加载失败：配置必须为关联数组或对象");
         }
     }
