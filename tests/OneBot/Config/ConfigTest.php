@@ -14,20 +14,10 @@ use PHPUnit\Framework\TestCase;
  */
 class ConfigTest extends TestCase
 {
-    public static function setUpBeforeClass(): void
-    {
-        file_put_contents(__DIR__ . '/config_mock.json', json_encode(['foo' => 'bar', 'array' => ['aaa', 'zzz']]));
-    }
-
-    public static function tearDownAfterClass(): void
-    {
-        unlink(__DIR__ . '/config_mock.json');
-    }
-
     public function testLoad(): void
     {
         $config = new Config();
-        $config->load(__DIR__ . '/config_mock.json', new JsonFileLoader());
+        $config->load('tests/Fixture/config.json', new JsonFileLoader());
         $this->assertSame('bar', $config->getRepository()->get('foo'));
         $this->assertSame(['aaa', 'zzz'], $config->getRepository()->get('array'));
     }
@@ -57,7 +47,7 @@ class ConfigTest extends TestCase
                 ['foo' => 'bar'],
             ],
             'path' => [
-                __DIR__ . '/config_mock.json',
+                'tests/Fixture/config.json',
             ],
             'repository' => [
                 new Repository(['foo' => 'bar']),
