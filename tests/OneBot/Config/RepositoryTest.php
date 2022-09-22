@@ -120,7 +120,7 @@ class RepositoryTest extends TestCase
         $this->assertSame($this->config, $this->repository->all());
     }
 
-    private function providerTestDeleteValue(): array
+    public function providerTestDeleteValue(): array
     {
         return [
             'shallow' => ['foo'],
