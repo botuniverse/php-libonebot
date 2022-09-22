@@ -50,7 +50,7 @@ class ConfigTest extends TestCase
         $this->assertSame('bar', $config->get('foo'));
     }
 
-    private function providerTestConstruct(): array
+    public function providerTestConstruct(): array
     {
         return [
             'array' => [
