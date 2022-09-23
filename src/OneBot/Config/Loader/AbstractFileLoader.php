@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace OneBot\Config\Loader;
 
+use OneBot\Util\FileUtil;
 use OneBot\Util\Utils;
 use stdClass;
 
@@ -44,11 +45,7 @@ abstract class AbstractFileLoader implements LoaderInterface
      */
     protected function getAbsolutePath(string $file, string $base): string
     {
-        if (str_starts_with($file, '/') || str_contains($file, ':')) {
-            return $file;
-        }
-
-        return $base . DIRECTORY_SEPARATOR . $file;
+        return FileUtil::isRelativePath($file) ? $base . DIRECTORY_SEPARATOR . $file : $file;
     }
 
     protected function ensureFileExists(string $file): void
