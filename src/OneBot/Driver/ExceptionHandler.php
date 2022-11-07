@@ -16,7 +16,7 @@ class ExceptionHandler
 
     protected $whoops;
 
-    protected $overrideed_by;
+    protected $overridden_by;
 
     private function __construct()
     {
@@ -42,8 +42,8 @@ class ExceptionHandler
      */
     public function handle(Throwable $e): void
     {
-        if ($this->overrideed_by !== null) {
-            $this->overrideed_by->handle($e);
+        if ($this->overridden_by !== null) {
+            $this->overridden_by->handle($e);
             return;
         }
 
@@ -58,6 +58,6 @@ class ExceptionHandler
 
     public function overrideWith(ExceptionHandler $handler): void
     {
-        $this->overrideed_by = $handler;
+        $this->overridden_by = $handler;
     }
 }
