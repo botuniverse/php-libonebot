@@ -16,6 +16,8 @@ class ExceptionHandler
 
     protected $whoops;
 
+    protected $overridden_by;
+
     private function __construct()
     {
         $whoops_class = 'Whoops\Run';
@@ -40,6 +42,11 @@ class ExceptionHandler
      */
     public function handle(Throwable $e): void
     {
+        if ($this->overridden_by !== null) {
+            $this->overridden_by->handle($e);
+            return;
+        }
+
         if (is_null($this->whoops)) {
             ob_logger()->error('Uncaught ' . get_class($e) . ': ' . $e->getMessage() . ' at ' . $e->getFile() . '(' . $e->getLine() . ')');
             ob_logger()->error($e->getTraceAsString());
@@ -47,5 +54,10 @@ class ExceptionHandler
         }
 
         $this->whoops->handleException($e);
+    }
+
+    public function overrideWith(ExceptionHandler $handler): void
+    {
+        $this->overridden_by = $handler;
     }
 }
