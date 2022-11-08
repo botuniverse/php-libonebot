@@ -5,7 +5,7 @@
 
 declare(strict_types=1);
 
-namespace OneBot\Driver;
+namespace OneBot\Exception;
 
 use OneBot\Util\Singleton;
 use Throwable;
@@ -16,7 +16,7 @@ class ExceptionHandler
 
     protected $whoops;
 
-    protected $overridden_by;
+    protected ?ExceptionHandlerInterface $overridden_by;
 
     private function __construct()
     {
@@ -47,6 +47,16 @@ class ExceptionHandler
             return;
         }
 
+        $this->handle0($e);
+    }
+
+    public function overrideWith(ExceptionHandlerInterface $handler): void
+    {
+        $this->overridden_by = $handler;
+    }
+
+    protected function handle0(Throwable $e): void
+    {
         if (is_null($this->whoops)) {
             ob_logger()->error('Uncaught ' . get_class($e) . ': ' . $e->getMessage() . ' at ' . $e->getFile() . '(' . $e->getLine() . ')');
             ob_logger()->error($e->getTraceAsString());
@@ -54,10 +64,5 @@ class ExceptionHandler
         }
 
         $this->whoops->handleException($e);
-    }
-
-    public function overrideWith(ExceptionHandler $handler): void
-    {
-        $this->overridden_by = $handler;
     }
 }
