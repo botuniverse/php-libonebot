@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace OneBot\Driver\Event;
 
-use OneBot\Driver\ExceptionHandler;
 use OneBot\Driver\Interfaces\HandledDispatcherInterface;
+use OneBot\Exception\ExceptionHandler;
 use Throwable;
 
 // TODO: 尝试把 EventDispatcher 全局唯一，以避免频繁的 new EventDispatcher
