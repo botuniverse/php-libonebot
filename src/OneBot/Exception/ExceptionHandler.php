@@ -10,7 +10,7 @@ namespace OneBot\Exception;
 use OneBot\Util\Singleton;
 use Throwable;
 
-class ExceptionHandler
+class ExceptionHandler implements ExceptionHandlerInterface
 {
     use Singleton;
 
@@ -18,7 +18,7 @@ class ExceptionHandler
 
     protected ?ExceptionHandlerInterface $overridden_by;
 
-    private function __construct()
+    protected function __construct()
     {
         $whoops_class = 'Whoops\Run';
         $collision_class = 'NunoMaduro\Collision\Handler';
