@@ -6,8 +6,6 @@ namespace OneBot\Driver\Workerman;
 
 use OneBot\Driver\Coroutine\Adaptive;
 use OneBot\Driver\Interfaces\PoolInterface;
-use RuntimeException;
-use SplQueue;
 
 class ObjectPool implements PoolInterface
 {
@@ -20,7 +18,7 @@ class ObjectPool implements PoolInterface
     /** @var int 池大小 */
     protected $size;
 
-    /** @var SplQueue Swoole 的 Channel 对象 */
+    /** @var \SplQueue Swoole 的 Channel 对象 */
     protected $queue;
 
     /** @var array 借出去的对象 Hash 表 */
@@ -34,7 +32,7 @@ class ObjectPool implements PoolInterface
         $this->class = $construct_class;
         $this->args = $args;
         $this->size = $size;
-        $this->queue = new SplQueue();
+        $this->queue = new \SplQueue();
     }
 
     public function __destruct()
@@ -55,7 +53,7 @@ class ObjectPool implements PoolInterface
                 Adaptive::sleep(1);
                 return $this->get(++$recursive);
             } else {
-                throw new RuntimeException('Non-coroutine mode cannot handle too much busy things');
+                throw new \RuntimeException('Non-coroutine mode cannot handle too much busy things');
             }
         } elseif ($this->queue->isEmpty()) {  // 如果 Channel 是空的，那么就新建一个对象
             $result = $this->makeObject();
@@ -71,7 +69,7 @@ class ObjectPool implements PoolInterface
     {
         if (!isset($this->out[spl_object_hash($object)])) {
             // 不能退还不是这里生产出去的对象
-            throw new RuntimeException('Cannot put object that not got from here');
+            throw new \RuntimeException('Cannot put object that not got from here');
         }
         unset($this->out[spl_object_hash($object)]);
         if (!empty(self::$coroutine_cid)) {
@@ -82,7 +80,7 @@ class ObjectPool implements PoolInterface
         try {
             $this->queue->push($object);
             return true;
-        } catch (RuntimeException $e) {
+        } catch (\RuntimeException $e) {
             return false;
         }
     }

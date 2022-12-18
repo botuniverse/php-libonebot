@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace OneBot\V12\Object\Event\Request;
 
-use DateTimeInterface;
 use OneBot\V12\Exception\OneBotException;
 use OneBot\V12\Object\Event\OneBotEvent;
 
@@ -16,9 +15,9 @@ use OneBot\V12\Object\Event\OneBotEvent;
 abstract class RequestEvent extends OneBotEvent
 {
     /**
-     * @param string                     $detail_type 事件详细类型
-     * @param string                     $sub_type    事件子类型
-     * @param null|DateTimeInterface|int $time        事件发生时间，可为DateTime对象或时间戳，不传或为null则使用当前时间
+     * @param string                      $detail_type 事件详细类型
+     * @param string                      $sub_type    事件子类型
+     * @param null|\DateTimeInterface|int $time        事件发生时间，可为DateTime对象或时间戳，不传或为null则使用当前时间
      *
      * @throws OneBotException
      */

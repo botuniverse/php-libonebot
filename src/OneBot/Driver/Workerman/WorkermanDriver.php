@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 namespace OneBot\Driver\Workerman;
 
-use Exception;
+use Choir\Http\Client\CurlClient;
+use Choir\Http\Client\StreamClient;
 use OneBot\Driver\Driver;
 use OneBot\Driver\DriverEventLoopBase;
 use OneBot\Driver\Event\DriverInitEvent;
@@ -18,10 +19,7 @@ use OneBot\Driver\Workerman\Socket\HttpServerSocket;
 use OneBot\Driver\Workerman\Socket\WSClientSocket;
 use OneBot\Driver\Workerman\Socket\WSServerSocket;
 use OneBot\Exception\ExceptionHandler;
-use OneBot\Http\Client\CurlClient;
-use OneBot\Http\Client\StreamClient;
 use OneBot\Util\Singleton;
-use Throwable;
 
 class WorkermanDriver extends Driver
 {
@@ -33,12 +31,12 @@ class WorkermanDriver extends Driver
     ];
 
     /**
-     * @throws Exception
+     * @throws \Exception
      */
     public function __construct(array $params = [])
     {
         if (static::$instance !== null) {
-            throw new Exception('不能重复初始化');
+            throw new \Exception('不能重复初始化');
         }
         static::$instance = $this;
         parent::__construct($params);
@@ -95,7 +93,7 @@ class WorkermanDriver extends Driver
                         try {
                             $event = new UserProcessStartEvent($process);
                             ob_event_dispatcher()->dispatch($event);
-                        } catch (Throwable $e) {
+                        } catch (\Throwable $e) {
                             ExceptionHandler::getInstance()->handle($e);
                         }
                     });
@@ -112,7 +110,7 @@ class WorkermanDriver extends Driver
             }
             ob_logger()->debug('启动 Workerman 下的 Worker 们');
             Worker::runAll();
-        } catch (Throwable $e) {
+        } catch (\Throwable $e) {
             ExceptionHandler::getInstance()->handle($e);
         }
     }
@@ -125,7 +123,7 @@ class WorkermanDriver extends Driver
     /**
      * {@inheritDoc}
      *
-     * @throws Exception
+     * @throws \Exception
      */
     public function initWSReverseClients(array $headers = [])
     {

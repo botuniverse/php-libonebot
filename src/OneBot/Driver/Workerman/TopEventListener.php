@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace OneBot\Driver\Workerman;
 
+use Choir\Http\HttpFactory;
+use Choir\WebSocket\FrameFactory;
+use Choir\WebSocket\FrameInterface;
 use OneBot\Driver\Event\Http\HttpRequestEvent;
 use OneBot\Driver\Event\Process\WorkerStartEvent;
 use OneBot\Driver\Event\Process\WorkerStopEvent;
@@ -12,13 +15,9 @@ use OneBot\Driver\Event\WebSocket\WebSocketMessageEvent;
 use OneBot\Driver\Event\WebSocket\WebSocketOpenEvent;
 use OneBot\Driver\Process\ProcessManager;
 use OneBot\Exception\ExceptionHandler;
-use OneBot\Http\HttpFactory;
-use OneBot\Http\WebSocket\FrameFactory;
-use OneBot\Http\WebSocket\FrameInterface;
 use OneBot\Util\Singleton;
 use OneBot\Util\Utils;
 use Psr\Http\Message\ResponseInterface;
-use Throwable;
 use Workerman\Connection\TcpConnection;
 use Workerman\Protocols\Http\Request;
 use Workerman\Protocols\Http\Response as WorkermanResponse;
@@ -56,7 +55,7 @@ class TopEventListener
         try {
             global $_SERVER;
             $headers = Utils::convertHeaderFromGlobal($_SERVER);
-            $server_request = HttpFactory::getInstance()->createServerRequest(
+            $server_request = HttpFactory::createServerRequest(
                 $_SERVER['REQUEST_METHOD'],
                 'http://' . $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI'],
                 $headers
@@ -76,7 +75,7 @@ class TopEventListener
                 // TODO: 编写不可能的异常情况
                 ob_logger()->error('WorkermanDriver::getWSServerSocketByWorker() returned null');
             }
-        } catch (Throwable $e) {
+        } catch (\Throwable $e) {
             ExceptionHandler::getInstance()->handle($e);
             $connection->close();
         }
@@ -119,7 +118,7 @@ class TopEventListener
             });
             $event->setSocketConfig($config);
             ob_event_dispatcher()->dispatch($event);
-        } catch (Throwable $e) {
+        } catch (\Throwable $e) {
             ExceptionHandler::getInstance()->handle($e);
         }
     }
@@ -128,7 +127,7 @@ class TopEventListener
     {
         $port = $connection->getLocalPort();
         ob_logger()->debug('Http request from ' . $port . ': ' . $request->uri());
-        $event = new HttpRequestEvent(HttpFactory::getInstance()->createServerRequest(
+        $event = new HttpRequestEvent(HttpFactory::createServerRequest(
             $request->method(),
             $request->uri(),
             $request->header(),
@@ -152,7 +151,7 @@ class TopEventListener
                 $response->withBody($psr_response->getBody()->getContents());
                 $connection->send($response);
             }
-        } catch (Throwable $e) {
+        } catch (\Throwable $e) {
             ExceptionHandler::getInstance()->handle($e);
             $response->withStatus(500);
             $response->withBody('Internal Server Error');

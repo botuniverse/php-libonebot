@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Tests\OneBot\V12;
 
+use Choir\Http\HttpFactory;
 use MessagePack\MessagePack;
 use OneBot\Driver\Event\Http\HttpRequestEvent;
-use OneBot\Http\HttpFactory;
 use OneBot\V12\Object\Action;
 use OneBot\V12\Object\ActionResponse;
 use OneBot\V12\OneBot;
@@ -31,7 +31,7 @@ class OneBotEventListenerTest extends TestCase
      */
     public function testOnHttpRequest(array $request_params, array $expected)
     {
-        $req = HttpFactory::getInstance()->createServerRequest(...$request_params);
+        $req = HttpFactory::createServerRequest(...$request_params);
         $event = new HttpRequestEvent($req);
         $event->setSocketConfig(['type' => 'http', 'host' => '127.1', 'port' => 8083]);
         OneBotEventListener::getInstance()->onHttpRequest($event);

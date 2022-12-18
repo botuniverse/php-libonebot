@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace OneBot\V12;
 
-use InvalidArgumentException;
 use OneBot\Config\Config;
 use OneBot\Config\RepositoryInterface;
 use OneBot\Driver\Driver;
@@ -19,7 +18,7 @@ use Psr\Log\LoggerInterface;
 class OneBotBuilder
 {
     /** @var array 定义的组件 */
-    private $components;
+    private array $components;
 
     /**
      * 工厂模式链式构建起始函数
@@ -112,7 +111,7 @@ class OneBotBuilder
 
         if (array_keys($this->components) !== $required_config) {
             $missing = implode(', ', array_diff($required_config, array_keys($this->components)));
-            throw new InvalidArgumentException('Builder must be configured before building, missing: ' . $missing);
+            throw new \InvalidArgumentException('Builder must be configured before building, missing: ' . $missing);
         }
 
         $config = new Config([
@@ -189,7 +188,7 @@ class OneBotBuilder
             return new $classname();
         }
 
-        throw new InvalidArgumentException("Cannot resolve {$expected}, it must be an instance, a class name or an array containing a class name and an array of parameters");
+        throw new \InvalidArgumentException("Cannot resolve {$expected}, it must be an instance, a class name or an array containing a class name and an array of parameters");
     }
 
     /**

@@ -4,16 +4,13 @@ declare(strict_types=1);
 
 namespace OneBot\Driver\Socket;
 
-use JsonSerializable;
+use Choir\Http\Client\AsyncClientInterface;
+use Choir\Http\Client\Exception\ClientException;
+use Choir\Http\HttpFactory;
 use OneBot\Driver\Driver;
 use OneBot\Driver\Interfaces\SocketInterface;
-use OneBot\Http\Client\AsyncClientInterface;
-use OneBot\Http\Client\ClientBase;
-use OneBot\Http\Client\Exception\ClientException;
-use OneBot\Http\HttpFactory;
 use Psr\Http\Client\ClientInterface;
 use Psr\Http\Message\RequestInterface;
-use Throwable;
 
 abstract class HttpClientSocketBase implements SocketInterface
 {
@@ -29,7 +26,7 @@ abstract class HttpClientSocketBase implements SocketInterface
     protected $timeout;
 
     /**
-     * @var AsyncClientInterface|ClientBase|ClientInterface
+     * @var AsyncClientInterface|ClientInterface
      */
     private $client_cache;
 
@@ -74,23 +71,23 @@ abstract class HttpClientSocketBase implements SocketInterface
 
     public function get(array $headers, callable $success_callback, callable $error_callback)
     {
-        $request = HttpFactory::getInstance()->createRequest('GET', $this->url, array_merge($this->headers, $headers));
+        $request = HttpFactory::createRequest('GET', $this->url, array_merge($this->headers, $headers));
         return $this->sendRequest($request, $success_callback, $error_callback);
     }
 
     /**
-     * @param  array|JsonSerializable|string $data             数据
-     * @param  array                         $headers          头
-     * @param  callable                      $success_callback 成功回调
-     * @param  callable                      $error_callback   错误回调
+     * @param  array|\JsonSerializable|string $data             数据
+     * @param  array                          $headers          头
+     * @param  callable                       $success_callback 成功回调
+     * @param  callable                       $error_callback   错误回调
      * @return bool|mixed
      */
     public function post($data, array $headers, callable $success_callback, callable $error_callback)
     {
-        if ($data instanceof JsonSerializable) {
+        if ($data instanceof \JsonSerializable) {
             $data = json_encode($data);
         }
-        $request = HttpFactory::getInstance()->createRequest('POST', $this->url, array_merge($this->headers, $headers), $data);
+        $request = HttpFactory::createRequest('POST', $this->url, array_merge($this->headers, $headers), $data);
         return $this->sendRequest($request, $success_callback, $error_callback);
     }
 
@@ -123,7 +120,7 @@ abstract class HttpClientSocketBase implements SocketInterface
         try {
             $response = $this->client_cache->sendRequest($request);
             return $success_callback($response);
-        } catch (Throwable $e) {
+        } catch (\Throwable $e) {
             return $error_callback($request, $e);
         }
     }

@@ -4,15 +4,12 @@ declare(strict_types=1);
 
 namespace OneBot\V12\Object;
 
-use ArrayIterator;
-use IteratorAggregate;
-use JsonSerializable;
 use ReturnTypeWillChange;
 
 /**
  * OneBot 12 标准的 Action 请求对象
  */
-class Action implements JsonSerializable, IteratorAggregate
+class Action implements \JsonSerializable, \IteratorAggregate
 {
     /** @var string 动作名称 */
     public string $action = '';
@@ -63,9 +60,9 @@ class Action implements JsonSerializable, IteratorAggregate
     /**
      * @noinspection PhpLanguageLevelInspection
      */
-    #[ReturnTypeWillChange]
-    public function getIterator(): ArrayIterator
+    #[\ReturnTypeWillChange]
+    public function getIterator(): \ArrayIterator
     {
-        return new ArrayIterator($this);
+        return new \ArrayIterator($this);
     }
 }

@@ -4,6 +4,11 @@ declare(strict_types=1);
 
 namespace OneBot\V12;
 
+use Choir\Http\Client\Exception\NetworkException;
+use Choir\Http\HttpFactory;
+use Choir\WebSocket\CloseFrameInterface;
+use Choir\WebSocket\FrameInterface;
+use Choir\WebSocket\Opcode;
 use MessagePack\Exception\UnpackingFailedException;
 use MessagePack\MessagePack;
 use OneBot\Driver\Event\DriverInitEvent;
@@ -12,18 +17,12 @@ use OneBot\Driver\Event\WebSocket\WebSocketMessageEvent;
 use OneBot\Driver\Event\WebSocket\WebSocketOpenEvent;
 use OneBot\Driver\Interfaces\WebSocketClientInterface;
 use OneBot\Driver\Process\ProcessManager;
-use OneBot\Http\Client\Exception\NetworkException;
-use OneBot\Http\HttpFactory;
-use OneBot\Http\WebSocket\CloseFrameInterface;
-use OneBot\Http\WebSocket\FrameInterface;
-use OneBot\Http\WebSocket\Opcode;
 use OneBot\Util\Singleton;
 use OneBot\Util\Utils;
 use OneBot\V12\Action\DefaultActionHandler;
 use OneBot\V12\Exception\OneBotFailureException;
 use OneBot\V12\Object\Action;
 use OneBot\V12\Object\ActionResponse;
-use Throwable;
 
 /**
  * OneBot 相关事件监听的集合
@@ -47,7 +46,7 @@ class OneBotEventListener
             $request = $event->getRequest();
             // OneBot 12 只接受 POST 请求
             if ($request->getMethod() !== 'POST') {
-                $event->withResponse(HttpFactory::getInstance()->createResponse(405, 'Not Allowed'));
+                $event->withResponse(HttpFactory::createResponse(405, 'Not Allowed'));
                 return;
             }
             // OneBot 12 鉴权部分
@@ -55,30 +54,30 @@ class OneBotEventListener
                 $token = $request->getHeaderLine('Authorization');
                 $token = explode('Bearer ', $token);
                 if (!isset($token[1]) || $token[1] !== $stored_token) { // 没有 token，鉴权失败
-                    $event->withResponse(HttpFactory::getInstance()->createResponse(401, 'Unauthorized'));
+                    $event->withResponse(HttpFactory::createResponse(401, 'Unauthorized'));
                     return;
                 }
             }
             if ($request->getHeaderLine('content-type') === 'application/json') {
                 $response_obj = $this->processActionRequest($request->getBody());
-                $response = HttpFactory::getInstance()->createResponse(200, null, ['Content-Type' => 'application/json'], json_encode($response_obj, JSON_UNESCAPED_UNICODE));
+                $response = HttpFactory::createResponse(200, null, ['Content-Type' => 'application/json'], json_encode($response_obj, JSON_UNESCAPED_UNICODE));
                 $event->withResponse($response);
             } elseif ($request->getHeaderLine('content-type') === 'application/msgpack') {
                 $response_obj = $this->processActionRequest($request->getBody()->getContents(), ONEBOT_MSGPACK);
-                $response = HttpFactory::getInstance()->createResponse(200, null, ['Content-Type' => 'application/msgpack'], MessagePack::pack((array) $response_obj));
+                $response = HttpFactory::createResponse(200, null, ['Content-Type' => 'application/msgpack'], MessagePack::pack((array) $response_obj));
                 $event->withResponse($response);
             } else {
-                $event->withResponse(HttpFactory::getInstance()->createResponse(415, 'Unsupported Media Type'));
+                $event->withResponse(HttpFactory::createResponse(415, 'Unsupported Media Type'));
                 return;
             }
         } catch (OneBotFailureException $e) {
             $response_obj = ActionResponse::create($e->getActionObject()->echo ?? null)->fail($e->getRetCode());
-            $response = HttpFactory::getInstance()->createResponse(200, null, ['Content-Type' => 'application/json'], json_encode($response_obj, JSON_UNESCAPED_UNICODE));
+            $response = HttpFactory::createResponse(200, null, ['Content-Type' => 'application/json'], json_encode($response_obj, JSON_UNESCAPED_UNICODE));
             $event->withResponse($response);
             ob_logger()->warning('OneBot Failure: ' . RetCode::getMessage($e->getRetCode()) . '(' . $e->getRetCode() . ') at ' . $e->getFile() . ':' . $e->getLine());
-        } catch (Throwable $e) {
+        } catch (\Throwable $e) {
             $response_obj = ActionResponse::create($response_obj->echo ?? null)->fail(RetCode::INTERNAL_HANDLER_ERROR);
-            $response = HttpFactory::getInstance()->createResponse(200, null, ['Content-Type' => 'application/json'], json_encode($response_obj, JSON_UNESCAPED_UNICODE));
+            $response = HttpFactory::createResponse(200, null, ['Content-Type' => 'application/json'], json_encode($response_obj, JSON_UNESCAPED_UNICODE));
             $event->withResponse($response);
             ob_logger()->error('Unhandled ' . get_class($e) . ': ' . $e->getMessage() . "\nStack trace:\n" . $e->getTraceAsString());
         }
@@ -99,7 +98,7 @@ class OneBotEventListener
             $token = $request->getHeaderLine('Authorization');
             $token = explode('Bearer ', $token);
             if (!isset($token[1]) || $token[1] !== $stored_token) { // 没有 token，鉴权失败
-                $event->withResponse(HttpFactory::getInstance()->createResponse(401, 'Unauthorized'));
+                $event->withResponse(HttpFactory::createResponse(401, 'Unauthorized'));
                 return;
             }
         }
@@ -121,7 +120,7 @@ class OneBotEventListener
             $response_obj = ActionResponse::create($e->getActionObject()->echo ?? null)->fail($e->getRetCode());
             $event->send(json_encode($response_obj));
             ob_logger()->warning('OneBot Failure: ' . RetCode::getMessage($e->getRetCode()) . '(' . $e->getRetCode() . ') at ' . $e->getFile() . ':' . $e->getLine());
-        } catch (Throwable $e) {
+        } catch (\Throwable $e) {
             $response_obj = ActionResponse::create()->fail(RetCode::INTERNAL_HANDLER_ERROR);
             $event->send(json_encode($response_obj));
             ob_logger()->error('Unhandled ' . get_class($e) . ': ' . $e->getMessage() . "\nStack trace:\n" . $e->getTraceAsString());
@@ -173,7 +172,7 @@ class OneBotEventListener
         $event->getDriver()->initWSReverseClients(OneBot::getInstance()->getRequestHeaders(['Sec-WebSocket-Protocol' => '12.' . OneBot::getInstance()->getImplementName()]));
         foreach ($event->getDriver()->getWSReverseSockets() as $v) {
             // 根据 Socket 内的信息生成 HTTP Request 对象
-            $request = HttpFactory::getInstance()->createRequest('GET', $v->getUrl(), $v->getHeaders());
+            $request = HttpFactory::createRequest('GET', $v->getUrl(), $v->getHeaders());
             if (isset($v->getConfig()['access_token'])) {
                 // 鉴权
                 $request = $request->withAddedHeader('Authorization', 'Bearer ' . $v->getConfig()['access_token']);

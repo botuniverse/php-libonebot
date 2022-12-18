@@ -4,8 +4,9 @@ declare(strict_types=1);
 
 namespace OneBot\V12;
 
-use InvalidArgumentException;
+use Choir\WebSocket\FrameFactory;
 use OneBot\Config\Config;
+use OneBot\Config\RepositoryInterface;
 use OneBot\Driver\Driver;
 use OneBot\Driver\Event\DriverInitEvent;
 use OneBot\Driver\Event\Http\HttpRequestEvent;
@@ -16,7 +17,6 @@ use OneBot\Driver\Event\Process\WorkerStopEvent;
 use OneBot\Driver\Event\WebSocket\WebSocketMessageEvent;
 use OneBot\Driver\Event\WebSocket\WebSocketOpenEvent;
 use OneBot\Driver\Interfaces\DriverInitPolicy;
-use OneBot\Http\WebSocket\FrameFactory;
 use OneBot\Util\ObjectQueue;
 use OneBot\Util\Singleton;
 use OneBot\V12\Action\ActionHandlerBase;
@@ -26,7 +26,6 @@ use OneBot\V12\Object\Event\OneBotEvent;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Log\LoggerInterface;
-use RuntimeException;
 
 /**
  * OneBot 入口类
@@ -36,8 +35,8 @@ class OneBot
 {
     use Singleton;
 
-    /** @var Config 配置实例 */
-    private Config $config;
+    /** @var Config|RepositoryInterface 配置实例 */
+    private $config;
 
     /** @var string 实现名称 */
     private string $implement_name;
@@ -61,11 +60,12 @@ class OneBot
 
     /**
      * 创建一个 OneBot 实例
+     * @param mixed $config
      */
-    public function __construct(Config $config)
+    public function __construct($config)
     {
         if (self::$instance !== null) {
-            throw new RuntimeException('只能有一个OneBot实例！');
+            throw new \RuntimeException('只能有一个OneBot实例！');
         }
 
         $this->validateConfig($config);
@@ -321,14 +321,20 @@ class OneBot
         }
     }
 
-    protected function validateConfig(Config $config): void
+    /**
+     * @param Config|RepositoryInterface $config 配置文件
+     */
+    protected function validateConfig($config): void
     {
+        if (!($config instanceof Config) && !($config instanceof RepositoryInterface)) {
+            throw new \InvalidArgumentException('传入要验证的 Config 对象必须是 Config 或 RepositoryInterface 的实例');
+        }
         if (!preg_match('/[a-z][\-a-z0-9]*(\.[\-a-z0-9]+)*/', $config->get('platform'))) {
-            throw new InvalidArgumentException('配置的平台名称不合法，请参阅文档');
+            throw new \InvalidArgumentException('配置的平台名称不合法，请参阅文档');
         }
 
         if (!preg_match('/[a-z][\-a-z0-9]*(\.[\-a-z0-9]+)*/', $config->get('name'))) {
-            throw new InvalidArgumentException('配置的实现名称不合法，请参阅文档');
+            throw new \InvalidArgumentException('配置的实现名称不合法，请参阅文档');
         }
     }
 }

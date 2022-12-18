@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace OneBot\Driver\Swoole;
 
+use Choir\Http\HttpFactory;
+use Choir\WebSocket\FrameInterface;
 use OneBot\Driver\Event\Http\HttpRequestEvent;
 use OneBot\Driver\Event\Process\ManagerStartEvent;
 use OneBot\Driver\Event\Process\ManagerStopEvent;
@@ -14,8 +16,6 @@ use OneBot\Driver\Event\WebSocket\WebSocketMessageEvent;
 use OneBot\Driver\Event\WebSocket\WebSocketOpenEvent;
 use OneBot\Driver\Process\ProcessManager;
 use OneBot\Exception\ExceptionHandler;
-use OneBot\Http\HttpFactory;
-use OneBot\Http\WebSocket\FrameInterface;
 use OneBot\Util\Singleton;
 use Psr\Http\Message\ResponseInterface;
 use Swoole\Http\Request;
@@ -23,7 +23,6 @@ use Swoole\Http\Response;
 use Swoole\Server;
 use Swoole\WebSocket\Frame;
 use Swoole\WebSocket\Server as SwooleWebSocketServer;
-use Throwable;
 
 class TopEventListener
 {
@@ -76,7 +75,7 @@ class TopEventListener
         if (empty($content = $request->rawContent()) && $content !== '0') { // empty 遇到纯0的请求会返回true，所以这里加上 !== '0'
             $content = null;
         }
-        $req = HttpFactory::getInstance()->createServerRequest(
+        $req = HttpFactory::createServerRequest(
             $request->server['request_method'],
             $request->server['request_uri'],
             $request->header,
@@ -94,9 +93,9 @@ class TopEventListener
                     }
                 }
                 $response->setStatusCode($psr_response->getStatusCode());
-                $response->end($psr_response->getBody());
+                $response->end($psr_response->getBody()->getContents());
             }
-        } catch (Throwable $e) {
+        } catch (\Throwable $e) {
             ExceptionHandler::getInstance()->handle($e);
             if (is_callable($event->getErrorHandler())) {
                 $err_response = call_user_func($event->getErrorHandler(), $e, $event);
@@ -107,7 +106,7 @@ class TopEventListener
                         }
                     }
                     $response->setStatusCode($err_response->getStatusCode());
-                    $response->end($err_response->getBody());
+                    $response->end($err_response->getBody()->getContents());
                     return;
                 }
             }
@@ -138,7 +137,7 @@ class TopEventListener
         if (empty($content = $request->rawContent())) {
             $content = null;
         }
-        $event = new WebSocketOpenEvent(HttpFactory::getInstance()->createServerRequest(
+        $event = new WebSocketOpenEvent(HttpFactory::createServerRequest(
             $request->server['request_method'],
             $request->server['request_uri'],
             $request->header,
@@ -154,7 +153,7 @@ class TopEventListener
     public function onMessage(array $config, ?SwooleWebSocketServer $server, Frame $frame)
     {
         ob_logger()->debug('WebSocket message from: ' . $frame->fd);
-        $new_frame = new \OneBot\Http\WebSocket\Frame($frame->data, $frame->opcode, true);
+        $new_frame = new \Choir\WebSocket\Frame($frame->data, $frame->opcode, true, true);
         $event = new WebSocketMessageEvent($frame->fd, $new_frame, function (int $fd, $data) use ($server) {
             if ($data instanceof FrameInterface) {
                 return $server->push($fd, $data->getData(), $data->getOpcode());

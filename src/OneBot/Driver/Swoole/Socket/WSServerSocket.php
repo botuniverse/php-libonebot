@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace OneBot\Driver\Swoole\Socket;
 
+use Choir\WebSocket\FrameInterface;
 use OneBot\Driver\Socket\WSServerSocketBase;
-use OneBot\Http\WebSocket\FrameInterface;
 use Swoole\Server;
 
 class WSServerSocket extends WSServerSocketBase

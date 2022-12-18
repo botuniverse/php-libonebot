@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
+use Choir\Http\HttpFactory;
 use OneBot\Driver\Event\EventProvider;
 use OneBot\Driver\Event\Http\HttpRequestEvent;
 use OneBot\Driver\Swoole\SwooleDriver;
-use OneBot\Http\HttpFactory;
 use OneBot\V12\Object\Action;
 use OneBot\V12\Object\ActionResponse;
 use OneBot\V12\Object\Event\Message\PrivateMessageEvent;
@@ -129,20 +129,20 @@ function swoole_channel(string $name, int $size = 1): Swoole\Coroutine\Channel
 
 $ob = OneBotBuilder::buildFromArray($config); // 传入通信方式
 
-EventProvider::addEventListener(HttpRequestEvent::getName(), function (HttpRequestEvent $event) use ($config, $ob) {
+EventProvider::getInstance()->addEventListener(HttpRequestEvent::getName(), function (HttpRequestEvent $event) use ($config, $ob) {
     if ($event->getSocketFlag() !== 1000) {
         return;
     }
 
     // 检查是否为微信的签名
     if (!check_wx_signature($event->getRequest()->getQueryParams(), $config['wx']['token'])) {
-        $event->withResponse(HttpFactory::getInstance()->createResponse(403));
+        $event->withResponse(HttpFactory::createResponse(403));
         return;
     }
 
     // 如果是echostr认证，则直接返回
     if (isset($event->getRequest()->getQueryParams()['echostr'])) {
-        $event->withResponse(HttpFactory::getInstance()->createResponse(200, null, [], $event->getRequest()->getQueryParams()['echostr']));
+        $event->withResponse(HttpFactory::createResponse(200, null, [], $event->getRequest()->getQueryParams()['echostr']));
         return;
     }
 
@@ -182,7 +182,7 @@ EventProvider::addEventListener(HttpRequestEvent::getName(), function (HttpReque
     }
 
     if (!isset($msg_event)) {
-        $event->withResponse(HttpFactory::getInstance()->createResponse(204));
+        $event->withResponse(HttpFactory::createResponse(204));
         return;
     }
     // 设置 message_id，因为微信公众号事件中自带 MsgId，所以直接传递
@@ -230,27 +230,27 @@ EventProvider::addEventListener(HttpRequestEvent::getName(), function (HttpReque
         $obj = swoole_channel($self_id . ':' . $user_id)->pop(4.5); // 等待4.5秒后，如果还不返回，就失败
         wx_global_unset($self_id . ':' . $user_id);
         if ($obj === false) {
-            $event->withResponse(HttpFactory::getInstance()->createResponse(204));
+            $event->withResponse(HttpFactory::createResponse(204));
             return;
         }
         if ($obj instanceof Action) {
             $xml = wx_make_xml_reply($obj, $self_id);
-            $event->withResponse(HttpFactory::getInstance()->createResponse(200, null, ['Content-Type' => 'application/xml'], $xml));
+            $event->withResponse(HttpFactory::createResponse(200, null, ['Content-Type' => 'application/xml'], $xml));
         }
     } elseif ($ob->getDriver()->getName() === 'workerman') { // Workerman 使用异步模式，直接把回调存起来，然后等触发
         $event->setAsyncSend(); // 标记为异步发送
         $timer_id = $ob->getDriver()->getEventLoop()->addTimer(4500, function () use ($event, $self_id, $user_id) {
-            $event->getAsyncSendCallable()(HttpFactory::getInstance()->createResponse(204));
+            $event->getAsyncSendCallable()(HttpFactory::createResponse(204));
             wx_global_unset($self_id . ':' . $user_id);
         });
         wx_global_set($self_id . ':' . $user_id, function (Action $action) use ($ob, $event, $timer_id, $self_id) {
             $xml = wx_make_xml_reply($action, $self_id);
-            $event->getAsyncSendCallable()(HttpFactory::getInstance()->createResponse(200, null, ['Content-Type' => 'application/xml'], $xml));
+            $event->getAsyncSendCallable()(HttpFactory::createResponse(200, null, ['Content-Type' => 'application/xml'], $xml));
             $ob->getDriver()->getEventLoop()->clearTimer($timer_id);
         });
         OneBot::getInstance()->dispatchEvent($msg_event);
     } else {
-        $event->withResponse(HttpFactory::getInstance()->createResponse(500, 'Unknown Driver'));
+        $event->withResponse(HttpFactory::createResponse(500, 'Unknown Driver'));
     }
 }, 0);
 

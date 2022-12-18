@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace OneBot\V12\Action;
 
-use OneBot\Http\Stream;
+use Choir\Http\Stream;
 use OneBot\Util\FileUtil;
 use OneBot\Util\Utils;
 use OneBot\V12\Exception\OneBotFailureException;
@@ -14,8 +14,6 @@ use OneBot\V12\OneBot;
 use OneBot\V12\RetCode;
 use OneBot\V12\Validator;
 use Psr\Http\Message\ResponseInterface;
-use ReflectionClass;
-use Throwable;
 
 abstract class ActionHandlerBase
 {
@@ -28,6 +26,11 @@ abstract class ActionHandlerBase
     /** @var array 缓存的文件段 */
     private static $upload_fragment = [];
 
+    /**
+     * get_status 响应
+     *
+     * @param Action $action Action 数据对象
+     */
     public function onGetStatus(Action $action): ActionResponse
     {
         return ActionResponse::create($action)->ok([
@@ -44,6 +47,11 @@ abstract class ActionHandlerBase
         ]);
     }
 
+    /**
+     * get_version 响应
+     *
+     * @param Action $action Action 数据对象
+     */
     public function onGetVersion(Action $action): ActionResponse
     {
         return ActionResponse::create($action)->ok([
@@ -55,10 +63,13 @@ abstract class ActionHandlerBase
 
     /**
      * 内置的一个可以使用的 API，用来获取所有已注册成功的 action
+     * get_supported_actions 响应
+     *
+     * @param Action $action Action 数据对象
      */
     public function onGetSupportedActions(Action $action): ActionResponse
     {
-        $reflection = new ReflectionClass($this);
+        $reflection = new \ReflectionClass($this);
         $list = [];
         foreach (OneBot::getInstance()->getActionHandlers() as $k => $v) {
             $list[] = $k;
@@ -499,7 +510,7 @@ abstract class ActionHandlerBase
             }
             return ActionResponse::create()->ok(['file_id' => $file_id]);
         }, function ($request, $a = null) {
-            if ($a instanceof Throwable) {
+            if ($a instanceof \Throwable) {
                 return ActionResponse::create()->fail(RetCode::NETWORK_ERROR, 'Request failed with ' . get_class($a) . ': ' . $a->getMessage() . "\n" . $a->getTraceAsString());
             }
             return ActionResponse::create()->fail(RetCode::NETWORK_ERROR, 'Request failed');

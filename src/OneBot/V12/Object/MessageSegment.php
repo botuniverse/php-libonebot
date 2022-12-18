@@ -4,12 +4,9 @@ declare(strict_types=1);
 
 namespace OneBot\V12\Object;
 
-use ArrayIterator;
-use IteratorAggregate;
-use JsonSerializable;
 use ReturnTypeWillChange;
 
-class MessageSegment implements JsonSerializable, IteratorAggregate
+class MessageSegment implements \JsonSerializable, \IteratorAggregate
 {
     /** @var string 类型 */
     public string $type;
@@ -94,9 +91,9 @@ class MessageSegment implements JsonSerializable, IteratorAggregate
     /**
      * @noinspection PhpLanguageLevelInspection
      */
-    #[ReturnTypeWillChange]
-    public function getIterator(): ArrayIterator
+    #[\ReturnTypeWillChange]
+    public function getIterator(): \ArrayIterator
     {
-        return new ArrayIterator($this);
+        return new \ArrayIterator($this);
     }
 }

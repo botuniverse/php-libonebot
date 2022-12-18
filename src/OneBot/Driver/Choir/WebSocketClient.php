@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace OneBot\Driver\Workerman;
+namespace OneBot\Driver\Choir;
 
 use Choir\Http\HttpFactory;
 use Choir\WebSocket\FrameFactory;

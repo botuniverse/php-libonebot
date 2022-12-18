@@ -4,9 +4,6 @@ declare(strict_types=1);
 
 namespace OneBot\Util;
 
-use RuntimeException;
-use SplQueue;
-
 class ObjectQueue
 {
     private static $queues;
@@ -21,7 +18,7 @@ class ObjectQueue
     public static function enqueue(string $queue_name, $value)
     {
         if (!isset(self::$queues[$queue_name])) {
-            self::$queues[$queue_name] = new SplQueue();
+            self::$queues[$queue_name] = new \SplQueue();
         }
         if (self::$queues[$queue_name]->count() >= (self::$limit[$queue_name] ?? 999999)) {
             self::$queues[$queue_name]->dequeue();
@@ -33,7 +30,7 @@ class ObjectQueue
     {
         $arr = [];
         if (!isset(self::$queues[$queue_name])) {
-            self::$queues[$queue_name] = new SplQueue();
+            self::$queues[$queue_name] = new \SplQueue();
         }
         if ($count <= 0) {
             $count = 999999999;
@@ -42,7 +39,7 @@ class ObjectQueue
             for ($i = 0; $i < $count; ++$i) {
                 $arr[] = self::$queues[$queue_name]->dequeue();
             }
-        } catch (RuntimeException $e) {
+        } catch (\RuntimeException $e) {
         }
         return $arr;
     }

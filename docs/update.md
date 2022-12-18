@@ -6,7 +6,7 @@
 
 ## v0.3.0 (2021-11-29)
 
-- 实现 Event 事件相关对象 @sunxyw #14
+- 实现 EventLoop 事件相关对象 @sunxyw #14
 - 添加连接池和 SQLite 连接组件及相关配置项 `lib` @sunxyw #16 #17
 - 加入 Dependabot @sunxyw #18
 - 修改全局方法 `logger()` -> `ob_logger()` @crazywhalecc #19

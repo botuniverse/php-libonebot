@@ -6,7 +6,8 @@ declare(strict_types=1);
 
 namespace OneBot\Driver\Swoole;
 
-use Exception;
+use Choir\Http\Client\Exception\ClientException;
+use Choir\Http\Client\SwooleClient;
 use OneBot\Driver\Driver;
 use OneBot\Driver\DriverEventLoopBase;
 use OneBot\Driver\Event\DriverInitEvent;
@@ -19,8 +20,6 @@ use OneBot\Driver\Swoole\Socket\HttpServerSocket;
 use OneBot\Driver\Swoole\Socket\WSClientSocket;
 use OneBot\Driver\Swoole\Socket\WSServerSocket;
 use OneBot\Exception\ExceptionHandler;
-use OneBot\Http\Client\Exception\ClientException;
-use OneBot\Http\Client\SwooleClient;
 use OneBot\Util\Singleton;
 use Swoole\Atomic;
 use Swoole\Event;
@@ -28,7 +27,6 @@ use Swoole\Http\Server as SwooleHttpServer;
 use Swoole\Server;
 use Swoole\Server\Port;
 use Swoole\WebSocket\Server as SwooleWebSocketServer;
-use Throwable;
 
 class SwooleDriver extends Driver
 {
@@ -45,12 +43,12 @@ class SwooleDriver extends Driver
     protected $server_set;
 
     /**
-     * @throws Exception
+     * @throws \Exception
      */
     public function __construct(array $params = [])
     {
         if (static::$instance !== null) {
-            throw new Exception('不能重复初始化');
+            throw new \Exception('不能重复初始化');
         }
         static::$instance = $this;
         parent::__construct($params);
@@ -145,7 +143,7 @@ class SwooleDriver extends Driver
                     try {
                         $event = new UserProcessStartEvent($process);
                         ob_event_dispatcher()->dispatch($event);
-                    } catch (Throwable $e) {
+                    } catch (\Throwable $e) {
                         ExceptionHandler::getInstance()->handle($e);
                     }
                 }, false);

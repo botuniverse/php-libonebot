@@ -8,7 +8,6 @@ declare(strict_types=1);
 namespace OneBot\Exception;
 
 use OneBot\Util\Singleton;
-use Throwable;
 
 class ExceptionHandler implements ExceptionHandlerInterface
 {
@@ -40,7 +39,7 @@ class ExceptionHandler implements ExceptionHandlerInterface
     /**
      * 处理异常
      */
-    public function handle(Throwable $e): void
+    public function handle(\Throwable $e): void
     {
         if ($this->overridden_by !== null) {
             $this->overridden_by->handle($e);
@@ -55,7 +54,7 @@ class ExceptionHandler implements ExceptionHandlerInterface
         $this->overridden_by = $handler;
     }
 
-    protected function handle0(Throwable $e): void
+    protected function handle0(\Throwable $e): void
     {
         if (is_null($this->whoops)) {
             ob_logger()->error('Uncaught ' . get_class($e) . ': ' . $e->getMessage() . ' at ' . $e->getFile() . '(' . $e->getLine() . ')');

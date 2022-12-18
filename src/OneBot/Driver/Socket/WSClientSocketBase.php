@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace OneBot\Driver\Socket;
 
+use Choir\WebSocket\FrameInterface;
 use OneBot\Driver\Interfaces\SocketInterface;
 use OneBot\Driver\Interfaces\WebSocketClientInterface;
 use OneBot\Driver\Interfaces\WebSocketInterface;
-use OneBot\Http\WebSocket\FrameInterface;
 
 abstract class WSClientSocketBase implements SocketInterface, WebSocketInterface
 {

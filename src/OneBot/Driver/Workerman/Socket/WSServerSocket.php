@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace OneBot\Driver\Workerman\Socket;
 
+use Choir\WebSocket\FrameInterface;
 use OneBot\Driver\Socket\WSServerSocketBase;
 use OneBot\Driver\Workerman\Worker;
-use OneBot\Http\WebSocket\FrameInterface;
 use Workerman\Connection\TcpConnection;
 
 class WSServerSocket extends WSServerSocketBase

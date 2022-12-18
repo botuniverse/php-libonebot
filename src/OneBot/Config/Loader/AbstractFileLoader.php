@@ -6,7 +6,6 @@ namespace OneBot\Config\Loader;
 
 use OneBot\Util\FileUtil;
 use OneBot\Util\Utils;
-use stdClass;
 
 abstract class AbstractFileLoader implements LoaderInterface
 {
@@ -32,8 +31,8 @@ abstract class AbstractFileLoader implements LoaderInterface
     /**
      * 从文件加载配置
      *
-     * @param  string               $file 文件路径（绝对路径）
-     * @return array|mixed|stdClass 配置数组、对象或者其他类型，但其最终必须可以被转换为数组，可以直接返回null或false代表失败
+     * @param  string                $file 文件路径（绝对路径）
+     * @return array|mixed|\stdClass 配置数组、对象或者其他类型，但其最终必须可以被转换为数组，可以直接返回null或false代表失败
      */
     abstract protected function loadFile(string $file);
 
@@ -61,7 +60,7 @@ abstract class AbstractFileLoader implements LoaderInterface
             throw new LoadException("配置文件 '{$file}' 加载失败");
         }
 
-        if (!$data instanceof stdClass && !Utils::isAssocArray((array) $data)) {
+        if (!$data instanceof \stdClass && !Utils::isAssocArray((array) $data)) {
             throw new LoadException("配置文件 '{$file}' 加载失败：配置必须为关联数组或对象");
         }
     }
