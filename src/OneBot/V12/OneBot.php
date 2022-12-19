@@ -21,8 +21,7 @@ use OneBot\Util\ObjectQueue;
 use OneBot\Util\Singleton;
 use OneBot\V12\Action\ActionHandlerBase;
 use OneBot\V12\Exception\OneBotException;
-use OneBot\V12\Object\Event\Meta\MetaEvent;
-use OneBot\V12\Object\Event\OneBotEvent;
+use OneBot\V12\Object\OneBotEvent;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Log\LoggerInterface;
@@ -242,7 +241,7 @@ class OneBot
     public function dispatchEvent(OneBotEvent $event): void
     {
         ob_logger()->info('Dispatching event: ' . $event->type);
-        if (!$event instanceof MetaEvent) { // 排除 meta_event，要不然队列速度爆炸
+        if ($event->type !== 'meta') { // 排除 meta_event，要不然队列速度爆炸
             ObjectQueue::enqueue('ob_event', $event);
         }
         foreach ($this->driver->getHttpWebhookSockets() as $socket) {

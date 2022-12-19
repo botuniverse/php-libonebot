@@ -6,9 +6,9 @@ use Choir\Http\HttpFactory;
 use OneBot\Driver\Event\EventProvider;
 use OneBot\Driver\Event\Http\HttpRequestEvent;
 use OneBot\Driver\Swoole\SwooleDriver;
+use OneBot\V12\EventBuilder;
 use OneBot\V12\Object\Action;
 use OneBot\V12\Object\ActionResponse;
-use OneBot\V12\Object\Event\Message\PrivateMessageEvent;
 use OneBot\V12\Object\MessageSegment;
 use OneBot\V12\OneBot;
 use OneBot\V12\OneBotBuilder;
@@ -161,21 +161,30 @@ EventProvider::getInstance()->addEventListener(HttpRequestEvent::getName(), func
     switch ($msg_type) {
         case 'text':
             $content = $xml_tree->getElementsByTagName('Content')->item(0)->nodeValue;
-            $msg_event = new PrivateMessageEvent($user_id, MessageSegment::text($content));
+            $msg_event = (new EventBuilder('message'))
+                ->feed('user_id', $user_id)
+                ->feed('message', MessageSegment::text($content))
+                ->feed('self', ['platform' => OneBot::getInstance()->getPlatform(), 'user_id' => $self_id]);
             break;
         case 'image':
             $pic_url = $xml_tree->getElementsByTagName('PicUrl')->item(0)->nodeValue;
             /** @noinspection PhpComposerExtensionStubsInspection */
             $pic_url = openssl_encrypt($pic_url, 'AES-128-ECB', OneBot::getInstance()->getConfig()->get('wx.aeskey'));
             $seg = new MessageSegment('image', ['file_id' => $pic_url]);
-            $msg_event = new PrivateMessageEvent($user_id, [$seg]);
+            $msg_event = (new EventBuilder('message'))
+                ->feed('user_id', $user_id)
+                ->feed('message', $seg)
+                ->feed('self', ['platform' => OneBot::getInstance()->getPlatform(), 'user_id' => $self_id]);
             break;
         case 'event':
             $content = $xml_tree->getElementsByTagName('Event')->item(0)->nodeValue;
             break;
         case 'voice':
             $content = preg_replace('/[，。]/', '', $xml_tree->getElementsByTagName('Recognition')->item(0)->nodeValue);
-            $msg_event = new PrivateMessageEvent($user_id, MessageSegment::text($content));
+            $msg_event = (new EventBuilder('message'))
+                ->feed('user_id', $user_id)
+                ->feed('message', MessageSegment::text($content))
+                ->feed('self', ['platform' => OneBot::getInstance()->getPlatform(), 'user_id' => $self_id]);
             break;
         default:
             echo $xml_data . PHP_EOL;
@@ -186,7 +195,8 @@ EventProvider::getInstance()->addEventListener(HttpRequestEvent::getName(), func
         return;
     }
     // 设置 message_id，因为微信公众号事件中自带 MsgId，所以直接传递
-    $msg_event->message_id = $xml_tree->getElementsByTagName('MsgId')->item(0)->nodeValue;
+    $msg_event->feed('message_id', $xml_tree->getElementsByTagName('MsgId')->item(0)->nodeValue);
+    $msg_event->feed('detail_type', 'private');
 
     // 然后分别判断 swoole 还是 workerman（处理方式不同
     // Swoole 处理时候直接用 Channel，这里为消费者，限定 4.5 秒内拿到一个回包，否则就不回复
@@ -196,7 +206,7 @@ EventProvider::getInstance()->addEventListener(HttpRequestEvent::getName(), func
         }
         wx_global_set($self_id . ':' . $user_id, true);
         // 首先调用 libob 内置的分发函数，通过不同的通信方式进行事件分发
-        OneBot::getInstance()->dispatchEvent($msg_event);
+        OneBot::getInstance()->dispatchEvent($msg_event->build());
         // 这段为临时的调试代码，模拟一个固定的发送消息动作
         /* switch ($msg_event->message[0]->type) {
             case 'text':
@@ -248,7 +258,7 @@ EventProvider::getInstance()->addEventListener(HttpRequestEvent::getName(), func
             $event->getAsyncSendCallable()(HttpFactory::createResponse(200, null, ['Content-Type' => 'application/xml'], $xml));
             $ob->getDriver()->getEventLoop()->clearTimer($timer_id);
         });
-        OneBot::getInstance()->dispatchEvent($msg_event);
+        OneBot::getInstance()->dispatchEvent($msg_event->build());
     } else {
         $event->withResponse(HttpFactory::createResponse(500, 'Unknown Driver'));
     }
