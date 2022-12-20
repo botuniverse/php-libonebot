@@ -12,7 +12,7 @@ class WebSocketOpenEvent extends DriverEvent
 {
     protected ServerRequestInterface $request;
 
-    protected ?ResponseInterface $response;
+    protected ?ResponseInterface $response = null;
 
     protected int $fd;
 
