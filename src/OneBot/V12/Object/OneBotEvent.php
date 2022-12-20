@@ -68,6 +68,9 @@ class OneBotEvent implements \Stringable, \JsonSerializable
             return null;
         }
         if (str_starts_with($name, 'set')) {
+            if ($name === 'setMessage') {
+                $this->message_segment_cache = null;
+            }
             $key = Utils::camelToSeparator(substr($name, 3));
             if (isset($this->data[$key])) {
                 $this->data[$key] = $args[0];
@@ -130,6 +133,26 @@ class OneBotEvent implements \Stringable, \JsonSerializable
             $this->message_segment_cache[] = new MessageSegment($segment['type'], $segment['data']);
         }
         return $this->message_segment_cache;
+    }
+
+    /**
+     * 获取纯文本消息
+     */
+    public function getMessageString(): string
+    {
+        $message = $this->getMessage();
+        if ($message === null) {
+            return '';
+        }
+        $message_string = '';
+        foreach ($message as $segment) {
+            if ($segment->type === 'text') {
+                $message_string .= $segment->data['text'];
+            } else {
+                $message_string .= '[富文本:' . $segment->type . ']';
+            }
+        }
+        return $message_string;
     }
 
     public function jsonSerialize(): array
