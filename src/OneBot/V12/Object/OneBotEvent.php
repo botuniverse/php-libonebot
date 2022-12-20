@@ -22,6 +22,20 @@ use OneBot\V12\Validator;
  * @method          getChannelId()
  * @method          getOperatorId()
  * @method          getMessageId()
+ * @method          setId(string $id)
+ * @method          setType(string $type)
+ * @method          setSelf(array $self)
+ * @method          setDetailType(string $detail_type)
+ * @method          setSubType(string $sub_type)
+ * @method          setTime(float|int $time)
+ * @method          setAltMessage(string $alt_message)
+ * @method          setGroupId(string $group_id)
+ * @method          setUserId(string $user_id)
+ * @method          setGuildId(string $guild_id)
+ * @method          setChannelId(string $channel_id)
+ * @method          setOperatorId(string $operator_id)
+ * @method          setMessageId(string $message_id)
+ * @method          setMessage(array|MessageSegment|string|\Stringable $message)
  * @property string $id
  * @property string $type
  * @property array  $self
@@ -52,6 +66,14 @@ class OneBotEvent implements \Stringable, \JsonSerializable
                 return $this->data[$key];
             }
             return null;
+        }
+        if (str_starts_with($name, 'set')) {
+            $key = Utils::camelToSeparator(substr($name, 3));
+            if (isset($this->data[$key])) {
+                $this->data[$key] = $args[0];
+                return true;
+            }
+            return false;
         }
         throw new \BadMethodCallException('Call to undefined method ' . __CLASS__ . '::' . $name . '()');
     }
