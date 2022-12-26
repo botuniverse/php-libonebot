@@ -47,3 +47,8 @@ cghooks.lock
 ### Phive ###
 tools
 .phive
+
+### pcov coverage report
+build/
+
+data/

@@ -10,16 +10,11 @@ use Psr\Http\Message\ServerRequestInterface;
 
 class WebSocketOpenEvent extends DriverEvent
 {
-    /** @var ServerRequestInterface */
-    protected $request;
+    protected ServerRequestInterface $request;
 
-    /** @var null|ResponseInterface */
-    protected $response;
+    protected ?ResponseInterface $response = null;
 
-    /**
-     * @var int
-     */
-    protected $fd;
+    protected int $fd;
 
     public function __construct(ServerRequestInterface $request, int $fd)
     {
@@ -44,5 +39,10 @@ class WebSocketOpenEvent extends DriverEvent
     public function getResponse(): ?ResponseInterface
     {
         return $this->response;
+    }
+
+    public function getFd(): int
+    {
+        return $this->fd;
     }
 }

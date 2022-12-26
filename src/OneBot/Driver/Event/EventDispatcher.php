@@ -4,9 +4,8 @@ declare(strict_types=1);
 
 namespace OneBot\Driver\Event;
 
-use OneBot\Driver\ExceptionHandler;
 use OneBot\Driver\Interfaces\HandledDispatcherInterface;
-use Throwable;
+use OneBot\Exception\ExceptionHandler;
 
 // TODO: 尝试把 EventDispatcher 全局唯一，以避免频繁的 new EventDispatcher
 class EventDispatcher implements HandledDispatcherInterface
@@ -22,7 +21,7 @@ class EventDispatcher implements HandledDispatcherInterface
                 // TODO: 在调用 listener 前先判断 isPropagationStopped
                 $listener[1]($event);
             } catch (StopException $exception) {
-                ob_logger()->debug('Event ' . $event . ' stopped');
+                ob_logger()->debug('EventLoop ' . $event . ' stopped');
                 if ($event instanceof DriverEvent) {
                     $event->setPropagationStopped();
                 }
@@ -39,7 +38,7 @@ class EventDispatcher implements HandledDispatcherInterface
     {
         try {
             (new self())->dispatch($event);
-        } catch (Throwable $e) {
+        } catch (\Throwable $e) {
             ExceptionHandler::getInstance()->handle($e);
         }
     }

@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace OneBot\Driver\Socket;
 
-use Generator;
-
 trait SocketTrait
 {
     /** @var WSServerSocketBase[] */
@@ -23,9 +21,9 @@ trait SocketTrait
     /* ======================== Getter by flags ======================== */
 
     /**
-     * @return Generator|WSServerSocketBase[]
+     * @return \Generator|WSServerSocketBase[]
      */
-    public function getWSServerSocketsByFlag(int $flag = 0): Generator
+    public function getWSServerSocketsByFlag(int $flag = 0): \Generator
     {
         foreach ($this->ws_socket as $socket) {
             if ($socket->getFlag() === $flag) {
@@ -35,9 +33,9 @@ trait SocketTrait
     }
 
     /**
-     * @return Generator|HttpServerSocketBase[]
+     * @return \Generator|HttpServerSocketBase[]
      */
-    public function getHttpServerSocketsByFlag(int $flag = 0): Generator
+    public function getHttpServerSocketsByFlag(int $flag = 0): \Generator
     {
         foreach ($this->http_socket as $socket) {
             if ($socket->getFlag() === $flag) {
@@ -47,9 +45,9 @@ trait SocketTrait
     }
 
     /**
-     * @return Generator|HttpClientSocketBase[]
+     * @return \Generator|HttpClientSocketBase[]
      */
-    public function getHttpWebhookSocketsByFlag(int $flag = 0): Generator
+    public function getHttpWebhookSocketsByFlag(int $flag = 0): \Generator
     {
         foreach ($this->http_client_socket as $socket) {
             if ($socket->getFlag() === $flag) {
@@ -59,9 +57,9 @@ trait SocketTrait
     }
 
     /**
-     * @return Generator|WSClientSocketBase[]
+     * @return \Generator|WSClientSocketBase[]
      */
-    public function getWSReverseSocketsByFlag(int $flag = 0): Generator
+    public function getWSReverseSocketsByFlag(int $flag = 0): \Generator
     {
         foreach ($this->ws_client_socket as $socket) {
             if ($socket->getFlag() === $flag) {

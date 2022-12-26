@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace OneBot\V12;
 
+use Choir\WebSocket\FrameFactory;
+use OneBot\Config\Config;
+use OneBot\Config\RepositoryInterface;
 use OneBot\Driver\Driver;
 use OneBot\Driver\Event\DriverInitEvent;
 use OneBot\Driver\Event\Http\HttpRequestEvent;
@@ -14,18 +17,14 @@ use OneBot\Driver\Event\Process\WorkerStopEvent;
 use OneBot\Driver\Event\WebSocket\WebSocketMessageEvent;
 use OneBot\Driver\Event\WebSocket\WebSocketOpenEvent;
 use OneBot\Driver\Interfaces\DriverInitPolicy;
-use OneBot\Http\WebSocket\FrameFactory;
 use OneBot\Util\ObjectQueue;
 use OneBot\Util\Singleton;
 use OneBot\V12\Action\ActionHandlerBase;
-use OneBot\V12\Config\ConfigInterface;
 use OneBot\V12\Exception\OneBotException;
-use OneBot\V12\Object\Event\Meta\MetaEvent;
-use OneBot\V12\Object\Event\OneBotEvent;
+use OneBot\V12\Object\OneBotEvent;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Log\LoggerInterface;
-use RuntimeException;
 
 /**
  * OneBot 入口类
@@ -35,35 +34,40 @@ class OneBot
 {
     use Singleton;
 
-    /** @var ConfigInterface 配置实例 */
+    /** @var Config|RepositoryInterface 配置实例 */
     private $config;
 
     /** @var string 实现名称 */
-    private $implement_name;
+    private string $implement_name;
 
     /** @var string 实现平台 */
-    private $platform;
+    private string $platform;
 
     /** @var string 机器人 ID */
-    private $self_id;
+    private string $self_id;
 
     /** @var Driver 驱动实例 */
-    private $driver;
+    private Driver $driver;
 
     /** @var null|ActionHandlerBase 动作处理器 */
-    private $base_action_handler;
+    private ?ActionHandlerBase $base_action_handler = null;
 
     /** @var array 动作处理回调们 */
-    private $action_handlers = [];
+    private array $action_handlers = [];
+
+    private bool $bot_status = true;
 
     /**
      * 创建一个 OneBot 实例
+     * @param mixed $config
      */
-    public function __construct(ConfigInterface $config)
+    public function __construct($config)
     {
         if (self::$instance !== null) {
-            throw new RuntimeException('只能有一个OneBot实例！');
+            throw new \RuntimeException('只能有一个OneBot实例！');
         }
+
+        $this->validateConfig($config);
 
         $this->config = $config;
         $this->implement_name = $config->get('name');
@@ -134,7 +138,7 @@ class OneBot
     /**
      * 获取配置实例
      */
-    public function getConfig(): ConfigInterface
+    public function getConfig(): Config
     {
         return $this->config;
     }
@@ -237,7 +241,7 @@ class OneBot
     public function dispatchEvent(OneBotEvent $event): void
     {
         ob_logger()->info('Dispatching event: ' . $event->type);
-        if (!$event instanceof MetaEvent) { // 排除 meta_event，要不然队列速度爆炸
+        if ($event->type !== 'meta') { // 排除 meta_event，要不然队列速度爆炸
             ObjectQueue::enqueue('ob_event', $event);
         }
         foreach ($this->driver->getHttpWebhookSockets() as $socket) {
@@ -246,7 +250,8 @@ class OneBot
             }
             $socket->post(json_encode($event->jsonSerialize()), $this->getRequestHeaders(), function (ResponseInterface $response) {
                 // TODO：编写 HTTP Webhook 响应的处理逻辑
-            }, function (RequestInterface $request) {});
+            }, function (RequestInterface $request) {
+            });
         }
         $frame_str = FrameFactory::createTextFrame(json_encode($event->jsonSerialize())); // 创建文本帧
         foreach ($this->driver->getWSServerSockets() as $socket) {
@@ -268,11 +273,21 @@ class OneBot
      */
     public function run(): void
     {
-        $this->driver->initDriverProtocols($this->config->getEnabledCommunications());
+        $this->driver->initDriverProtocols($this->config->get('communications', []));
         $this->addOneBotEvent();
 
         ObjectQueue::limit('ob_event', 99999);
         $this->driver->run();
+    }
+
+    public function getBotStatus(): bool
+    {
+        return $this->bot_status;
+    }
+
+    public function setBotStatus(bool $bot_status): void
+    {
+        $this->bot_status = $bot_status;
     }
 
     /**
@@ -300,10 +315,25 @@ class OneBot
         // 监听单进程无 Server 模式的相关事件（如纯 Client 情况下的启动模式）
         ob_event_provider()->addEventListener(DriverInitEvent::getName(), [OneBotEventListener::getInstance(), 'onDriverInit'], ONEBOT_EVENT_LEVEL);
         // 如果Init策略是FirstWorker，则给WorkerStart添加添加相关事件，让WorkerStart事件（#0）中再套娃执行DriverInit事件
-        switch ($this->driver->getDriverInitPolicy()) {
-            case DriverInitPolicy::MULTI_PROCESS_INIT_IN_FIRST_WORKER:
-                ob_event_provider()->addEventListener(WorkerStartEvent::getName(), [OneBotEventListener::getInstance(), 'onFirstWorkerInit'], ONEBOT_EVENT_LEVEL);
-                break;
+        if ($this->driver->getDriverInitPolicy() == DriverInitPolicy::MULTI_PROCESS_INIT_IN_FIRST_WORKER) {
+            ob_event_provider()->addEventListener(WorkerStartEvent::getName(), [OneBotEventListener::getInstance(), 'onFirstWorkerInit'], ONEBOT_EVENT_LEVEL);
+        }
+    }
+
+    /**
+     * @param Config|RepositoryInterface $config 配置文件
+     */
+    protected function validateConfig($config): void
+    {
+        if (!($config instanceof Config) && !($config instanceof RepositoryInterface)) {
+            throw new \InvalidArgumentException('传入要验证的 Config 对象必须是 Config 或 RepositoryInterface 的实例');
+        }
+        if (!preg_match('/[a-z][\-a-z0-9]*(\.[\-a-z0-9]+)*/', $config->get('platform'))) {
+            throw new \InvalidArgumentException('配置的平台名称不合法，请参阅文档');
+        }
+
+        if (!preg_match('/[a-z][\-a-z0-9]*(\.[\-a-z0-9]+)*/', $config->get('name'))) {
+            throw new \InvalidArgumentException('配置的实现名称不合法，请参阅文档');
         }
     }
 }

@@ -4,8 +4,7 @@ declare(strict_types=1);
 
 namespace OneBot\Driver\Interfaces;
 
-use Closure;
-use OneBot\Http\WebSocket\FrameInterface;
+use Choir\WebSocket\FrameInterface;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\UriInterface;
 
@@ -75,14 +74,14 @@ interface WebSocketClientInterface
     /**
      * 设置 WebSocket 收到消息的回调函数
      *
-     * @param callable|Closure $callable 回调函数
+     * @param callable|\Closure $callable 回调函数
      */
     public function setMessageCallback($callable): WebSocketClientInterface;
 
     /**
      * 设置 WebSocket 连接关闭时触发的回调函数
      *
-     * @param callable|Closure $callable 回调函数
+     * @param callable|\Closure $callable 回调函数
      */
     public function setCloseCallback($callable): WebSocketClientInterface;
 

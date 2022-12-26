@@ -7,15 +7,23 @@ use OneBot\Driver\Event\EventProvider;
 use OneBot\Driver\Interfaces\HandledDispatcherInterface;
 use OneBot\Driver\Interfaces\SortedProviderInterface;
 use OneBot\Driver\Process\ProcessManager;
+use OneBot\V12\Object\MessageSegment;
 use OneBot\V12\OneBot;
 use Psr\Log\LoggerInterface;
 use ZM\Logger\ConsoleLogger;
 
 const ONEBOT_VERSION = '12';
-const ONEBOT_LIBOB_VERSION = '0.4.1';
+const ONEBOT_LIBOB_VERSION = '0.5.0';
 
 const ONEBOT_JSON = 1;
 const ONEBOT_MSGPACK = 2;
+
+const ONEBOT_TYPE_ANY = 0;
+const ONEBOT_TYPE_STRING = 1;
+const ONEBOT_TYPE_INT = 2;
+const ONEBOT_TYPE_ARRAY = 4;
+const ONEBOT_TYPE_FLOAT = 8;
+const ONEBOT_TYPE_OBJECT = 16;
 
 const ONEBOT_CORE_ACTION = 1;
 const ONEBOT_EXTENDED_ACTION = 2;
@@ -26,6 +34,8 @@ const ONEBOT_PROCESS_MANAGER = 2;
 const ONEBOT_PROCESS_WORKER = 4;
 const ONEBOT_PROCESS_USER = 8;
 const ONEBOT_PROCESS_TASKWORKER = 16;
+
+class_alias(MessageSegment::class, 'MessageSegment');
 
 /**
  * 更漂亮的dump变量
@@ -153,4 +163,15 @@ function ob_event_provider(): SortedProviderInterface
 function ob_driver_is(string $driver): bool
 {
     return get_class(OneBot::getInstance()->getDriver()) === $driver;
+}
+
+/**
+ * 构建消息段的助手函数
+ *
+ * @param string $type 类型
+ * @param array  $data 字段
+ */
+function ob_segment(string $type, array $data = []): MessageSegment
+{
+    return new MessageSegment($type, $data);
 }

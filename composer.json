@@ -25,13 +25,14 @@
         "wiki": "https://github.com/botuniverse/php-libonebot/wiki"
     },
     "require": {
-        "php": "^7.2 || ^7.3 || ^7.4 || ^8.0 || ^8.1",
+        "php": "^7.4 || ^8.0 || ^8.1 || ^8.2",
         "ext-json": "*",
         "psr/cache": "^1.0",
         "psr/event-dispatcher": "^1.0",
         "psr/http-client": "^1.0",
         "psr/log": "^1.1",
         "rybakit/msgpack": "^0.9.0",
+        "choir/psr-http": "^1.0",
         "workerman/workerman": "^4.0",
         "zhamao/logger": "^1.0"
     },

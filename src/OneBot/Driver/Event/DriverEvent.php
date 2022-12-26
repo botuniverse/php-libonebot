@@ -9,12 +9,12 @@ use Psr\EventDispatcher\StoppableEventInterface;
 abstract class DriverEvent implements Event, StoppableEventInterface
 {
     /** @var bool 是否停止分发 */
-    protected $propagationStopped = false;
+    protected bool $propagation_stopped = false;
 
-    protected $socket_flag = 0;
+    protected array $socket_config = [];
 
     /** @var null|string 事件自定义名称 */
-    protected static $custom_name;
+    protected static ?string $custom_name;
 
     /**
      * 获取事件类型
@@ -29,7 +29,7 @@ abstract class DriverEvent implements Event, StoppableEventInterface
      */
     public function isPropagationStopped(): bool
     {
-        return $this->propagationStopped;
+        return $this->propagation_stopped;
     }
 
     /**
@@ -50,16 +50,21 @@ abstract class DriverEvent implements Event, StoppableEventInterface
      */
     public function setPropagationStopped(): void
     {
-        $this->propagationStopped = true;
+        $this->propagation_stopped = true;
     }
 
     public function getSocketFlag(): int
     {
-        return $this->socket_flag;
+        return $this->socket_config['flag'] ?? 1;
     }
 
-    public function setSocketFlag(int $socket_flag): void
+    public function getSocketConfig(): array
     {
-        $this->socket_flag = $socket_flag;
+        return $this->socket_config;
+    }
+
+    public function setSocketConfig(array $socket_config): void
+    {
+        $this->socket_config = $socket_config;
     }
 }

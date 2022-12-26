@@ -4,9 +4,8 @@ declare(strict_types=1);
 
 use OneBot\Driver\Event\DriverInitEvent;
 use OneBot\Util\Utils;
-use OneBot\V12\Action\ActionResponse;
 use OneBot\V12\Object\Action;
-use OneBot\V12\Object\Event\Message\PrivateMessageEvent;
+use OneBot\V12\Object\ActionResponse;
 use OneBot\V12\OneBot;
 use OneBot\V12\OneBotBuilder;
 use OneBot\V12\Validator;
@@ -82,7 +81,12 @@ ob_event_provider()->addEventListener(DriverInitEvent::getName(), function (Driv
             $event->getDriver()->getEventLoop()->delReadEvent($x);
             return;
         }
-        $event = new PrivateMessageEvent('tty', trim($s));
+        $event = (new \OneBot\V12\EventBuilder('message', 'private'))
+            ->feed('message', trim($s))
+            ->feed('alt_message', trim($s))
+            ->feed('message_id', message_id())
+            ->feed('user_id', 'tty')
+            ->build();
         OneBot::getInstance()->dispatchEvent($event);
     });
 }, 0);

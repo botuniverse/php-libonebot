@@ -4,12 +4,13 @@ declare(strict_types=1);
 
 namespace OneBot\Driver\Swoole;
 
+use Choir\Http\Client\Exception\ClientException;
+use Choir\Http\Client\Exception\NetworkException;
+use Choir\Http\Client\SwooleClient;
+use Choir\Http\HttpFactory;
+use Choir\WebSocket\FrameFactory;
+use Choir\WebSocket\FrameInterface;
 use OneBot\Driver\Interfaces\WebSocketClientInterface;
-use OneBot\Http\Client\Exception\ClientException;
-use OneBot\Http\Client\Exception\NetworkException;
-use OneBot\Http\Client\SwooleClient;
-use OneBot\Http\HttpFactory;
-use OneBot\Http\WebSocket\FrameFactory;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\UriInterface;
 use Swoole\Coroutine\Http\Client;
@@ -54,7 +55,7 @@ class WebSocketClient implements WebSocketClientInterface
      */
     public static function createFromAddress($address, array $header = [], array $set = ['websocket_mask' => true]): WebSocketClientInterface
     {
-        return (new self($set))->withRequest(HttpFactory::getInstance()->createRequest('GET', $address, $header));
+        return (new self($set))->withRequest(HttpFactory::createRequest('GET', $address, $header));
     }
 
     /**
@@ -106,7 +107,7 @@ class WebSocketClient implements WebSocketClientInterface
                         }
                     } elseif ($result instanceof Frame) {
                         go(function () use ($result) {
-                            $frame = new \OneBot\Http\WebSocket\Frame($result->data, $result->opcode, true);
+                            $frame = new \Choir\WebSocket\Frame($result->data, $result->opcode, true, true);
                             call_user_func($this->message_func, $frame, $this);
                         });
                     }
@@ -137,6 +138,9 @@ class WebSocketClient implements WebSocketClientInterface
 
     public function send($data): bool
     {
+        if ($data instanceof FrameInterface) {
+            return $this->client->push($data->getData(), $data->getOpcode());
+        }
         return $this->client->push($data);
     }
 

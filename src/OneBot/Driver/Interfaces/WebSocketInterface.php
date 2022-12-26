@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace OneBot\Driver\Interfaces;
 
-use OneBot\Http\WebSocket\FrameInterface;
+use Choir\WebSocket\FrameInterface;
 
 interface WebSocketInterface
 {

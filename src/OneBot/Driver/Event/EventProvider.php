@@ -28,7 +28,7 @@ class EventProvider implements SortedProviderInterface
         /*
          * TODO: 尝试同时支持类名和自定义名称作为事件名
          * NOTE: 这有可能导致事件日志难以追溯？
-         * NOTE: 使用自定义名称的一个替代方法是在 Event 类中实现 getName 方法
+         * NOTE: 使用自定义名称的一个替代方法是在 EventLoop 类中实现 getName 方法
          * NOTE: 如果使用自定义名称，则需要在事件处理器中使用 `$event->getName()` 获取事件名
          * NOTE: 或者是否由其他可能的方法支持自定义名称，从而避免频繁的 new EventDispatcher
          */

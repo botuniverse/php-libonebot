@@ -6,24 +6,14 @@ declare(strict_types=1);
 
 namespace OneBot\Driver\Workerman;
 
-use Closure;
-use Exception;
 use Workerman\Connection\ConnectionInterface;
 use Workerman\Lib\Timer;
-use function count;
-use function debug_backtrace;
 use function is_file;
 use function pcntl_signal;
-use function pcntl_signal_dispatch;
-use function pcntl_wait;
-use function posix_kill;
 use function set_error_handler;
-use function str_replace;
-use function time;
-use function unlink;
 
 /**
- * @property callable|Closure $onWebSocketConnect
+ * @property callable|\Closure $onWebSocketConnect
  */
 class Worker extends \Workerman\Worker
 {
@@ -54,7 +44,7 @@ class Worker extends \Workerman\Worker
     ];
 
     /**
-     * @throws Exception
+     * @throws \Exception
      */
     public static function runAll(): void
     {
@@ -156,7 +146,7 @@ class Worker extends \Workerman\Worker
                 try {
                     exit($code);
                     /* @phpstan-ignore-next-line */
-                } catch (Exception $e) {
+                } catch (\Exception $e) {
                     // nocode
                 }
             }
@@ -179,16 +169,16 @@ class Worker extends \Workerman\Worker
     protected static function init()
     {
         /* @phpstan-ignore-next-line */
-        set_error_handler(function ($code, $msg, $file, $line) {
+        \set_error_handler(function ($code, $msg, $file, $line) {
             // 这里为重写的部分
             ob_logger()->critical("{$msg} in file {$file} on line {$line}\n");
         });
 
         // Start file.
-        $backtrace = debug_backtrace();
-        static::$_startFile = $backtrace[count($backtrace) - 1]['file'];
+        $backtrace = \debug_backtrace();
+        static::$_startFile = $backtrace[\count($backtrace) - 1]['file'];
 
-        $unique_prefix = str_replace('/', '_', static::$_startFile);
+        $unique_prefix = \str_replace('/', '_', static::$_startFile);
 
         // Pid file.
         // [jerry]: 不需要Workerman自作主张写文件了！！
@@ -212,7 +202,7 @@ class Worker extends \Workerman\Worker
         static::$_status = static::STATUS_STARTING;
 
         // For statistics.
-        static::$_globalStatistics['start_timestamp'] = time();
+        static::$_globalStatistics['start_timestamp'] = \time();
 
         // Process title.
         static::setProcessTitle(static::$processTitle . ': master process  start_file=' . static::$_startFile);
@@ -273,7 +263,7 @@ class Worker extends \Workerman\Worker
         // static::log("Workerman[{$start_file}] {$command} {$mode_str}");
 
         // Get master process PID.
-        $master_pid = is_file(static::$pidFile) ? (int) file_get_contents(static::$pidFile) : 0;
+        $master_pid = \is_file(static::$pidFile) ? (int) file_get_contents(static::$pidFile) : 0;
         // Master is still alive?
         if (static::checkMasterIsAlive($master_pid)) {
             if ($command === 'start') {
@@ -296,11 +286,11 @@ class Worker extends \Workerman\Worker
                 break;
             case 'status':
                 while (1) {
-                    if (is_file($statistics_file)) {
-                        @unlink($statistics_file);
+                    if (\is_file($statistics_file)) {
+                        @\unlink($statistics_file);
                     }
                     // Master process will send SIGUSR2 signal to all child processes.
-                    posix_kill($master_pid, SIGUSR2);
+                    \posix_kill($master_pid, SIGUSR2);
                     // Sleep 1 second.
                     sleep(1);
                     // Clear terminal.
@@ -316,11 +306,11 @@ class Worker extends \Workerman\Worker
                 }
             // no break
             case 'connections':
-                if (is_file($statistics_file) && is_writable($statistics_file)) {
-                    unlink($statistics_file);
+                if (\is_file($statistics_file) && is_writable($statistics_file)) {
+                    \unlink($statistics_file);
                 }
                 // Master process will send SIGIO signal to all child processes.
-                posix_kill($master_pid, SIGIO);
+                \posix_kill($master_pid, SIGIO);
                 // Waiting a moment.
                 usleep(500000);
                 // Display statistics data from a disk file.
@@ -340,16 +330,16 @@ class Worker extends \Workerman\Worker
                     static::log("Workerman[{$start_file}] is stopping ...");
                 }
                 // Send stop signal to master process.
-                $master_pid && posix_kill($master_pid, $sig);
+                $master_pid && \posix_kill($master_pid, $sig);
                 // Timeout.
                 $timeout = 5;
-                $start_time = time();
+                $start_time = \time();
                 // Check master process is still alive?
                 while (1) {
-                    $master_is_alive = $master_pid && posix_kill($master_pid, 0);
+                    $master_is_alive = $master_pid && \posix_kill($master_pid, 0);
                     if ($master_is_alive) {
                         // Timeout?
-                        if (!static::$_gracefulStop && time() - $start_time >= $timeout) {
+                        if (!static::$_gracefulStop && \time() - $start_time >= $timeout) {
                             static::log("Workerman[{$start_file}] stop fail");
                             exit;
                         }
@@ -374,7 +364,7 @@ class Worker extends \Workerman\Worker
                 } else {
                     $sig = SIGUSR1;
                 }
-                posix_kill($master_pid, $sig);
+                \posix_kill($master_pid, $sig);
                 exit;
             default:
                 static::safeEcho('Unknown command: ' . $command . "\n");
@@ -401,7 +391,7 @@ class Worker extends \Workerman\Worker
         // // graceful stop
         // \pcntl_signal(\SIGHUP, $signalHandler, false);
         // // reload
-        pcntl_signal(SIGUSR1, $signalHandler, false);
+        \pcntl_signal(SIGUSR1, $signalHandler, false);
         // // graceful reload
         // \pcntl_signal(\SIGQUIT, $signalHandler, false);
         // // status
@@ -481,12 +471,12 @@ class Worker extends \Workerman\Worker
         /* @phpstan-ignore-next-line */
         while (1) {
             // Calls signal handlers for pending signals.
-            pcntl_signal_dispatch();
+            \pcntl_signal_dispatch();
             // Suspends execution of the current process until a child has exited, or until a signal is delivered
             $status = 0;
-            $pid = pcntl_wait($status, WUNTRACED);
+            $pid = \pcntl_wait($status, WUNTRACED);
             // Calls signal handlers for pending signals again.
-            pcntl_signal_dispatch();
+            \pcntl_signal_dispatch();
             // If a child has already exited.
             if ($pid > 0) {
                 // 这里插入用户持久进程的退出监听事件

@@ -4,10 +4,9 @@ declare(strict_types=1);
 
 namespace OneBot\Driver\Workerman;
 
-use Exception;
+use Choir\Http\HttpFactory;
+use Choir\WebSocket\FrameFactory;
 use OneBot\Driver\Interfaces\WebSocketClientInterface;
-use OneBot\Http\HttpFactory;
-use OneBot\Http\WebSocket\FrameFactory;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\UriInterface;
 use Workerman\Connection\AsyncTcpConnection;
@@ -46,15 +45,15 @@ class WebSocketClient implements WebSocketClientInterface
      *
      * @param  string|UriInterface $address 地址
      * @param  array               $header  请求头
-     * @throws Exception
+     * @throws \Exception
      */
     public static function createFromAddress($address, array $header = []): WebSocketClientInterface
     {
-        return (new self())->withRequest(HttpFactory::getInstance()->createRequest('GET', $address, $header));
+        return (new self())->withRequest(HttpFactory::createRequest('GET', $address, $header));
     }
 
     /**
-     * @throws Exception
+     * @throws \Exception
      */
     public function withRequest(RequestInterface $request): WebSocketClientInterface
     {
@@ -83,7 +82,7 @@ class WebSocketClient implements WebSocketClientInterface
     }
 
     /**
-     * @throws Exception
+     * @throws \Exception
      */
     public function reconnect(): bool
     {

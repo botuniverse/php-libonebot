@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace OneBot\V12;
 
-use InvalidArgumentException;
+use OneBot\Config\Config;
+use OneBot\Config\RepositoryInterface;
 use OneBot\Driver\Driver;
-use OneBot\V12\Config\ConfigInterface;
 use Psr\Log\LoggerInterface;
 
 /**
@@ -18,7 +18,7 @@ use Psr\Log\LoggerInterface;
 class OneBotBuilder
 {
     /** @var array 定义的组件 */
-    private $components;
+    private array $components;
 
     /**
      * 工厂模式链式构建起始函数
@@ -111,10 +111,10 @@ class OneBotBuilder
 
         if (array_keys($this->components) !== $required_config) {
             $missing = implode(', ', array_diff($required_config, array_keys($this->components)));
-            throw new InvalidArgumentException('Builder must be configured before building, missing: ' . $missing);
+            throw new \InvalidArgumentException('Builder must be configured before building, missing: ' . $missing);
         }
 
-        $config = new Config\Config([
+        $config = new Config([
             'name' => $this->components['name'],
             'platform' => $this->components['platform'],
             'self_id' => $this->components['self_id'],
@@ -129,27 +129,27 @@ class OneBotBuilder
     /**
      * 从数组格式的配置文件实例化 OneBot 对象
      *
-     * 内部将自动转换为 Config 对象再依次调用 buildFromConfig()。
+     * 内部将自动转换为 Repository 对象再依次调用 buildFromConfig()。
      *
      * @param  array  $array config 数组
      * @return OneBot OneBot 对象
      */
     public static function buildFromArray(array $array): OneBot
     {
-        $config = new Config\Config($array);
+        $config = new \OneBot\Config\Repository($array);
         return self::buildFromConfig($config);
     }
 
     /**
-     * 从 Config 对象实例化 OneBot 对象
+     * 从 Repository 对象实例化 OneBot 对象
      *
      * 首先会对 config 中的 'logger' 类实例化，然后对 Driver 类进行实例化。
      * 实例化后可以通过 $config 进行获取相应对象。
      *
-     * @param  ConfigInterface $config Config 对象
-     * @return OneBot          OneBot 对象
+     * @param  RepositoryInterface $config Repository 对象
+     * @return OneBot              OneBot 对象
      */
-    public static function buildFromConfig(ConfigInterface $config): OneBot
+    public static function buildFromConfig(RepositoryInterface $config): OneBot
     {
         $config->set('logger', self::resolveClassInstance($config->get('logger'), LoggerInterface::class));
         $config->set('driver', self::resolveClassInstance($config->get('driver'), Driver::class));
@@ -188,7 +188,7 @@ class OneBotBuilder
             return new $classname();
         }
 
-        throw new InvalidArgumentException("Cannot resolve {$expected}, it must be an instance, a class name or an array containing a class name and an array of parameters");
+        throw new \InvalidArgumentException("Cannot resolve {$expected}, it must be an instance, a class name or an array containing a class name and an array of parameters");
     }
 
     /**

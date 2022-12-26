@@ -4,14 +4,15 @@ declare(strict_types=1);
 
 namespace OneBot\Driver\Socket;
 
+use Choir\WebSocket\FrameInterface;
 use OneBot\Driver\Interfaces\SocketInterface;
 use OneBot\Driver\Interfaces\WebSocketClientInterface;
 use OneBot\Driver\Interfaces\WebSocketInterface;
-use OneBot\Http\WebSocket\FrameInterface;
 
 abstract class WSClientSocketBase implements SocketInterface, WebSocketInterface
 {
     use SocketFlag;
+    use SocketConfig;
 
     protected $url;
 
@@ -21,17 +22,15 @@ abstract class WSClientSocketBase implements SocketInterface, WebSocketInterface
 
     protected $reconnect_interval;
 
-    /**
-     * @var WebSocketClientInterface
-     */
-    protected $client;
+    protected WebSocketClientInterface $client;
 
-    public function __construct(string $url, array $headers = [], string $access_token = '', int $reconnect_interval = 5)
+    public function __construct(array $config)
     {
-        $this->url = $url;
-        $this->headers = $headers;
-        $this->access_token = $access_token;
-        $this->reconnect_interval = $reconnect_interval;
+        $this->url = $config['url'];
+        $this->headers = $config['headers'] ?? [];
+        $this->access_token = $config['access_token'] ?? '';
+        $this->reconnect_interval = $config['reconnect_interval'] ?? 5;
+        $this->config = $config;
     }
 
     public function setClient(WebSocketClientInterface $client)

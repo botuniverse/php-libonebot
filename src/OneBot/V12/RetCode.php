@@ -22,6 +22,8 @@ class RetCode
 
     public const UNSUPPORTED_SEGMENT_DATA = 10007;
 
+    public const WHO_AM_I = 10101;
+
     public const BAD_HANDLER = 20001;
 
     public const INTERNAL_HANDLER_ERROR = 20002;
@@ -51,6 +53,7 @@ class RetCode
             self::UNSUPPORTED_SEGMENT => 'Unsupported segment',
             self::BAD_SEGMENT_DATA => 'Bad segment data',
             self::UNSUPPORTED_SEGMENT_DATA => 'Unsupported segment data',
+            self::WHO_AM_I => 'Who am I',
             self::BAD_HANDLER => 'Bad handler',
             self::INTERNAL_HANDLER_ERROR => 'Internal handler error',
             self::DATABASE_ERROR => 'Database error',

@@ -20,7 +20,7 @@
     </testsuites>
     <coverage>
         <include>
-            <directory suffix=".php">./src/ZM</directory>
+            <directory suffix=".php">./src/OneBot</directory>
         </include>
         <report>
             <html outputDirectory="./build/html-coverage"/>

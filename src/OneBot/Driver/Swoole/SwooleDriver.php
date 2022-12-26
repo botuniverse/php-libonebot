@@ -6,20 +6,20 @@ declare(strict_types=1);
 
 namespace OneBot\Driver\Swoole;
 
-use Exception;
+use Choir\Http\Client\Exception\ClientException;
+use Choir\Http\Client\SwooleClient;
 use OneBot\Driver\Driver;
 use OneBot\Driver\DriverEventLoopBase;
 use OneBot\Driver\Event\DriverInitEvent;
 use OneBot\Driver\Event\Process\UserProcessStartEvent;
-use OneBot\Driver\ExceptionHandler;
 use OneBot\Driver\Interfaces\DriverInitPolicy;
 use OneBot\Driver\Process\ProcessManager;
+use OneBot\Driver\Socket\HttpClientSocketBase;
 use OneBot\Driver\Swoole\Socket\HttpClientSocket;
 use OneBot\Driver\Swoole\Socket\HttpServerSocket;
 use OneBot\Driver\Swoole\Socket\WSClientSocket;
 use OneBot\Driver\Swoole\Socket\WSServerSocket;
-use OneBot\Http\Client\Exception\ClientException;
-use OneBot\Http\Client\SwooleClient;
+use OneBot\Exception\ExceptionHandler;
 use OneBot\Util\Singleton;
 use Swoole\Atomic;
 use Swoole\Event;
@@ -27,7 +27,6 @@ use Swoole\Http\Server as SwooleHttpServer;
 use Swoole\Server;
 use Swoole\Server\Port;
 use Swoole\WebSocket\Server as SwooleWebSocketServer;
-use Throwable;
 
 class SwooleDriver extends Driver
 {
@@ -44,12 +43,12 @@ class SwooleDriver extends Driver
     protected $server_set;
 
     /**
-     * @throws Exception
+     * @throws \Exception
      */
     public function __construct(array $params = [])
     {
         if (static::$instance !== null) {
-            throw new Exception('不能重复初始化');
+            throw new \Exception('不能重复初始化');
         }
         static::$instance = $this;
         parent::__construct($params);
@@ -69,8 +68,8 @@ class SwooleDriver extends Driver
             $ws_0 = array_shift($ws);
             $this->server = new SwooleWebSocketServer($ws_0['host'], $ws_0['port'], $this->getParam('swoole_server_mode', SWOOLE_PROCESS));
             $this->initServer();
-            $this->initWebSocketServer($this->server, $ws_0['flag'] ?? 1);
-            $this->ws_socket[] = (new WSServerSocket($this->server, $ws_0))->setFlag($ws_0['flag'] ?? 1);
+            $this->initWebSocketServer($this->server, $ws_0);
+            $this->ws_socket[] = new WSServerSocket($this->server, $ws_0);
             if (!empty($ws)) {
                 foreach ($ws as $v) {
                     $this->addWSServerListener($v);
@@ -85,8 +84,8 @@ class SwooleDriver extends Driver
             $http_0 = array_shift($http);
             $this->server = new SwooleHttpServer($http_0['host'], $http_0['port'], $this->getParam('swoole_server_mode', SWOOLE_PROCESS));
             $this->initServer();
-            $this->initHttpServer($this->server, $http_0['flag'] ?? 1);
-            $this->http_socket[] = (new HttpServerSocket($this->server, $http_0))->setFlag($http_0['flag'] ?? 1);
+            $this->initHttpServer($this->server, $http_0);
+            $this->http_socket[] = new HttpServerSocket($this->server, $http_0);
             if (!empty($http)) {
                 foreach ($http as $v) {
                     $this->addHttpServerListener($v);
@@ -95,12 +94,17 @@ class SwooleDriver extends Driver
         }
         /* @noinspection DuplicatedCode */
         foreach ($http_webhook as $v) {
-            $this->http_client_socket[] = (new HttpClientSocket($v['url'], $v['header'] ?? [], $v['access_token'] ?? '', $v['timeout'] ?? 5))->setFlag($v['flag'] ?? 1);
+            $this->http_client_socket[] = new HttpClientSocket($v);
         }
         foreach ($ws_reverse as $v) {
-            $this->ws_client_socket[] = (new WSClientSocket($v['url'], $v['header'] ?? [], $v['access_token'] ?? '', $v['reconnect_interval'] ?? 5))->setFlag($v['flag'] ?? 1);
+            $this->ws_client_socket[] = new WSClientSocket($v);
         }
         return [$this->http_socket !== [], $this->http_client_socket !== [], $this->ws_socket !== [], $this->ws_client_socket !== []];
+    }
+
+    public function createHttpClientSocket(array $config): HttpClientSocketBase
+    {
+        return new HttpClientSocket($config);
     }
 
     /**
@@ -139,7 +143,7 @@ class SwooleDriver extends Driver
                     try {
                         $event = new UserProcessStartEvent($process);
                         ob_event_dispatcher()->dispatch($event);
-                    } catch (Throwable $e) {
+                    } catch (\Throwable $e) {
                         ExceptionHandler::getInstance()->handle($e);
                     }
                 }, false);
@@ -204,19 +208,19 @@ class SwooleDriver extends Driver
     /**
      * 初始化 Websocket 服务端，注册 WS 连接、收到消息和断开连接三种事件的顶层回调
      *
-     * @param Port|Server $obj  Server 或 Port 对象
-     * @param int         $flag 类型标记
+     * @param Port|Server $obj    Server 或 Port 对象
+     * @param array       $config 类型标记
      */
-    private function initWebSocketServer($obj, int $flag): void
+    private function initWebSocketServer($obj, array $config): void
     {
-        $obj->on('open', function (...$params) use ($flag) {
-            TopEventListener::getInstance()->onOpen($flag, ...$params);
+        $obj->on('open', function (...$params) use ($config) {
+            TopEventListener::getInstance()->onOpen($config, ...$params);
         });
-        $obj->on('message', function (...$params) use ($flag) {
-            TopEventListener::getInstance()->onMessage($flag, ...$params);
+        $obj->on('message', function (...$params) use ($config) {
+            TopEventListener::getInstance()->onMessage($config, ...$params);
         });
-        $obj->on('close', function (...$params) use ($flag) {
-            TopEventListener::getInstance()->onClose($flag, ...$params);
+        $obj->on('close', function (...$params) use ($config) {
+            TopEventListener::getInstance()->onClose($config, ...$params);
         });
     }
 
@@ -237,13 +241,13 @@ class SwooleDriver extends Driver
 
     /**
      * 初始化使用http通信方式的注册事件，包含收到 HTTP 请求的事件顶层回调
-     * @param Port|SwooleHttpServer $obj  Server 或 Port 对象
-     * @param int                   $flag Socket 类型标记
+     * @param Port|SwooleHttpServer $obj    Server 或 Port 对象
+     * @param array                 $config Socket 类型标记
      */
-    private function initHttpServer($obj, int $flag): void
+    private function initHttpServer($obj, array $config): void
     {
-        $obj->on('request', function (...$params) use ($flag) {
-            TopEventListener::getInstance()->onRequest($flag, ...$params);
+        $obj->on('request', function (...$params) use ($config) {
+            TopEventListener::getInstance()->onRequest($config, ...$params);
         });
     }
 
@@ -255,7 +259,7 @@ class SwooleDriver extends Driver
             'open_websocket_protocol' => true,
             'open_http_protocol' => false,
         ]);
-        $this->initWebSocketServer($port, $v['flag'] ?? 1);
+        $this->initWebSocketServer($port, $v);
         $this->ws_socket[] = new WSServerSocket($port, $v);
     }
 
@@ -266,7 +270,7 @@ class SwooleDriver extends Driver
             'open_websocket_protocol' => false,
             'open_http_protocol' => true,
         ]);
-        $this->initHttpServer($port, $v['flag'] ?? 1);
+        $this->initHttpServer($port, $v);
         $this->http_socket[] = new HttpServerSocket($port, $v);
     }
 }

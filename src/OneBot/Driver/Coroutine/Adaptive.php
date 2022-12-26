@@ -7,7 +7,6 @@ namespace OneBot\Driver\Coroutine;
 use OneBot\Driver\Driver;
 use OneBot\Driver\Process\ExecutionResult;
 use OneBot\Driver\Workerman\WorkermanDriver;
-use RuntimeException;
 use Swoole\Coroutine;
 
 /**
@@ -100,7 +99,7 @@ class Adaptive
                 });
                 return self::$coroutine->suspend();
             }
-            throw new RuntimeException('Cannot open process with command ' . $cmd);
+            throw new \RuntimeException('Cannot open process with command ' . $cmd);
         }
         default_exec:
         exec($cmd, $output, $code);

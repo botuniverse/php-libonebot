@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace OneBot\Driver\Swoole;
 
 use OneBot\Driver\Interfaces\PoolInterface;
-use RuntimeException;
 use Swoole\Coroutine\Channel;
 
 class ObjectPool implements PoolInterface
@@ -60,7 +59,7 @@ class ObjectPool implements PoolInterface
             $result = $this->channel->pop();
         }
         if (!$result) { // 当池子被关闭则抛出异常
-            throw new RuntimeException('Channel has been disabled');
+            throw new \RuntimeException('Channel has been disabled');
         }
         // 记录借出去的 Hash 表
         $this->out[spl_object_hash($result)] = 1;
@@ -71,7 +70,7 @@ class ObjectPool implements PoolInterface
     {
         if (!isset($this->out[spl_object_hash($object)])) {
             // 不能退还不是这里生产出去的对象
-            throw new RuntimeException('Cannot put object that not got from here');
+            throw new \RuntimeException('Cannot put object that not got from here');
         }
         unset($this->out[spl_object_hash($object)]);
         return $this->channel->push($object);

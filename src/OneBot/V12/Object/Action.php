@@ -4,24 +4,21 @@ declare(strict_types=1);
 
 namespace OneBot\V12\Object;
 
-use ArrayIterator;
-use IteratorAggregate;
-use JsonSerializable;
-use ReturnTypeWillChange;
-
 /**
  * OneBot 12 标准的 Action 请求对象
  */
-class Action implements JsonSerializable, IteratorAggregate
+class Action implements \JsonSerializable, \IteratorAggregate, \Stringable
 {
     /** @var string 动作名称 */
-    public $action = '';
+    public string $action = '';
 
     /** @var array 动作参数 */
-    public $params = [];
+    public array $params = [];
 
     /** @var mixed 回包消息 */
     public $echo;
+
+    public ?array $self;
 
     /**
      * 创建新的动作实例
@@ -30,11 +27,17 @@ class Action implements JsonSerializable, IteratorAggregate
      * @param array  $params 动作参数
      * @param mixed  $echo
      */
-    public function __construct(string $action, array $params = [], $echo = null)
+    public function __construct(string $action, array $params = [], $echo = null, ?array $self = null)
     {
         $this->action = $action;
         $this->params = $params;
         $this->echo = $echo;
+        $this->self = $self;
+    }
+
+    public function __toString()
+    {
+        return json_encode($this->jsonSerialize(), JSON_UNESCAPED_SLASHES);
     }
 
     /**
@@ -42,30 +45,30 @@ class Action implements JsonSerializable, IteratorAggregate
      */
     public static function fromArray(array $arr): Action
     {
-        return new self($arr['action'], $arr['params'] ?? [], $arr['echo'] ?? null);
+        return new self($arr['action'], $arr['params'] ?? [], $arr['echo'] ?? null, $arr['self'] ?? null);
     }
 
     public function jsonSerialize(): array
     {
-        if ($this->echo === null) {
-            return [
-                'action' => $this->action,
-                'params' => $this->params,
-            ];
-        }
-        return [
+        $d = [
             'action' => $this->action,
             'params' => $this->params,
-            'echo' => $this->echo,
         ];
+        if ($this->echo !== null) {
+            $d['echo'] = $this->echo;
+        }
+        if ($this->self !== null) {
+            $d['self'] = $this->self;
+        }
+        return $d;
     }
 
     /**
      * @noinspection PhpLanguageLevelInspection
      */
-    #[ReturnTypeWillChange]
-    public function getIterator(): ArrayIterator
+    #[\ReturnTypeWillChange]
+    public function getIterator(): \ArrayIterator
     {
-        return new ArrayIterator($this);
+        return new \ArrayIterator($this->jsonSerialize());
     }
 }

@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace OneBot\Driver\Event\WebSocket;
 
+use Choir\WebSocket\FrameInterface;
 use OneBot\Driver\Event\DriverEvent;
-use OneBot\Http\WebSocket\FrameInterface;
 
 class WebSocketMessageEvent extends DriverEvent
 {
