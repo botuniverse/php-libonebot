@@ -19,16 +19,7 @@ class ExceptionHandler implements ExceptionHandlerInterface
 
     protected function __construct()
     {
-        $whoops_class = 'Whoops\Run';
-        $collision_class = 'NunoMaduro\Collision\Handler';
-        if (class_exists($collision_class) && class_exists($whoops_class)) {
-            /* @phpstan-ignore-next-line */
-            $this->whoops = new $whoops_class();
-            $this->whoops->allowQuit(false);
-            $this->whoops->writeToOutput(false);
-            $this->whoops->pushHandler(new $collision_class());
-            $this->whoops->register();
-        }
+        $this->tryEnableCollision();
     }
 
     public function getWhoops()
@@ -63,5 +54,29 @@ class ExceptionHandler implements ExceptionHandlerInterface
         }
 
         $this->whoops->handleException($e);
+    }
+
+    protected function tryEnableCollision($solution_repo = null): void
+    {
+        $whoops_class = 'Whoops\Run';
+        $collision_namespace = 'NunoMaduro\Collision';
+        $collision_handler = "{$collision_namespace}\\Handler";
+        $collision_writer = "{$collision_namespace}\\Writer";
+        $collision_repo = "{$collision_namespace}\\Contracts\\SolutionsRepository";
+        if (class_exists($collision_handler) && class_exists($whoops_class)) {
+            if ($solution_repo instanceof $collision_repo) {
+                // @phpstan-ignore-next-line
+                $writer = new $collision_writer($solution_repo);
+            } else {
+                // @phpstan-ignore-next-line
+                $writer = new $collision_writer();
+            }
+
+            $this->whoops = new $whoops_class();
+            $this->whoops->allowQuit(false);
+            $this->whoops->writeToOutput(false);
+            $this->whoops->pushHandler(new $collision_handler($writer));
+            $this->whoops->register();
+        }
     }
 }
