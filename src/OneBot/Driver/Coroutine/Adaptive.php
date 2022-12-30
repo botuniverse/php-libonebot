@@ -27,10 +27,10 @@ class Adaptive
     public static function initWithDriver(Driver $driver)
     {
         if ($driver->getName() === 'swoole') {
-            self::$coroutine = SwooleCoroutine::getInstance();
+            self::$coroutine = SwooleCoroutine::getInstance($driver);
         } elseif ($driver->getName() === 'workerman' && PHP_VERSION_ID >= 80100) {
             // 只有 PHP >= 8.1 才能使用 Fiber 协程接口
-            self::$coroutine = FiberCoroutine::getInstance();
+            self::$coroutine = FiberCoroutine::getInstance($driver);
         }
     }
 

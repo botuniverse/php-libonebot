@@ -6,6 +6,7 @@ namespace OneBot\Driver\Swoole;
 
 use Choir\Http\HttpFactory;
 use Choir\WebSocket\FrameInterface;
+use OneBot\Driver\Coroutine\Adaptive;
 use OneBot\Driver\Event\Http\HttpRequestEvent;
 use OneBot\Driver\Event\Process\ManagerStartEvent;
 use OneBot\Driver\Event\Process\ManagerStopEvent;
@@ -38,6 +39,7 @@ class TopEventListener
         } else {
             ProcessManager::initProcess(ONEBOT_PROCESS_WORKER, $server->worker_id);
         }
+        Adaptive::initWithDriver(SwooleDriver::getInstance());
         ob_event_dispatcher()->dispatchWithHandler(new WorkerStartEvent());
     }
 
