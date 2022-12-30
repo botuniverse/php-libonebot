@@ -7,6 +7,7 @@ namespace OneBot\Driver\Workerman;
 use Choir\Http\HttpFactory;
 use Choir\WebSocket\FrameFactory;
 use Choir\WebSocket\FrameInterface;
+use OneBot\Driver\Coroutine\Adaptive;
 use OneBot\Driver\Event\Http\HttpRequestEvent;
 use OneBot\Driver\Event\Process\WorkerStartEvent;
 use OneBot\Driver\Event\Process\WorkerStopEvent;
@@ -32,6 +33,7 @@ class TopEventListener
     public function onWorkerStart(Worker $worker)
     {
         ProcessManager::initProcess(ONEBOT_PROCESS_WORKER, $worker->id);
+        Adaptive::initWithDriver(WorkermanDriver::getInstance());
         ob_event_dispatcher()->dispatchWithHandler(new WorkerStartEvent());
     }
 

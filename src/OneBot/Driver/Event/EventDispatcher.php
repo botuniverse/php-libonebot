@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace OneBot\Driver\Event;
 
+use OneBot\Driver\Coroutine\Adaptive;
 use OneBot\Driver\Interfaces\HandledDispatcherInterface;
 use OneBot\Exception\ExceptionHandler;
 
@@ -13,8 +14,13 @@ class EventDispatcher implements HandledDispatcherInterface
     /**
      * 分发事件
      */
-    public function dispatch(object $event): object
+    public function dispatch(object $event, bool $inside = false): object
     {
+        if (($co = Adaptive::getCoroutine()) !== null && !$inside) {
+            $co->create([$this, 'dispatch'], $event, true);
+            return $event;
+        }
+        ob_logger()->warning('Dispatching event in fiber: ' . $co->getCid());
         foreach (ob_event_provider()->getEventListeners($event->getName()) as $listener) {
             try {
                 // TODO: 允许 Listener 修改 $event

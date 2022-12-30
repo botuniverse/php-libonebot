@@ -24,7 +24,7 @@ abstract class ActionHandlerBase
     public static $ext_cache;
 
     /** @var array 缓存的文件段 */
-    private static $upload_fragment = [];
+    private static array $upload_fragment = [];
 
     /**
      * get_status 响应
