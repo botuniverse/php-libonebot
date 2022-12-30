@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace OneBot\Driver\Coroutine;
 
-
 use OneBot\Driver\Process\ExecutionResult;
 
 interface CoroutineInterface

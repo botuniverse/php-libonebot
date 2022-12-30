@@ -71,4 +71,3 @@ class SwooleCoroutine implements CoroutineInterface
         return Coroutine::stats()['coroutine_num'];
     }
 }
-
