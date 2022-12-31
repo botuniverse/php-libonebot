@@ -29,7 +29,6 @@
         "ext-json": "*",
         "psr/cache": "^1.0",
         "psr/event-dispatcher": "^1.0",
-        "psr/http-client": "^1.0",
         "psr/log": "^1.1",
         "rybakit/msgpack": "^0.9.0",
         "choir/psr-http": "^1.0",
