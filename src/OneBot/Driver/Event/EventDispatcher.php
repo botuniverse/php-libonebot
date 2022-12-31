@@ -20,7 +20,6 @@ class EventDispatcher implements HandledDispatcherInterface
             $co->create([$this, 'dispatch'], $event, true);
             return $event;
         }
-        ob_logger()->warning('Dispatching event in fiber: ' . $co->getCid());
         foreach (ob_event_provider()->getEventListeners($event->getName()) as $listener) {
             try {
                 // TODO: 允许 Listener 修改 $event
