@@ -86,12 +86,6 @@ class FiberCoroutine implements CoroutineInterface
             return false;
         }
         self::$fiber_stacks->push(self::$suspended_fiber_map[$cid]);
-        if (self::$suspended_fiber_map[$cid]->isSuspended()) {
-            echo "(I have been suspended)\n";
-        } else {
-            echo "[I am not been suspended]\n";
-        }
-        debug_print_backtrace();
         self::$suspended_fiber_map[$cid]->resume($value);
         self::$fiber_stacks->pop();
         if (self::$suspended_fiber_map[$cid]->isTerminated()) {
