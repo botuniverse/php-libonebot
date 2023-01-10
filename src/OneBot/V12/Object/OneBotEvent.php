@@ -130,7 +130,7 @@ class OneBotEvent implements \Stringable, \JsonSerializable
         }
         $this->message_segment_cache = [];
         foreach ($this->data['message'] as $segment) {
-            $this->message_segment_cache[] = new MessageSegment($segment['type'], $segment['data']);
+            $this->message_segment_cache[] = $segment instanceof MessageSegment ? $segment : new MessageSegment($segment['type'], $segment['data']);
         }
         return $this->message_segment_cache;
     }
