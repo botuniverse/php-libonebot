@@ -40,6 +40,7 @@ class Worker extends \Workerman\Worker
     protected static $_availableEventLoops = [
         'event' => '\Workerman\Events\Event',
         'libevent' => '\Workerman\Events\Libevent',
+        'swow' => '\Workerman\Events\Swow',
         'swoole' => '\Workerman\Events\Swoole',
     ];
 
