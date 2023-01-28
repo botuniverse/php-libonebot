@@ -13,7 +13,7 @@ use Psr\Log\LoggerInterface;
 use ZM\Logger\ConsoleLogger;
 
 const ONEBOT_VERSION = '12';
-const ONEBOT_LIBOB_VERSION = '0.5.5';
+const ONEBOT_LIBOB_VERSION = '0.5.6';
 
 const ONEBOT_JSON = 1;
 const ONEBOT_MSGPACK = 2;
@@ -90,15 +90,16 @@ function ob_logger_register(LoggerInterface $logger): void
     global $ob_logger;
     if ($logger instanceof ConsoleLogger) {
         $type = ProcessManager::getProcessType();
-        $map = [
+        $type_map = [
             ONEBOT_PROCESS_MASTER => 'MST',
             ONEBOT_PROCESS_MANAGER => 'MAN',
             ONEBOT_PROCESS_WORKER => '#' . ProcessManager::getProcessId(),
             ONEBOT_PROCESS_USER => 'USR',
-            ONEBOT_PROCESS_TASKWORKER => '#' . ProcessManager::getProcessId(),
-            ONEBOT_PROCESS_MASTER | ONEBOT_PROCESS_WORKER => 'MST#' . ProcessManager::getProcessId(),
+            (ONEBOT_PROCESS_WORKER | ONEBOT_PROCESS_TASKWORKER) => '%' . ProcessManager::getProcessId(),
+            (ONEBOT_PROCESS_WORKER | ONEBOT_PROCESS_MASTER) => 'MST#' . ProcessManager::getProcessId(),
         ];
-        $logger::$format = '[%date%] [%level%] [' . $map[$type] . '] %body%';
+        $ss_type = $type_map[$type] ?? ('TYPE*' . $type);
+        $logger::$format = '[%date%] [%level%] [' . $ss_type . '] %body%';
         $logger::$date_format = 'Y-m-d H:i:s';
     }
     $ob_logger = $logger;

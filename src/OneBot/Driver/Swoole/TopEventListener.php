@@ -37,7 +37,7 @@ class TopEventListener
         if ($server->master_pid === $server->worker_pid) {
             ProcessManager::initProcess(ONEBOT_PROCESS_MASTER | ONEBOT_PROCESS_WORKER, $server->worker_id);
         } else {
-            ProcessManager::initProcess(ONEBOT_PROCESS_WORKER, $server->worker_id);
+            ProcessManager::initProcess($server->taskworker ? ONEBOT_PROCESS_WORKER | ONEBOT_PROCESS_TASKWORKER : ONEBOT_PROCESS_WORKER, $server->worker_id);
         }
         Adaptive::initWithDriver(SwooleDriver::getInstance());
         ob_event_dispatcher()->dispatchWithHandler(new WorkerStartEvent());
