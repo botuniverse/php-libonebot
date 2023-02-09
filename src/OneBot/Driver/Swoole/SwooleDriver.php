@@ -213,8 +213,8 @@ class SwooleDriver extends Driver
      */
     private function initWebSocketServer($obj, array $config): void
     {
-        $obj->on('open', function (...$params) use ($config) {
-            TopEventListener::getInstance()->onOpen($config, ...$params);
+        $obj->on('handshake', function (...$params) use ($config) {
+            TopEventListener::getInstance()->onHandshake($config, ...$params);
         });
         $obj->on('message', function (...$params) use ($config) {
             TopEventListener::getInstance()->onMessage($config, ...$params);
