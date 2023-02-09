@@ -8,9 +8,26 @@ use OneBot\V12\Action\ActionHandlerBase;
 use OneBot\V12\Exception\OneBotFailureException;
 use OneBot\V12\OneBot;
 use OneBot\V12\RetCode;
+use Psr\Http\Message\ResponseInterface;
 
 class Utils
 {
+    /**
+     * 转换 Response 对象的 Header 为字符串形式
+     *
+     * @param ResponseInterface $response Http 响应对象
+     */
+    public static function getRawHeadersFromResponse(ResponseInterface $response): string
+    {
+        $line = '';
+        foreach ($response->getHeaders() as $k => $v) {
+            foreach ($v as $vs) {
+                $line .= $k . ': ' . $vs . "\r\n";
+            }
+        }
+        return trim($line, "\r\n");
+    }
+
     /**
      * 判断是否为关联数组
      *

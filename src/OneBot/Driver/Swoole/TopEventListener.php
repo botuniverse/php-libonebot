@@ -131,11 +131,11 @@ class TopEventListener
     }
 
     /**
-     * Swoole 的顶层 open 事件回调（WebSocket 连接建立事件）
+     * Swoole 的顶层 handshake 事件回调（WebSocket 连接建立事件）
      */
-    public function onOpen(array $config, SwooleWebSocketServer $server, Request $request)
+    public function onHandshake(array $config, Request $request, Response $response)
     {
-        ob_logger()->debug('WebSocket connection open: ' . $request->fd);
+        ob_logger()->debug('WebSocket connection handahske: ' . $request->fd);
         if (empty($content = $request->rawContent())) {
             $content = null;
         }
@@ -147,6 +147,59 @@ class TopEventListener
         ), $request->fd);
         $event->setSocketConfig($config);
         ob_event_dispatcher()->dispatchWithHandler($event);
+        // 检查有没有制定response
+        if (is_object($event->getResponse())) {
+            $user_resp = $event->getResponse();
+            // 不等于 101 bu不握手
+            if ($user_resp->getStatusCode() !== 101) {
+                foreach ($user_resp->getHeaders() as $header => $value) {
+                    if (is_array($value)) {
+                        $response->setHeader($header, implode(';', $value));
+                    }
+                }
+                $response->setStatusCode($user_resp->getStatusCode());
+                $response->end($user_resp->getBody()->getContents());
+                return false;
+            }
+            // 等于 101 时候，检查把 Header 合进来
+            $my_headers = [];
+            foreach ($user_resp->getHeaders() as $header => $value) {
+                if (is_array($value)) {
+                    $my_headers[$header] = implode(';', $value);
+                }
+            }
+        }
+        // 手动实现握手
+        // websocket握手连接算法验证
+        $sec_websocket_key = $request->header['sec-websocket-key'];
+        $patten = '#^[+/0-9A-Za-z]{21}[AQgw]==$#';
+        if (preg_match($patten, $sec_websocket_key) === 0 || strlen(base64_decode($sec_websocket_key)) !== 16) {
+            $response->end();
+            return false;
+        }
+        echo $request->header['sec-websocket-key'];
+        $key = base64_encode(
+            sha1(
+                $request->header['sec-websocket-key'] . '258EAFA5-E914-47DA-95CA-C5AB0DC85B11',
+                true
+            )
+        );
+        $headers = [
+            'Upgrade' => 'websocket',
+            'Connection' => 'Upgrade',
+            'Sec-WebSocket-Accept' => $key,
+            'Sec-WebSocket-Version' => '13',
+        ];
+        if (isset($my_headers)) {
+            $headers = array_merge($headers, $my_headers);
+        }
+        foreach ($headers as $key => $val) {
+            $response->header($key, $val);
+        }
+
+        $response->status(101);
+        $response->end();
+        return true;
     }
 
     /**

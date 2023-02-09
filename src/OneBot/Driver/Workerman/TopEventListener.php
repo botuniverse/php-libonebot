@@ -67,9 +67,12 @@ class TopEventListener
 
             $event->setSocketConfig($config);
             ob_event_dispatcher()->dispatch($event);
-            if (is_object($event->getResponse()) && method_exists($event->getResponse(), '__toString')) {
-                $connection->close((string) $event->getResponse());
-                return;
+            // 判断 response 是不是 101 状态，如果是 101 状态，那么就只取 Header 补充，其他内容丢弃
+            if (is_object($event->getResponse()) && $event->getResponse()->getStatusCode() !== 101) {
+                $connection->close(method_exists($event->getResponse(), '__toString') ? ((string) $event->getResponse()) : '');
+            } elseif (is_object($event->getResponse())) {
+                /* @phpstan-ignore-next-line */
+                $connection->headers = Utils::getRawHeadersFromResponse($event->getResponse());
             }
             if (($connection->worker instanceof Worker) && ($socket = WorkermanDriver::getInstance()->getWSServerSocketByWorker($connection->worker)) !== null) {
                 $socket->connections[$connection->id] = $connection;
