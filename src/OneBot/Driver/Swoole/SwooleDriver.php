@@ -237,6 +237,7 @@ class SwooleDriver extends Driver
         $this->server->on('managerstart', [TopEventListener::getInstance(), 'onManagerStart']);
         $this->server->on('managerstop', [TopEventListener::getInstance(), 'onManagerStop']);
         $this->server->on('workerstop', [TopEventListener::getInstance(), 'onWorkerStop']);
+        $this->server->on('workerexit', [TopEventListener::getInstance(), 'onWorkerExit']);
     }
 
     /**

@@ -61,4 +61,12 @@ class EventLoop extends DriverEventLoopBase
     {
         Timer::clear($timer_id);
     }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function clearAllTimer()
+    {
+        Timer::clearAll();
+    }
 }

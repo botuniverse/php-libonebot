@@ -55,4 +55,9 @@ abstract class DriverEventLoopBase
      * @param int $timer_id 通过 addTimer() 方法返回的计时器 ID
      */
     abstract public function clearTimer(int $timer_id);
+
+    /**
+     * 删除所有计时器
+     */
+    abstract public function clearAllTimer();
 }
