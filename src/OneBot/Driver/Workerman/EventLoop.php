@@ -67,4 +67,12 @@ class EventLoop extends DriverEventLoopBase
     {
         Worker::getEventLoop()->del($fd, EventInterface::EV_WRITE);
     }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function clearAllTimer()
+    {
+        Timer::delAll();
+    }
 }

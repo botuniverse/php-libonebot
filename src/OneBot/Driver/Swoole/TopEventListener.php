@@ -10,6 +10,7 @@ use OneBot\Driver\Coroutine\Adaptive;
 use OneBot\Driver\Event\Http\HttpRequestEvent;
 use OneBot\Driver\Event\Process\ManagerStartEvent;
 use OneBot\Driver\Event\Process\ManagerStopEvent;
+use OneBot\Driver\Event\Process\WorkerExitEvent;
 use OneBot\Driver\Event\Process\WorkerStartEvent;
 use OneBot\Driver\Event\Process\WorkerStopEvent;
 use OneBot\Driver\Event\WebSocket\WebSocketCloseEvent;
@@ -66,6 +67,14 @@ class TopEventListener
     public function onWorkerStop()
     {
         ob_event_dispatcher()->dispatchWithHandler(new WorkerStopEvent());
+    }
+
+    /**
+     * Swoole 的顶层 workerExit 事件回调
+     */
+    public function onWorkerExit()
+    {
+        ob_event_dispatcher()->dispatchWithHandler(new WorkerExitEvent());
     }
 
     /**
