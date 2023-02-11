@@ -117,9 +117,11 @@ class TopEventListener
             $event = new WebSocketMessageEvent($connection->id, $frame, function (int $fd, $data) use ($connection) {
                 if ($data instanceof FrameInterface) {
                     $data_w = $data->getData();
-                    return $connection->send($data_w);
+                    $res = $connection->send($data_w);
+                } else {
+                    $res = $connection->send($data);
                 }
-                return $connection->send($data);
+                return !($res === false);
             });
             $event->setSocketConfig($config);
             ob_event_dispatcher()->dispatch($event);
