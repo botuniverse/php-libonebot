@@ -13,7 +13,7 @@ use Psr\Log\LoggerInterface;
 use ZM\Logger\ConsoleLogger;
 
 const ONEBOT_VERSION = '12';
-const ONEBOT_LIBOB_VERSION = '0.5.9';
+const ONEBOT_LIBOB_VERSION = '0.5.10';
 
 const ONEBOT_JSON = 1;
 const ONEBOT_MSGPACK = 2;
