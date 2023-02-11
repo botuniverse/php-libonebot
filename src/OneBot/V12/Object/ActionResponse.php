@@ -20,6 +20,11 @@ class ActionResponse implements \JsonSerializable, \IteratorAggregate
 
     public string $message = '';
 
+    /**
+     * @var mixed
+     */
+    public $echo = null;
+
     public static function create($echo = null): ActionResponse
     {
         $a = new self();
@@ -55,13 +60,16 @@ class ActionResponse implements \JsonSerializable, \IteratorAggregate
     #[\ReturnTypeWillChange]
     public function getIterator(): \ArrayIterator
     {
-        return new \ArrayIterator($this);
+        return new \ArrayIterator($this->jsonSerialize());
     }
 
     public function jsonSerialize(): array
     {
         $data = [];
         foreach ($this as $k => $v) {
+            if ($k === 'echo' && $v === null) {
+                continue;
+            }
             $data[$k] = $v;
         }
         return $data;
