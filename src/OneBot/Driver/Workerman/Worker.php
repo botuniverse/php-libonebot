@@ -8,9 +8,6 @@ namespace OneBot\Driver\Workerman;
 
 use Workerman\Connection\ConnectionInterface;
 use Workerman\Lib\Timer;
-use function is_file;
-use function pcntl_signal;
-use function set_error_handler;
 
 /**
  * @property callable|\Closure $onWebSocketConnect
@@ -189,15 +186,16 @@ class Worker extends \Workerman\Worker
 
         // Log file.
         // [jerry]: 不需要Workerman自作主张写文件了！！
-        /*
+        // [jerry]: 还是得写个日志，要不然workerman就报错了
         if (empty(static::$logFile)) {
-            static::$logFile = __DIR__ . '/../workerman.log';
+            $rand = random_int(100000, 999999);
+            static::$logFile = ONEBOT_TMP_DIR . '/.libob ' . $rand . '.workerman.log';
         }
         $log_file = (string) static::$logFile;
-        if (!is_file($log_file)) {
+        if (!\is_file($log_file)) {
             touch($log_file);
             chmod($log_file, 0622);
-        }*/
+        }
 
         // State.
         static::$_status = static::STATUS_STARTING;
