@@ -16,7 +16,10 @@ class ActionResponse implements \JsonSerializable, \IteratorAggregate
 
     public int $retcode = 0;
 
-    public array $data = [];
+    /**
+     * @var mixed
+     */
+    public $data = [];
 
     public string $message = '';
 
