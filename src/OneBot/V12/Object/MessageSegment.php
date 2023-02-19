@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace OneBot\V12\Object;
 
-use ReturnTypeWillChange;
-
 class MessageSegment implements \JsonSerializable, \IteratorAggregate
 {
     /** @var string 类型 */
