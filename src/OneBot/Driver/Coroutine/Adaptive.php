@@ -50,7 +50,7 @@ class Adaptive
             return;
         }
         if (self::$coroutine instanceof FiberCoroutine) {
-            WorkermanDriver::getInstance()->getEventLoop()->addTimer($time * 1000, function () use ($cid) {
+            WorkermanDriver::getInstance()->getEventLoop()->addTimer(intval($time * 1000), function () use ($cid) {
                 self::$coroutine->resume($cid);
             });
             self::$coroutine->suspend();
