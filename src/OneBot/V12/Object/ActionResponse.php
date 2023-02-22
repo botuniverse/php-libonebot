@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace OneBot\V12\Object;
 
 use OneBot\V12\RetCode;
-use ReturnTypeWillChange;
 
 /**
  * @property mixed $echo
@@ -63,18 +62,23 @@ class ActionResponse implements \JsonSerializable, \IteratorAggregate
     #[\ReturnTypeWillChange]
     public function getIterator(): \ArrayIterator
     {
-        return new \ArrayIterator($this->jsonSerialize());
+        return new \ArrayIterator([
+            'status' => $this->status,
+            'retcode' => $this->retcode,
+            'message' => $this->message,
+            'data' => $this->data,
+            'echo' => $this->echo,
+        ]);
     }
 
     public function jsonSerialize(): array
     {
-        $data = [];
-        foreach ($this as $k => $v) {
-            if ($k === 'echo' && $v === null) {
-                continue;
-            }
-            $data[$k] = $v;
-        }
-        return $data;
+        return [
+            'status' => $this->status,
+            'retcode' => $this->retcode,
+            'message' => $this->message,
+            'data' => $this->data,
+            'echo' => $this->echo,
+        ];
     }
 }
