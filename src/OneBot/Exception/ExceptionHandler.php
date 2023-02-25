@@ -15,7 +15,7 @@ class ExceptionHandler implements ExceptionHandlerInterface
 
     protected $whoops;
 
-    protected ?ExceptionHandlerInterface $overridden_by;
+    protected ?ExceptionHandlerInterface $overridden_by = null;
 
     protected function __construct()
     {
