@@ -11,47 +11,64 @@ use Workerman\Connection\TcpConnection;
 
 class WSServerSocket extends WSServerSocketBase
 {
-    /**
-     * @var Worker
-     */
-    public $worker;
+    public Worker $worker;
 
     /**
      * @var TcpConnection[]
      */
-    public $connections = [];
+    public array $connections = [];
 
     public function __construct(Worker $worker)
     {
         $this->worker = $worker;
     }
 
-    public function send(FrameInterface $data, $id = null): bool
+    public function send($data, $fd): bool
     {
-        if (!isset($this->connections[$id])) {
+        if (!isset($this->connections[$fd])) {
             ob_logger()->warning('链接不存在，可能已被关闭或未连接');
             return false;
         }
-        return $this->connections[$id]->send($data->getData());
+        if ($data instanceof FrameInterface) {
+            $data = $data->getData();
+        }
+        return $this->connections[$fd]->send($data->getData());
     }
 
-    public function sendAll(FrameInterface $data): array
+    public function sendMultiple($data, ?callable $filter = null): array
     {
         $result = [];
-        foreach ($this->connections as $id => $connection) {
-            $result[$id] = $connection->send($data->getData());
+        if ($data instanceof FrameInterface) {
+            $data = $data->getData();
+        }
+        foreach ($this->connections as $fd => $connection) {
+            if ($connection->getStatus() === TcpConnection::STATUS_ESTABLISHED && ($filter === null || $filter($fd, $this))) {
+                $result[$fd] = $connection->send($data->getData());
+            }
         }
         return $result;
     }
 
-    public function close($id): bool
+    public function sendAll($data): array
     {
-        if (!isset($this->connections[$id])) {
+        $result = [];
+        if ($data instanceof FrameInterface) {
+            $data = $data->getData();
+        }
+        foreach ($this->connections as $id => $connection) {
+            $result[$id] = $connection->send($data);
+        }
+        return $result;
+    }
+
+    public function close($fd): bool
+    {
+        if (!isset($this->connections[$fd])) {
             ob_logger()->warning('链接不存在，可能已被关闭或未连接');
             return false;
         }
-        $this->connections[$id]->close();
-        unset($this->connections[$id]);
+        $this->connections[$fd]->close();
+        unset($this->connections[$fd]);
         return true;
     }
 

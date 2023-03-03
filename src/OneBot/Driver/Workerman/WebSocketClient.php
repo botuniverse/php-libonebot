@@ -6,6 +6,7 @@ namespace OneBot\Driver\Workerman;
 
 use Choir\Http\HttpFactory;
 use Choir\WebSocket\FrameFactory;
+use Choir\WebSocket\FrameInterface;
 use OneBot\Driver\Interfaces\WebSocketClientInterface;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\UriInterface;
@@ -114,6 +115,11 @@ class WebSocketClient implements WebSocketClientInterface
 
     public function send($data): bool
     {
+        if ($data instanceof FrameInterface) {
+            $data = $data->getData();
+        } elseif (!is_string($data)) {
+            return false;
+        }
         $this->connection->send($data);
         return true;
     }
