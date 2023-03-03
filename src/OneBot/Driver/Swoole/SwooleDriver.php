@@ -69,7 +69,7 @@ class SwooleDriver extends Driver
             $this->server = new SwooleWebSocketServer($ws_0['host'], $ws_0['port'], $this->getParam('swoole_server_mode', SWOOLE_PROCESS));
             $this->initServer();
             $this->initWebSocketServer($this->server, $ws_0);
-            $this->ws_socket[] = new WSServerSocket($this->server, $ws_0);
+            $this->ws_socket[] = new WSServerSocket($this->server, null, $ws_0);
             if (!empty($ws)) {
                 foreach ($ws as $v) {
                     $this->addWSServerListener($v);
@@ -261,7 +261,7 @@ class SwooleDriver extends Driver
             'open_http_protocol' => false,
         ]);
         $this->initWebSocketServer($port, $v);
-        $this->ws_socket[] = new WSServerSocket($port, $v);
+        $this->ws_socket[] = new WSServerSocket($this->server, $port, $v);
     }
 
     private function addHttpServerListener($v)

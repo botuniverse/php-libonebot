@@ -20,6 +20,16 @@ trait SocketTrait
 
     /* ======================== Getter by flags ======================== */
 
+    public function getWSServerSocketByFlag(int $flag = 0): ?WSServerSocketBase
+    {
+        foreach ($this->ws_socket as $socket) {
+            if ($socket->getFlag() === $flag) {
+                return $socket;
+            }
+        }
+        return null;
+    }
+
     /**
      * @return \Generator|WSServerSocketBase[]
      */

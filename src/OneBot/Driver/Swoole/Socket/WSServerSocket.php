@@ -6,25 +6,23 @@ namespace OneBot\Driver\Swoole\Socket;
 
 use Choir\WebSocket\FrameInterface;
 use OneBot\Driver\Socket\WSServerSocketBase;
-use Swoole\Server;
+use Swoole\Server\Port;
+use Swoole\WebSocket\Server;
 
 class WSServerSocket extends WSServerSocketBase
 {
-    /** @var Server|Server\Port|\Swoole\Http\Server|\Swoole\WebSocket\Server */
-    protected $socket_obj;
+    protected ?Server $server;
 
-    public function __construct($server_or_port, array $config)
+    protected ?Port $port;
+
+    public function __construct(?Server $server = null, ?Port $port = null, array $config = [])
     {
-        $this->socket_obj = $server_or_port;
+        $this->server = $server;
+        $this->port = $port;
         $this->config = $config;
     }
 
-    public function sendAll(FrameInterface $data): array
-    {
-        return [];
-    }
-
-    public function close($id): bool
+    public function close($fd): bool
     {
         return false;
     }
@@ -32,8 +30,27 @@ class WSServerSocket extends WSServerSocketBase
     /**
      * {@inheritDoc}
      */
-    public function send(FrameInterface $data, $id = null): bool
+    public function send($data, $fd): bool
     {
-        return false;
+        if ($data instanceof FrameInterface) {
+            return $this->server->push($fd, $data->getData(), $data->getOpcode());
+        }
+        return $this->server->push($fd, $data);
+    }
+
+    public function sendMultiple($data, ?callable $filter = null): array
+    {
+        $result = [];
+        if ($this->port !== null) {
+            $a = $this->port->connections;
+        } else {
+            $a = $this->server->connections;
+        }
+        foreach ($a as $fd) {
+            if ($this->server->exists($fd) && ($filter === null || $filter($fd, $this))) {
+                $result[$fd] = $this->send($data, $fd);
+            }
+        }
+        return $result;
     }
 }

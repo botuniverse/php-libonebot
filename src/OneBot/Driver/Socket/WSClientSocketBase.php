@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace OneBot\Driver\Socket;
 
-use Choir\WebSocket\FrameInterface;
 use OneBot\Driver\Interfaces\SocketInterface;
 use OneBot\Driver\Interfaces\WebSocketClientInterface;
 use OneBot\Driver\Interfaces\WebSocketInterface;
@@ -63,7 +62,7 @@ abstract class WSClientSocketBase implements SocketInterface, WebSocketInterface
         return $this->client;
     }
 
-    public function send(FrameInterface $data, $id = null): bool
+    public function send($data, $fd = null): bool
     {
         return $this->client->send($data);
     }
