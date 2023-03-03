@@ -258,7 +258,7 @@ class OneBot
             if ($socket->getFlag() !== 1) {
                 continue;
             }
-            $socket->sendAll($frame_str);
+            $socket->sendMultiple($frame_str);
         }
         foreach ($this->driver->getWSReverseSockets() as $socket) {
             if ($socket->getFlag() !== 1 || !$socket->getClient()->isConnected()) {
