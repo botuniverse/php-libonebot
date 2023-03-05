@@ -34,7 +34,11 @@ class TopEventListener
     {
         ProcessManager::initProcess(ONEBOT_PROCESS_WORKER, $worker->id);
         Adaptive::initWithDriver(WorkermanDriver::getInstance());
-        ob_event_dispatcher()->dispatchWithHandler(new WorkerStartEvent());
+        if (($co = Adaptive::getCoroutine()) !== null) {
+            $co->create(fn () => ob_event_dispatcher()->dispatchWithHandler(new WorkerStartEvent()));
+        } else {
+            ob_event_dispatcher()->dispatchWithHandler(new WorkerStartEvent());
+        }
     }
 
     /**
@@ -42,17 +46,25 @@ class TopEventListener
      */
     public function onWorkerStop()
     {
-        ob_event_dispatcher()->dispatchWithHandler(new WorkerStopEvent());
+        if (($co = Adaptive::getCoroutine()) !== null) {
+            $co->create(fn () => ob_event_dispatcher()->dispatchWithHandler(new WorkerStopEvent()));
+        } else {
+            ob_event_dispatcher()->dispatchWithHandler(new WorkerStopEvent());
+        }
     }
 
     /**
      * Workerman 的顶层 onWebSocketConnect 事件回调
      *
      * @param TcpConnection $connection 连接本身
-     * @param mixed         $data       数据
      */
-    public function onWebSocketOpen(array $config, TcpConnection $connection, $data)
+    public function onWebSocketOpen(array $config, TcpConnection $connection)
     {
+        // 协程套娃
+        if (($co = Adaptive::getCoroutine()) !== null && $co->getCid() === -1) {
+            $co->create([$this, 'onWebSocketOpen'], $config, $connection);
+            return;
+        }
         // WebSocket 隐藏特性： _SERVER 全局变量会在 onWebSocketConnect 中被替换为当前连接的 Header 相关信息
         try {
             global $_SERVER;
@@ -91,6 +103,11 @@ class TopEventListener
      */
     public function onWebSocketClose(array $config, TcpConnection $connection)
     {
+        // 协程套娃
+        if (($co = Adaptive::getCoroutine()) !== null && $co->getCid() === -1) {
+            $co->create([$this, 'onWebSocketClose'], $config, $connection);
+            return;
+        }
         if (($connection->worker instanceof Worker) && ($socket = WorkermanDriver::getInstance()->getWSServerSocketByWorker($connection->worker)) !== null) {
             unset($socket->connections[$connection->id]);
         } else {
@@ -110,6 +127,11 @@ class TopEventListener
      */
     public function onWebSocketMessage(array $config, TcpConnection $connection, $data)
     {
+        // 协程套娃
+        if (($co = Adaptive::getCoroutine()) !== null && $co->getCid() === -1) {
+            $co->create([$this, 'onWebSocketMessage'], $config, $connection, $data);
+            return;
+        }
         try {
             ob_logger()->debug('WebSocket message from: ' . $connection->id);
             $frame = FrameFactory::createTextFrame($data);
@@ -132,6 +154,11 @@ class TopEventListener
 
     public function onHttpRequest(array $config, TcpConnection $connection, Request $request)
     {
+        // 协程套娃
+        if (($co = Adaptive::getCoroutine()) !== null && $co->getCid() === -1) {
+            $co->create([$this, 'onHttpRequest'], $config, $connection, $request);
+            return;
+        }
         $port = $connection->getLocalPort();
         ob_logger()->debug('Http request from ' . $port . ': ' . $request->uri());
         $event = new HttpRequestEvent(HttpFactory::createServerRequest(
