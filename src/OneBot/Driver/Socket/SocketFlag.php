@@ -7,7 +7,7 @@ namespace OneBot\Driver\Socket;
 trait SocketFlag
 {
     /** @var int */
-    protected $flag = 0;
+    protected $flag = 1;
 
     public function setFlag(int $flag): self
     {
