@@ -32,7 +32,7 @@ class WSServerSocket extends WSServerSocketBase
         if ($data instanceof FrameInterface) {
             $data = $data->getData();
         }
-        return $this->connections[$fd]->send($data->getData());
+        return $this->connections[$fd]->send($data);
     }
 
     public function sendMultiple($data, ?callable $filter = null): array
