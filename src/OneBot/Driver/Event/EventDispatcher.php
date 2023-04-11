@@ -21,7 +21,7 @@ class EventDispatcher implements HandledDispatcherInterface
                 // TODO: 在调用 listener 前先判断 isPropagationStopped
                 $listener[1]($event);
             } catch (StopException $exception) {
-                ob_logger()->debug('EventLoop ' . $event . ' stopped');
+                // ob_logger()->debug('EventLoop ' . $event . ' stopped');
                 if ($event instanceof DriverEvent) {
                     $event->setPropagationStopped();
                 }
