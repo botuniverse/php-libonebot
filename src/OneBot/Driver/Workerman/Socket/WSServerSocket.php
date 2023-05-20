@@ -43,7 +43,7 @@ class WSServerSocket extends WSServerSocketBase
         }
         foreach ($this->connections as $fd => $connection) {
             if ($connection->getStatus() === TcpConnection::STATUS_ESTABLISHED && ($filter === null || $filter($fd, $this))) {
-                $result[$fd] = $connection->send($data->getData());
+                $result[$fd] = $connection->send($data);
             }
         }
         return $result;
