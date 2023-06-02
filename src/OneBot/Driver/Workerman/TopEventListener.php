@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace OneBot\Driver\Workerman;
 
 use Choir\Http\HttpFactory;
+use Choir\Http\UploadedFile;
 use Choir\WebSocket\FrameFactory;
 use Choir\WebSocket\FrameInterface;
 use OneBot\Driver\Coroutine\Adaptive;
@@ -161,12 +162,28 @@ class TopEventListener
         }
         $port = $connection->getLocalPort();
         ob_logger()->debug('Http request from ' . $port . ': ' . $request->uri());
-        $event = new HttpRequestEvent(HttpFactory::createServerRequest(
+        $req = HttpFactory::createServerRequest(
             $request->method(),
             $request->uri(),
             $request->header(),
             $request->rawBody()
-        ));
+        );
+        $req = $req->withQueryParams($request->get() ?? [])
+            ->withCookieParams($request->cookie() ?? []);
+        if (!empty($request->file())) {
+            $uploaded = [];
+            foreach ($request->file() as $key => $value) {
+                $upload = new UploadedFile([
+                    'key' => $key,
+                    ...$value,
+                ]);
+                $uploaded[] = $upload;
+            }
+            if ($uploaded !== []) {
+                $req = $req->withUploadedFiles($uploaded);
+            }
+        }
+        $event = new HttpRequestEvent($req);
         $event->setSocketConfig($config);
         $send_callable = function (ResponseInterface $psr_response) use ($connection) {
             $response = new WorkermanResponse();

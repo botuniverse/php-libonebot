@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace OneBot\Driver\Swoole;
 
 use Choir\Http\HttpFactory;
+use Choir\Http\UploadedFile;
 use Choir\WebSocket\FrameInterface;
 use OneBot\Driver\Coroutine\Adaptive;
 use OneBot\Driver\Event\Http\HttpRequestEvent;
@@ -92,7 +93,21 @@ class TopEventListener
             $request->header,
             $content
         );
-        $req = $req->withQueryParams($request->get ?? []);
+        $req = $req->withQueryParams($request->get ?? [])
+            ->withCookieParams($request->cookie ?? []);
+        $uploaded = [];
+        if (!empty($request->files)) {
+            foreach ($request->files as $key => $value) {
+                $upload = new UploadedFile([
+                    'key' => $key,
+                    ...$value,
+                ]);
+                $uploaded[] = $upload;
+            }
+            if ($uploaded !== []) {
+                $req = $req->withUploadedFiles($uploaded);
+            }
+        }
         $event = new HttpRequestEvent($req);
         try {
             $event->setSocketConfig($config);
