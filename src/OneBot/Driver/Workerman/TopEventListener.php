@@ -47,11 +47,7 @@ class TopEventListener
      */
     public function onWorkerStop()
     {
-        if (($co = Adaptive::getCoroutine()) !== null) {
-            $co->create(fn () => ob_event_dispatcher()->dispatchWithHandler(new WorkerStopEvent()));
-        } else {
-            ob_event_dispatcher()->dispatchWithHandler(new WorkerStopEvent());
-        }
+        ob_event_dispatcher()->dispatchWithHandler(new WorkerStopEvent());
     }
 
     /**
