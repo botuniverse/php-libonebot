@@ -96,6 +96,7 @@ class TopEventListener
         $req = $req->withQueryParams($request->get ?? [])
             ->withCookieParams($request->cookie ?? []);
         $uploaded = [];
+        // 上传的文件
         if (!empty($request->files)) {
             foreach ($request->files as $key => $value) {
                 $upload = new UploadedFile([
@@ -107,6 +108,10 @@ class TopEventListener
             if ($uploaded !== []) {
                 $req = $req->withUploadedFiles($uploaded);
             }
+        }
+        // post 包体
+        if (!empty($request->post)) {
+            $req = $req->withParsedBody($request->post);
         }
         $event = new HttpRequestEvent($req);
         try {
