@@ -166,6 +166,7 @@ class TopEventListener
         );
         $req = $req->withQueryParams($request->get() ?? [])
             ->withCookieParams($request->cookie() ?? []);
+        // 解析文件
         if (!empty($request->file())) {
             $uploaded = [];
             foreach ($request->file() as $key => $value) {
@@ -178,6 +179,10 @@ class TopEventListener
             if ($uploaded !== []) {
                 $req = $req->withUploadedFiles($uploaded);
             }
+        }
+        // 解析 post
+        if (!empty($request->post())) {
+            $req = $req->withParsedBody($request->post());
         }
         $event = new HttpRequestEvent($req);
         $event->setSocketConfig($config);
