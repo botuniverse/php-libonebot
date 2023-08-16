@@ -57,13 +57,13 @@ class TopEventListener
      */
     public function onWebSocketOpen(array $config, TcpConnection $connection)
     {
-        // 协程套娃
-        if (($co = Adaptive::getCoroutine()) !== null && $co->getCid() === -1) {
-            $co->create([$this, 'onWebSocketOpen'], $config, $connection);
-            return;
-        }
-        // WebSocket 隐藏特性： _SERVER 全局变量会在 onWebSocketConnect 中被替换为当前连接的 Header 相关信息
         try {
+            // 协程套娃
+            if (($co = Adaptive::getCoroutine()) !== null && $co->getCid() === -1) {
+                $co->create([$this, 'onWebSocketOpen'], $config, $connection);
+                return;
+            }
+            // WebSocket 隐藏特性： _SERVER 全局变量会在 onWebSocketConnect 中被替换为当前连接的 Header 相关信息
             global $_SERVER;
             $headers = Utils::convertHeaderFromGlobal($_SERVER);
             $server_request = HttpFactory::createServerRequest(
@@ -100,20 +100,24 @@ class TopEventListener
      */
     public function onWebSocketClose(array $config, TcpConnection $connection)
     {
-        // 协程套娃
-        if (($co = Adaptive::getCoroutine()) !== null && $co->getCid() === -1) {
-            $co->create([$this, 'onWebSocketClose'], $config, $connection);
-            return;
+        try {
+            // 协程套娃
+            if (($co = Adaptive::getCoroutine()) !== null && $co->getCid() === -1) {
+                $co->create([$this, 'onWebSocketClose'], $config, $connection);
+                return;
+            }
+            if (($connection->worker instanceof Worker) && ($socket = WorkermanDriver::getInstance()->getWSServerSocketByWorker($connection->worker)) !== null) {
+                unset($socket->connections[$connection->id]);
+            } else {
+                // TODO: 编写不可能的异常情况
+                ob_logger()->error('WorkermanDriver::getWSServerSocketByWorker() returned null');
+            }
+            $event = new WebSocketCloseEvent($connection->id);
+            $event->setSocketConfig($config);
+            ob_event_dispatcher()->dispatch($event);
+        } catch (\Throwable $e) {
+            ExceptionHandler::getInstance()->handle($e);
         }
-        if (($connection->worker instanceof Worker) && ($socket = WorkermanDriver::getInstance()->getWSServerSocketByWorker($connection->worker)) !== null) {
-            unset($socket->connections[$connection->id]);
-        } else {
-            // TODO: 编写不可能的异常情况
-            ob_logger()->error('WorkermanDriver::getWSServerSocketByWorker() returned null');
-        }
-        $event = new WebSocketCloseEvent($connection->id);
-        $event->setSocketConfig($config);
-        ob_event_dispatcher()->dispatch($event);
     }
 
     /**
@@ -124,12 +128,12 @@ class TopEventListener
      */
     public function onWebSocketMessage(array $config, TcpConnection $connection, $data)
     {
-        // 协程套娃
-        if (($co = Adaptive::getCoroutine()) !== null && $co->getCid() === -1) {
-            $co->create([$this, 'onWebSocketMessage'], $config, $connection, $data);
-            return;
-        }
         try {
+            // 协程套娃
+            if (($co = Adaptive::getCoroutine()) !== null && $co->getCid() === -1) {
+                $co->create([$this, 'onWebSocketMessage'], $config, $connection, $data);
+                return;
+            }
             ob_logger()->debug('WebSocket message from: ' . $connection->id);
             $frame = FrameFactory::createTextFrame($data);
 
@@ -151,51 +155,52 @@ class TopEventListener
 
     public function onHttpRequest(array $config, TcpConnection $connection, Request $request)
     {
-        // 协程套娃
-        if (($co = Adaptive::getCoroutine()) !== null && $co->getCid() === -1) {
-            $co->create([$this, 'onHttpRequest'], $config, $connection, $request);
-            return;
-        }
-        $port = $connection->getLocalPort();
-        ob_logger()->debug('Http request from ' . $port . ': ' . $request->uri());
-        $req = HttpFactory::createServerRequest(
-            $request->method(),
-            $request->uri(),
-            $request->header(),
-            $request->rawBody()
-        );
-        $req = $req->withQueryParams($request->get() ?? [])
-            ->withCookieParams($request->cookie() ?? []);
-        // 解析文件
-        if (!empty($request->file())) {
-            $uploaded = [];
-            foreach ($request->file() as $key => $value) {
-                $upload = new UploadedFile([
-                    'key' => $key,
-                    ...$value,
-                ]);
-                $uploaded[] = $upload;
-            }
-            if ($uploaded !== []) {
-                $req = $req->withUploadedFiles($uploaded);
-            }
-        }
-        // 解析 post
-        if (!empty($request->post())) {
-            $req = $req->withParsedBody($request->post());
-        }
-        $event = new HttpRequestEvent($req);
-        $event->setSocketConfig($config);
-        $send_callable = function (ResponseInterface $psr_response) use ($connection) {
-            $response = new WorkermanResponse();
-            $response->withStatus($psr_response->getStatusCode());
-            $response->withHeaders($psr_response->getHeaders());
-            $response->withBody($psr_response->getBody()->getContents());
-            $connection->send($response);
-        };
-        $event->withAsyncResponseCallable($send_callable);
-        $response = new WorkermanResponse();
         try {
+            // 协程套娃
+            if (($co = Adaptive::getCoroutine()) !== null && $co->getCid() === -1) {
+                $co->create([$this, 'onHttpRequest'], $config, $connection, $request);
+                return;
+            }
+            $port = $connection->getLocalPort();
+            ob_logger()->debug('Http request from ' . $port . ': ' . $request->uri());
+            $req = HttpFactory::createServerRequest(
+                $request->method(),
+                $request->uri(),
+                $request->header(),
+                $request->rawBody()
+            );
+            $req = $req->withQueryParams($request->get() ?? [])
+                ->withCookieParams($request->cookie() ?? []);
+            // 解析文件
+            if (!empty($request->file())) {
+                $uploaded = [];
+                foreach ($request->file() as $key => $value) {
+                    $upload = new UploadedFile([
+                        'key' => $key,
+                        ...$value,
+                    ]);
+                    $uploaded[] = $upload;
+                }
+                if ($uploaded !== []) {
+                    $req = $req->withUploadedFiles($uploaded);
+                }
+            }
+            // 解析 post
+            if (!empty($request->post())) {
+                $req = $req->withParsedBody($request->post());
+            }
+            $event = new HttpRequestEvent($req);
+            $event->setSocketConfig($config);
+            $send_callable = function (ResponseInterface $psr_response) use ($connection) {
+                $response = new WorkermanResponse();
+                $response->withStatus($psr_response->getStatusCode());
+                $response->withHeaders($psr_response->getHeaders());
+                $response->withBody($psr_response->getBody()->getContents());
+                $connection->send($response);
+            };
+            $event->withAsyncResponseCallable($send_callable);
+            $response = new WorkermanResponse();
+
             ob_event_dispatcher()->dispatch($event);
             if (($psr_response = $event->getResponse()) !== null) {
                 $response->withStatus($psr_response->getStatusCode());
@@ -205,9 +210,11 @@ class TopEventListener
             }
         } catch (\Throwable $e) {
             ExceptionHandler::getInstance()->handle($e);
-            $response->withStatus(500);
-            $response->withBody('Internal Server Error');
-            $connection->send($response);
+            if (isset($response)) {
+                $response->withStatus(500);
+                $response->withBody('Internal Server Error');
+                $connection->send($response);
+            }
         }
     }
 }
