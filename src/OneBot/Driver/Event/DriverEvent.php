@@ -24,9 +24,6 @@ abstract class DriverEvent implements Event, StoppableEventInterface
         return static::$custom_name ?? static::class;
     }
 
-    /**
-     * {@inheritDoc}
-     */
     public function isPropagationStopped(): bool
     {
         return $this->propagation_stopped;

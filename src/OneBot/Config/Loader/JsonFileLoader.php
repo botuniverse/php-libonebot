@@ -6,9 +6,6 @@ namespace OneBot\Config\Loader;
 
 class JsonFileLoader extends AbstractFileLoader
 {
-    /**
-     * {@inheritDoc}
-     */
     protected function loadFile(string $file)
     {
         try {

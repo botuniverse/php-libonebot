@@ -27,9 +27,6 @@ class WSServerSocket extends WSServerSocketBase
         return false;
     }
 
-    /**
-     * {@inheritDoc}
-     */
     public function send($data, $fd): bool
     {
         if ($data instanceof FrameInterface) {

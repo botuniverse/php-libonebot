@@ -58,9 +58,6 @@ class WorkermanDriver extends Driver
         return null;
     }
 
-    /**
-     * {@inheritDoc}
-     */
     public function run(): void
     {
         try {
@@ -121,8 +118,6 @@ class WorkermanDriver extends Driver
     }
 
     /**
-     * {@inheritDoc}
-     *
      * @throws \Exception
      */
     public function initWSReverseClients(array $headers = [])

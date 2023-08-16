@@ -59,9 +59,6 @@ class SwooleDriver extends Driver
         return EventLoop::getInstance();
     }
 
-    /**
-     * {@inheritDoc}
-     */
     public function initInternalDriverClasses(?array $http, ?array $http_webhook, ?array $ws, ?array $ws_reverse): array
     {
         if (!empty($ws)) {

@@ -10,17 +10,11 @@ use Swoole\Timer;
 
 class EventLoop extends DriverEventLoopBase
 {
-    /**
-     * {@inheritDoc}
-     */
     public function addReadEvent($fd, callable $callable)
     {
         Event::add($fd, $callable);
     }
 
-    /**
-     * {@inheritDoc}
-     */
     public function delReadEvent($fd)
     {
         Event::del($fd);
@@ -36,9 +30,6 @@ class EventLoop extends DriverEventLoopBase
         Event::del($fd);
     }
 
-    /**
-     * {@inheritDoc}
-     */
     public function addTimer(int $ms, callable $callable, int $times = 1, array $arguments = []): int
     {
         $timer_count = 0;
@@ -54,17 +45,11 @@ class EventLoop extends DriverEventLoopBase
         }, ...$arguments);
     }
 
-    /**
-     * {@inheritDoc}
-     */
     public function clearTimer(int $timer_id)
     {
         Timer::clear($timer_id);
     }
 
-    /**
-     * {@inheritDoc}
-     */
     public function clearAllTimer()
     {
         Timer::clearAll();

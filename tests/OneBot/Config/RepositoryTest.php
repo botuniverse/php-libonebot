@@ -49,12 +49,12 @@ class RepositoryTest extends TestCase
         );
     }
 
-// 尚未确定是否应该支持
-//    public function testGetValueWhenKeyContainsDot(): void
-//    {
-//        $this->assertEquals('c', $this->repository->get('a.b'));
-//        $this->assertEquals('d', $this->repository->get('a.b.c'));
-//    }
+    // 尚未确定是否应该支持
+    //    public function testGetValueWhenKeyContainsDot(): void
+    //    {
+    //        $this->assertEquals('c', $this->repository->get('a.b'));
+    //        $this->assertEquals('d', $this->repository->get('a.b.c'));
+    //    }
 
     public function testGetBooleanValue(): void
     {

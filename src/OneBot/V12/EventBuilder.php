@@ -36,7 +36,7 @@ class EventBuilder
         try {
             $this->event = new OneBotEvent($this->data);
             return true;
-        }catch (OneBotException $e) {
+        } catch (OneBotException $e) {
             return false;
         }
     }

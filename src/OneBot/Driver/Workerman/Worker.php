@@ -117,7 +117,7 @@ class Worker extends \Workerman\Worker
             }
             foreach ($worker_pid_array as $worker_pid) {
                 \posix_kill($worker_pid, $sig);
-                if (!static::$_gracefulStop){
+                if (!static::$_gracefulStop) {
                     Timer::add(static::$stopTimeout, '\posix_kill', [$worker_pid, \SIGKILL], false);
                 }
             }
@@ -130,7 +130,7 @@ class Worker extends \Workerman\Worker
         else {
             // Execute exit.
             foreach (static::$_workers as $worker) {
-                if (!$worker->stopping){
+                if (!$worker->stopping) {
                     $worker->stop();
                     $worker->stopping = true;
                 }
@@ -156,7 +156,8 @@ class Worker extends \Workerman\Worker
      *
      * @return array
      */
-    public static function getStartFilesForWindows() {
+    public static function getStartFilesForWindows()
+    {
         return [''];
     }
 
@@ -303,7 +304,7 @@ class Worker extends \Workerman\Worker
                     }
                     static::safeEcho("\nPress Ctrl+C to quit.\n\n");
                 }
-            // no break
+                // no break
             case 'connections':
                 if (\is_file($statistics_file) && is_writable($statistics_file)) {
                     \unlink($statistics_file);

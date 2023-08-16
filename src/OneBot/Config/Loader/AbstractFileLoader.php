@@ -9,9 +9,6 @@ use OneBot\Util\Utils;
 
 abstract class AbstractFileLoader implements LoaderInterface
 {
-    /**
-     * {@inheritDoc}
-     */
     public function load($source): array
     {
         // TODO: flexible base path

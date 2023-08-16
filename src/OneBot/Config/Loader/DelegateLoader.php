@@ -25,9 +25,6 @@ class DelegateLoader implements LoaderInterface
         $this->loaders = $loaders ?? self::getDefaultLoaders();
     }
 
-    /**
-     * {@inheritDoc}
-     */
     public function load($source): array
     {
         return $this->determineLoader($source)->load($source);
