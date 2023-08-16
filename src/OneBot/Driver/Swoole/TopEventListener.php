@@ -83,38 +83,38 @@ class TopEventListener
      */
     public function onRequest(array $config, Request $request, Response $response)
     {
-        ob_logger()->debug('Http request: ' . $request->server['request_uri']);
-        if (empty($content = $request->rawContent()) && $content !== '0') { // empty 遇到纯0的请求会返回true，所以这里加上 !== '0'
-            $content = null;
-        }
-        $req = HttpFactory::createServerRequest(
-            $request->server['request_method'],
-            $request->server['request_uri'],
-            $request->header,
-            $content
-        );
-        $req = $req->withQueryParams($request->get ?? [])
-            ->withCookieParams($request->cookie ?? []);
-        $uploaded = [];
-        // 上传的文件
-        if (!empty($request->files)) {
-            foreach ($request->files as $key => $value) {
-                $upload = new UploadedFile([
-                    'key' => $key,
-                    ...$value,
-                ]);
-                $uploaded[] = $upload;
-            }
-            if ($uploaded !== []) {
-                $req = $req->withUploadedFiles($uploaded);
-            }
-        }
-        // post 包体
-        if (!empty($request->post)) {
-            $req = $req->withParsedBody($request->post);
-        }
-        $event = new HttpRequestEvent($req);
         try {
+            ob_logger()->debug('Http request: ' . $request->server['request_uri']);
+            if (empty($content = $request->rawContent()) && $content !== '0') { // empty 遇到纯0的请求会返回true，所以这里加上 !== '0'
+                $content = null;
+            }
+            $req = HttpFactory::createServerRequest(
+                $request->server['request_method'],
+                $request->server['request_uri'],
+                $request->header,
+                $content
+            );
+            $req = $req->withQueryParams($request->get ?? [])
+                ->withCookieParams($request->cookie ?? []);
+            $uploaded = [];
+            // 上传的文件
+            if (!empty($request->files)) {
+                foreach ($request->files as $key => $value) {
+                    $upload = new UploadedFile([
+                        'key' => $key,
+                        ...$value,
+                    ]);
+                    $uploaded[] = $upload;
+                }
+                if ($uploaded !== []) {
+                    $req = $req->withUploadedFiles($uploaded);
+                }
+            }
+            // post 包体
+            if (!empty($request->post)) {
+                $req = $req->withParsedBody($request->post);
+            }
+            $event = new HttpRequestEvent($req);
             $event->setSocketConfig($config);
             ob_event_dispatcher()->dispatch($event);
             if (($psr_response = $event->getResponse()) !== null) {
@@ -128,7 +128,7 @@ class TopEventListener
             }
         } catch (\Throwable $e) {
             ExceptionHandler::getInstance()->handle($e);
-            if (is_callable($event->getErrorHandler())) {
+            if (isset($event) && is_callable($event->getErrorHandler())) {
                 $err_response = call_user_func($event->getErrorHandler(), $e, $event);
                 if ($err_response instanceof ResponseInterface) {
                     foreach ($err_response->getHeaders() as $header => $value) {
@@ -164,71 +164,76 @@ class TopEventListener
      */
     public function onHandshake(array $config, Request $request, Response $response)
     {
-        ob_logger()->debug('WebSocket connection handahske: ' . $request->fd);
-        if (empty($content = $request->rawContent())) {
-            $content = null;
-        }
-        $event = new WebSocketOpenEvent(HttpFactory::createServerRequest(
-            $request->server['request_method'],
-            $request->server['request_uri'],
-            $request->header,
-            $content
-        ), $request->fd);
-        $event->setSocketConfig($config);
-        ob_event_dispatcher()->dispatchWithHandler($event);
-        // 检查有没有制定response
-        if (is_object($event->getResponse())) {
-            $user_resp = $event->getResponse();
-            // 不等于 101 bu不握手
-            if ($user_resp->getStatusCode() !== 101) {
+        try {
+            ob_logger()->debug('WebSocket connection handahske: ' . $request->fd);
+            if (empty($content = $request->rawContent())) {
+                $content = null;
+            }
+            $event = new WebSocketOpenEvent(HttpFactory::createServerRequest(
+                $request->server['request_method'],
+                $request->server['request_uri'],
+                $request->header,
+                $content
+            ), $request->fd);
+            $event->setSocketConfig($config);
+            ob_event_dispatcher()->dispatchWithHandler($event);
+            // 检查有没有制定response
+            if (is_object($event->getResponse())) {
+                $user_resp = $event->getResponse();
+                // 不等于 101 bu不握手
+                if ($user_resp->getStatusCode() !== 101) {
+                    foreach ($user_resp->getHeaders() as $header => $value) {
+                        if (is_array($value)) {
+                            $response->setHeader($header, implode(';', $value));
+                        }
+                    }
+                    $response->setStatusCode($user_resp->getStatusCode());
+                    $response->end($user_resp->getBody()->getContents());
+                    return false;
+                }
+                // 等于 101 时候，检查把 Header 合进来
+                $my_headers = [];
                 foreach ($user_resp->getHeaders() as $header => $value) {
                     if (is_array($value)) {
-                        $response->setHeader($header, implode(';', $value));
+                        $my_headers[$header] = implode(';', $value);
                     }
                 }
-                $response->setStatusCode($user_resp->getStatusCode());
-                $response->end($user_resp->getBody()->getContents());
+            }
+            // 手动实现握手
+            // websocket握手连接算法验证
+            $sec_websocket_key = $request->header['sec-websocket-key'];
+            $patten = '#^[+/0-9A-Za-z]{21}[AQgw]==$#';
+            if (preg_match($patten, $sec_websocket_key) === 0 || strlen(base64_decode($sec_websocket_key)) !== 16) {
+                $response->end();
                 return false;
             }
-            // 等于 101 时候，检查把 Header 合进来
-            $my_headers = [];
-            foreach ($user_resp->getHeaders() as $header => $value) {
-                if (is_array($value)) {
-                    $my_headers[$header] = implode(';', $value);
-                }
+            echo $request->header['sec-websocket-key'];
+            $key = base64_encode(
+                sha1(
+                    $request->header['sec-websocket-key'] . '258EAFA5-E914-47DA-95CA-C5AB0DC85B11',
+                    true
+                )
+            );
+            $headers = [
+                'Upgrade' => 'websocket',
+                'Connection' => 'Upgrade',
+                'Sec-WebSocket-Accept' => $key,
+                'Sec-WebSocket-Version' => '13',
+            ];
+            if (isset($my_headers)) {
+                $headers = array_merge($headers, $my_headers);
             }
-        }
-        // 手动实现握手
-        // websocket握手连接算法验证
-        $sec_websocket_key = $request->header['sec-websocket-key'];
-        $patten = '#^[+/0-9A-Za-z]{21}[AQgw]==$#';
-        if (preg_match($patten, $sec_websocket_key) === 0 || strlen(base64_decode($sec_websocket_key)) !== 16) {
+            foreach ($headers as $key => $val) {
+                $response->header($key, $val);
+            }
+
+            $response->status(101);
             $response->end();
+            return true;
+        } catch (\Throwable $e) {
+            ExceptionHandler::getInstance()->handle($e);
             return false;
         }
-        echo $request->header['sec-websocket-key'];
-        $key = base64_encode(
-            sha1(
-                $request->header['sec-websocket-key'] . '258EAFA5-E914-47DA-95CA-C5AB0DC85B11',
-                true
-            )
-        );
-        $headers = [
-            'Upgrade' => 'websocket',
-            'Connection' => 'Upgrade',
-            'Sec-WebSocket-Accept' => $key,
-            'Sec-WebSocket-Version' => '13',
-        ];
-        if (isset($my_headers)) {
-            $headers = array_merge($headers, $my_headers);
-        }
-        foreach ($headers as $key => $val) {
-            $response->header($key, $val);
-        }
-
-        $response->status(101);
-        $response->end();
-        return true;
     }
 
     /**
@@ -236,16 +241,20 @@ class TopEventListener
      */
     public function onMessage(array $config, ?SwooleWebSocketServer $server, Frame $frame)
     {
-        ob_logger()->debug('WebSocket message from: ' . $frame->fd);
-        $new_frame = new \Choir\WebSocket\Frame($frame->data, $frame->opcode, true, true);
-        $event = new WebSocketMessageEvent($frame->fd, $new_frame, function (int $fd, $data) use ($server) {
-            if ($data instanceof FrameInterface) {
-                return $server->push($fd, $data->getData(), $data->getOpcode());
-            }
-            return $server->push($fd, $data);
-        });
-        $event->setOriginFrame($frame);
-        $event->setSocketConfig($config);
-        ob_event_dispatcher()->dispatchWithHandler($event);
+        try {
+            ob_logger()->debug('WebSocket message from: ' . $frame->fd);
+            $new_frame = new \Choir\WebSocket\Frame($frame->data, $frame->opcode, true, true);
+            $event = new WebSocketMessageEvent($frame->fd, $new_frame, function (int $fd, $data) use ($server) {
+                if ($data instanceof FrameInterface) {
+                    return $server->push($fd, $data->getData(), $data->getOpcode());
+                }
+                return $server->push($fd, $data);
+            });
+            $event->setOriginFrame($frame);
+            $event->setSocketConfig($config);
+            ob_event_dispatcher()->dispatchWithHandler($event);
+        } catch (\Throwable $e) {
+            ExceptionHandler::getInstance()->handle($e);
+        }
     }
 }
