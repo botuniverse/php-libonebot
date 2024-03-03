@@ -112,8 +112,8 @@ class Validator
     public static function validateEventParams(array $data)
     {
         // 每个 OneBot 事件必须有这几个参数
-        if (!isset($data['type'], $data['id'], $data['detail_type'], $data['time'], $data['sub_type'])) {
-            throw new OneBotException('onebot 12 requires type, id, detail_type, time, sub_type');
+        if (!isset($data['type'], $data['id'], $data['detail_type'], $data['sub_type'])) {
+            throw new OneBotException('onebot 12 requires type, id, detail_type, sub_type');
         }
         // 除元事件（type = meta）外，其他事件必须拥有 self 字段
         if ($data['type'] !== 'meta' && !isset($data['self'])) {
