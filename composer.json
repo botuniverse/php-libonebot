@@ -30,7 +30,7 @@
         "psr/cache": "^1.0 || ^3.0",
         "psr/event-dispatcher": "^1.0",
         "psr/http-client": "^1.0",
-        "psr/log": "^1.1",
+        "psr/log": "^1.1 || ^3.0",
         "rybakit/msgpack": "^0.9.0",
         "choir/psr-http": "^1.0",
         "workerman/workerman": "^4.0",
