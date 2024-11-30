@@ -23,6 +23,10 @@ class EventBuilder
         $this->data['time'] = $time ?? time();
         $this->data['detail_type'] = $detail_type;
         $this->data['sub_type'] = $sub_type;
+        $this->data['self'] = [
+            'platform' => OneBot::getInstance()->getPlatform(),
+            'user_id' => OneBot::getInstance()->getSelfId(),
+        ];
     }
 
     public function feed(string $key, $value): EventBuilder
