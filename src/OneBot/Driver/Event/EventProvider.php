@@ -32,7 +32,7 @@ class EventProvider implements SortedProviderInterface
          * NOTE: 如果使用自定义名称，则需要在事件处理器中使用 `$event->getName()` 获取事件名
          * NOTE: 或者是否由其他可能的方法支持自定义名称，从而避免频繁的 new EventDispatcher
          */
-        if (!is_object($event)) {
+        if (is_object($event)) {
             $event = get_class($event);
         }
         self::$_events[$event][] = [$level, $callback];
