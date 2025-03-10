@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace OneBot\V12;
 
 use OneBot\Config\Config;
+use OneBot\Config\Repository;
 use OneBot\Config\RepositoryInterface;
 use OneBot\Driver\Driver;
 use Psr\Log\LoggerInterface;
@@ -136,7 +137,7 @@ class OneBotBuilder
      */
     public static function buildFromArray(array $array): OneBot
     {
-        $config = new \OneBot\Config\Repository($array);
+        $config = new Repository($array);
         return self::buildFromConfig($config);
     }
 

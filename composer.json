@@ -25,7 +25,7 @@
         "wiki": "https://github.com/botuniverse/php-libonebot/wiki"
     },
     "require": {
-        "php": "^7.4 || ^8.0 || ^8.1 || ^8.2",
+        "php": "^7.4 || ^8.0 || ^8.1 || ^8.2 || ^8.3 || ^8.4",
         "ext-json": "*",
         "psr/cache": "^1.0",
         "psr/event-dispatcher": "^1.0",
@@ -84,7 +84,7 @@
             "[ $COMPOSER_DEV_MODE -eq 0 ] || vendor/bin/cghooks add"
         ],
         "analyse": "phpstan analyse --memory-limit 300M",
-        "cs-fix": "php-cs-fixer fix",
+        "cs-fix": "PHP_CS_FIXER_IGNORE_ENV=1 php-cs-fixer fix",
         "test": "phpunit --no-coverage"
     }
 }

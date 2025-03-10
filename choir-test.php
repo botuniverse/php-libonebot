@@ -3,10 +3,12 @@
 /** @noinspection PhpComposerExtensionStubsInspection */
 
 declare(strict_types=1);
+use Choir\Http\Server;
+use Choir\Protocol\HttpConnection;
 
 require_once 'vendor/autoload.php';
 
-$server = new \Choir\Http\Server('0.0.0.0', 20001, false, [
+$server = new Server('0.0.0.0', 20001, false, [
     'worker-num' => 8,
     // 'logger-level' => 'debug',
 ]);
@@ -22,7 +24,7 @@ $server->on('workerstop', function () {
     // echo "http://127.0.0.1:8080/index.php?run={$id}&source=xhprof_testing\n";
 });
 
-$server->on('request', function (Choir\Protocol\HttpConnection $connection) {
+$server->on('request', function (HttpConnection $connection) {
     $connection->end('hello world');
 });
 

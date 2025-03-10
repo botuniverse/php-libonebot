@@ -6,6 +6,4 @@ namespace OneBot\Driver\Swoole\Socket;
 
 use OneBot\Driver\Socket\WSClientSocketBase;
 
-class WSClientSocket extends WSClientSocketBase
-{
-}
+class WSClientSocket extends WSClientSocketBase {}

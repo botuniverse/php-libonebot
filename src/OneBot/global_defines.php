@@ -10,10 +10,11 @@ use OneBot\Driver\Process\ProcessManager;
 use OneBot\V12\Object\MessageSegment;
 use OneBot\V12\OneBot;
 use Psr\Log\LoggerInterface;
+use Symfony\Component\VarDumper\VarDumper;
 use ZM\Logger\ConsoleLogger;
 
 const ONEBOT_VERSION = '12';
-const ONEBOT_LIBOB_VERSION = '0.6.6';
+const ONEBOT_LIBOB_VERSION = '0.6.7';
 
 const ONEBOT_JSON = 1;
 const ONEBOT_MSGPACK = 2;
@@ -38,7 +39,7 @@ const ONEBOT_PROCESS_TASKWORKER = 16;
 class_alias(MessageSegment::class, 'MessageSegment');
 
 if (DIRECTORY_SEPARATOR === '\\') {
-    define('ONEBOT_TMP_DIR', 'C:\\Windows\\Temp');
+    define('ONEBOT_TMP_DIR', 'C:\Windows\Temp');
 } elseif (!empty(getenv('TMPDIR'))) {
     define('ONEBOT_TMP_DIR', getenv('TMPDIR'));
 } elseif (is_writable('/tmp')) {
@@ -56,9 +57,9 @@ if (DIRECTORY_SEPARATOR === '\\') {
 function ob_dump($var, ...$moreVars)
 {
     if (class_exists('\Symfony\Component\VarDumper\VarDumper')) {
-        Symfony\Component\VarDumper\VarDumper::dump($var);
+        VarDumper::dump($var);
         foreach ($moreVars as $v) {
-            Symfony\Component\VarDumper\VarDumper::dump($v);
+            VarDumper::dump($v);
         }
     } elseif (PHP_VERSION >= 8.0) {
         var_dump($var, ...$moreVars);
@@ -121,7 +122,7 @@ function ob_logger_register(LoggerInterface $logger): void
  * @param  null|mixed $default
  * @return mixed
  */
-function ob_config(string $key = null, $default = null)
+function ob_config(?string $key = null, $default = null)
 {
     $config = OneBot::getInstance()->getConfig();
     if (!is_null($key)) {
@@ -144,8 +145,8 @@ function ob_uuidgen(bool $uppercase = false): string
     }
     $data[6] = chr(ord($data[6]) & 0x0F | 0x40);
     $data[8] = chr(ord($data[8]) & 0x3F | 0x80);
-    return $uppercase ? strtoupper(vsprintf('%s%s-%s-%s-%s-%s%s%s', str_split(bin2hex($data), 4))) :
-        vsprintf('%s%s-%s-%s-%s-%s%s%s', str_split(bin2hex($data), 4));
+    return $uppercase ? strtoupper(vsprintf('%s%s-%s-%s-%s-%s%s%s', str_split(bin2hex($data), 4)))
+        : vsprintf('%s%s-%s-%s-%s-%s%s%s', str_split(bin2hex($data), 4));
 }
 
 function ob_event_dispatcher(): HandledDispatcherInterface

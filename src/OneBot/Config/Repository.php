@@ -21,9 +21,6 @@ class Repository implements RepositoryInterface
         $this->config = $config;
     }
 
-    /**
-     * {@inheritDoc}
-     */
     public function get(string $key, $default = null)
     {
         // 在表层直接查找，找到就直接返回
@@ -51,9 +48,6 @@ class Repository implements RepositoryInterface
         return $data;
     }
 
-    /**
-     * {@inheritDoc}
-     */
     public function set(string $key, $value): void
     {
         if ($value === null) {
@@ -75,17 +69,11 @@ class Repository implements RepositoryInterface
         $data = $value;
     }
 
-    /**
-     * {@inheritDoc}
-     */
     public function has(string $key): bool
     {
         return $this->get($key) !== null;
     }
 
-    /**
-     * {@inheritDoc}
-     */
     public function all(): array
     {
         return $this->config;

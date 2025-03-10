@@ -3,12 +3,15 @@
 declare(strict_types=1);
 
 use OneBot\Driver\Event\DriverInitEvent;
+use OneBot\Driver\Swoole\SwooleDriver;
 use OneBot\Util\Utils;
+use OneBot\V12\EventBuilder;
 use OneBot\V12\Object\Action;
 use OneBot\V12\Object\ActionResponse;
 use OneBot\V12\OneBot;
 use OneBot\V12\OneBotBuilder;
 use OneBot\V12\Validator;
+use ZM\Logger\ConsoleLogger;
 
 require_once __DIR__ . '/../vendor/autoload.php';
 
@@ -23,11 +26,11 @@ $config = [
     'self_id' => 'REPL-1',
     'db' => true,
     'logger' => [
-        'class' => \ZM\Logger\ConsoleLogger::class,
+        'class' => ConsoleLogger::class,
         'level' => 'info',
     ],
     'driver' => [
-        'class' => \OneBot\Driver\Swoole\SwooleDriver::class,
+        'class' => SwooleDriver::class,
         'config' => [
             'init_in_user_process_block' => true,
         ],
@@ -81,7 +84,7 @@ ob_event_provider()->addEventListener(DriverInitEvent::getName(), function (Driv
             $event->getDriver()->getEventLoop()->delReadEvent($x);
             return;
         }
-        $event = (new \OneBot\V12\EventBuilder('message', 'private'))
+        $event = (new EventBuilder('message', 'private'))
             ->feed('message', trim($s))
             ->feed('alt_message', trim($s))
             ->feed('message_id', message_id())

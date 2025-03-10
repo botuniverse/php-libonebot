@@ -10,9 +10,6 @@ use Workerman\Timer;
 
 class EventLoop extends DriverEventLoopBase
 {
-    /**
-     * {@inheritDoc}
-     */
     public function addTimer(int $ms, callable $callable, int $times = 1, array $arguments = []): int
     {
         $timer_count = 0;
@@ -28,49 +25,31 @@ class EventLoop extends DriverEventLoopBase
         }, $arguments);
     }
 
-    /**
-     * {@inheritDoc}
-     */
     public function clearTimer(int $timer_id)
     {
         Timer::del($timer_id);
     }
 
-    /**
-     * {@inheritDoc}
-     */
     public function addReadEvent($fd, callable $callable)
     {
         Worker::getEventLoop()->add($fd, EventInterface::EV_READ, $callable);
     }
 
-    /**
-     * {@inheritDoc}
-     */
     public function delReadEvent($fd)
     {
         Worker::getEventLoop()->del($fd, EventInterface::EV_READ);
     }
 
-    /**
-     * {@inheritDoc}
-     */
     public function addWriteEvent($fd, callable $callable)
     {
         Worker::getEventLoop()->add($fd, EventInterface::EV_WRITE, $callable);
     }
 
-    /**
-     * {@inheritDoc}
-     */
     public function delWriteEvent($fd)
     {
         Worker::getEventLoop()->del($fd, EventInterface::EV_WRITE);
     }
 
-    /**
-     * {@inheritDoc}
-     */
     public function clearAllTimer()
     {
         Timer::delAll();

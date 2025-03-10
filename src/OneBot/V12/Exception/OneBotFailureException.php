@@ -20,7 +20,7 @@ class OneBotFailureException extends OneBotException
         $retcode = RetCode::INTERNAL_HANDLER_ERROR,
         ?Action $action_object = null,
         $message = null,
-        \Exception $previous = null
+        ?\Exception $previous = null
     ) {
         $this->retcode = $retcode;
         $this->action_object = $action_object;

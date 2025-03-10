@@ -49,12 +49,12 @@ class RepositoryTest extends TestCase
         );
     }
 
-// 尚未确定是否应该支持
-//    public function testGetValueWhenKeyContainsDot(): void
-//    {
-//        $this->assertEquals('c', $this->repository->get('a.b'));
-//        $this->assertEquals('d', $this->repository->get('a.b.c'));
-//    }
+    // 尚未确定是否应该支持
+    //    public function testGetValueWhenKeyContainsDot(): void
+    //    {
+    //        $this->assertEquals('c', $this->repository->get('a.b'));
+    //        $this->assertEquals('d', $this->repository->get('a.b.c'));
+    //    }
 
     public function testGetBooleanValue(): void
     {
@@ -109,6 +109,16 @@ class RepositoryTest extends TestCase
         $this->assertNull($this->repository->get($key));
     }
 
+    public function providerTestDeleteValue(): array
+    {
+        return [
+            'shallow' => ['foo'],
+            'deep' => ['associate.x'],
+            'not exists' => ['not_exists'],
+            'not exists deep' => ['deep.not_exists'],
+        ];
+    }
+
     public function testHas(): void
     {
         $this->assertTrue($this->repository->has('foo'));
@@ -118,15 +128,5 @@ class RepositoryTest extends TestCase
     public function testAll(): void
     {
         $this->assertSame($this->config, $this->repository->all());
-    }
-
-    public function providerTestDeleteValue(): array
-    {
-        return [
-            'shallow' => ['foo'],
-            'deep' => ['associate.x'],
-            'not exists' => ['not_exists'],
-            'not exists deep' => ['deep.not_exists'],
-        ];
     }
 }

@@ -45,15 +45,15 @@ class AbstractFileLoaderTest extends TestCase
                 'Linux',
             ],
             'windows absolute path' => [
-                'C:\\Windows\\System32\\drivers\\etc\\hosts',
-                'C:\\Windows\\System32',
-                'C:\\Windows\\System32\\drivers\\etc\\hosts',
+                'C:\Windows\System32\drivers\etc\hosts',
+                'C:\Windows\System32',
+                'C:\Windows\System32\drivers\etc\hosts',
                 'Windows',
             ],
             'windows relative path' => [
-                'drivers\\etc\\hosts',
-                'C:\\Windows\\System32',
-                'C:\\Windows\\System32\\drivers\\etc\\hosts',
+                'drivers\etc\hosts',
+                'C:\Windows\System32',
+                'C:\Windows\System32\drivers\etc\hosts',
                 'Windows',
             ],
         ];
