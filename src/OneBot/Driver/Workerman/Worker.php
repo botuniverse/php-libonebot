@@ -121,7 +121,7 @@ class Worker extends \Workerman\Worker
                     Timer::add(static::$stopTimeout, '\posix_kill', [$worker_pid, \SIGKILL], false);
                 }
             }
-            Timer::add(1, '\\Workerman\\Worker::checkIfChildRunning');
+            Timer::add(1, '\Workerman\Worker::checkIfChildRunning');
             // Remove statistics file.
             if (\is_file(static::$_statisticsFile)) {
                 @\unlink(static::$_statisticsFile);

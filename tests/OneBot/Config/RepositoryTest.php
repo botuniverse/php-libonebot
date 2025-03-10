@@ -109,6 +109,16 @@ class RepositoryTest extends TestCase
         $this->assertNull($this->repository->get($key));
     }
 
+    public function providerTestDeleteValue(): array
+    {
+        return [
+            'shallow' => ['foo'],
+            'deep' => ['associate.x'],
+            'not exists' => ['not_exists'],
+            'not exists deep' => ['deep.not_exists'],
+        ];
+    }
+
     public function testHas(): void
     {
         $this->assertTrue($this->repository->has('foo'));
@@ -118,15 +128,5 @@ class RepositoryTest extends TestCase
     public function testAll(): void
     {
         $this->assertSame($this->config, $this->repository->all());
-    }
-
-    public function providerTestDeleteValue(): array
-    {
-        return [
-            'shallow' => ['foo'],
-            'deep' => ['associate.x'],
-            'not exists' => ['not_exists'],
-            'not exists deep' => ['deep.not_exists'],
-        ];
     }
 }

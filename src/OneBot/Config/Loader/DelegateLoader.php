@@ -14,7 +14,7 @@ class DelegateLoader implements LoaderInterface
     /**
      * @param null|array{string: LoaderInterface} $loaders 加载器列表，null则使用默认列表
      */
-    public function __construct(array $loaders = null)
+    public function __construct(?array $loaders = null)
     {
         foreach ((array) $loaders as $key => $loader) {
             if (!$loader instanceof LoaderInterface) {

@@ -15,6 +15,7 @@ use OneBot\V12\OneBotBuilder;
 use OneBot\V12\RetCode;
 use OneBot\V12\Validator;
 use Swoole\Coroutine\Channel;
+use ZM\Logger\ConsoleLogger;
 
 require_once __DIR__ . '/../vendor/autoload.php';
 
@@ -24,7 +25,7 @@ $config = [
     'self_id' => '', // 后续会自动获取
     'db' => true,
     'logger' => [
-        'class' => \ZM\Logger\ConsoleLogger::class,
+        'class' => ConsoleLogger::class,
         'level' => 'info',
     ],
     'driver' => [
@@ -118,7 +119,7 @@ function wx_make_xml_reply(Action $action, string $self_id): string
     return str_replace('{content}', '<![CDATA[' . $content . ']]>', $xml_template);
 }
 
-function swoole_channel(string $name, int $size = 1): Swoole\Coroutine\Channel
+function swoole_channel(string $name, int $size = 1): Channel
 {
     global $channel;
     if (!isset($channel[$name])) {

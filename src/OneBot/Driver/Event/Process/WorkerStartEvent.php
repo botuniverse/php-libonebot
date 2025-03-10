@@ -6,6 +6,4 @@ namespace OneBot\Driver\Event\Process;
 
 use OneBot\Driver\Event\DriverEvent;
 
-class WorkerStartEvent extends DriverEvent
-{
-}
+class WorkerStartEvent extends DriverEvent {}

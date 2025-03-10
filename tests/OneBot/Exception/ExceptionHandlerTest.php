@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\OneBot\Exception;
 
+use OneBot\Exception\ExceptionHandler;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
 
@@ -20,7 +21,7 @@ class ExceptionHandlerTest extends TestCase
         ob_logger_register(new NullLogger());
 
         // we want fresh instance here, since it's a singleton, we use reflection to get a new instance
-        $reflection = new \ReflectionClass(\OneBot\Exception\ExceptionHandler::class);
+        $reflection = new \ReflectionClass(ExceptionHandler::class);
         $instance = $reflection->newInstanceWithoutConstructor();
         // expect handle() to not throw any exception
         $this->expectNotToPerformAssertions();

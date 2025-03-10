@@ -6,6 +6,4 @@ namespace OneBot\Driver\Swoole\Socket;
 
 use OneBot\Driver\Socket\HttpClientSocketBase;
 
-class HttpClientSocket extends HttpClientSocketBase
-{
-}
+class HttpClientSocket extends HttpClientSocketBase {}

@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use OneBot\Driver\Workerman\WorkermanDriver;
+use OneBot\Util\FileUtil;
 use OneBot\V12\OneBotBuilder;
 use ZM\Logger\ConsoleLogger;
 
@@ -17,4 +18,4 @@ $ob = OneBotBuilder::factory()
     ->setCommunicationsProtocol([['http' => ['host' => '0.0.0.0', 'port' => 20001]]])
     ->build();
 
-$ob->getConfig()->set('file_upload.path', \OneBot\Util\FileUtil::getRealPath(__DIR__ . '/../data/files'));
+$ob->getConfig()->set('file_upload.path', FileUtil::getRealPath(__DIR__ . '/../data/files'));
