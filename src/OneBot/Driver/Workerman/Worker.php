@@ -7,6 +7,7 @@ declare(strict_types=1);
 namespace OneBot\Driver\Workerman;
 
 use Workerman\Connection\ConnectionInterface;
+use Workerman\Events\EventInterface;
 use Workerman\Lib\Timer;
 
 /**
@@ -51,7 +52,7 @@ class Worker extends \Workerman\Worker
         static::parseCommand();     // 解析命令行，但好像 libob 不太需要
         static::daemonize();        // 创建守护进程，但 libob 好像也不太需要
         static::initWorkers();      // 初始化 Worker 进程
-        // static::installSignal();    // 安装信号处理函数
+        static::installSignal();    // 安装信号处理函数
         // static::saveMasterPid();    // 保存 Master PID
         if (static::$_OS === OS_TYPE_LINUX) { // 此处替代上方的 saveMasterPid() 功能
             static::$_masterPid = posix_getpid();
@@ -382,24 +383,23 @@ class Worker extends \Workerman\Worker
         if (static::$_OS === OS_TYPE_WINDOWS) {
             return;
         }
-        echo "设置监听器\n";
         $signalHandler = '\Workerman\Worker::signalHandler';
-        // // stop
-        // \pcntl_signal(\SIGINT, $signalHandler, false);
-        // // stop
-        // pcntl_signal(SIGTERM, $signalHandler, false);
-        // // graceful stop
-        // \pcntl_signal(\SIGHUP, $signalHandler, false);
-        // // reload
+        // stop (Ctrl+C)
+        \pcntl_signal(\SIGINT, $signalHandler, false);
+        // stop
+        \pcntl_signal(SIGTERM, $signalHandler, false);
+        // graceful stop (terminal closed / SIGHUP)
+        \pcntl_signal(\SIGHUP, $signalHandler, false);
+        // reload
         \pcntl_signal(SIGUSR1, $signalHandler, false);
-        // // graceful reload
-        // \pcntl_signal(\SIGQUIT, $signalHandler, false);
-        // // status
-        // \pcntl_signal(\SIGUSR2, $signalHandler, false);
-        // // connection status
-        // \pcntl_signal(\SIGIO, $signalHandler, false);
-        // // ignore
-        // \pcntl_signal(\SIGPIPE, \SIG_IGN, false);
+        // graceful reload
+        \pcntl_signal(\SIGQUIT, $signalHandler, false);
+        // status
+        \pcntl_signal(\SIGUSR2, $signalHandler, false);
+        // connection status
+        \pcntl_signal(\SIGIO, $signalHandler, false);
+        // ignore SIGPIPE (prevent crash on broken pipe)
+        \pcntl_signal(\SIGPIPE, \SIG_IGN, false);
     }
 
     /**
@@ -413,32 +413,21 @@ class Worker extends \Workerman\Worker
             return;
         }
         $signalHandler = '\Workerman\Worker::signalHandler';
-        // // uninstall stop signal handler
-        // \pcntl_signal(\SIGINT, \SIG_IGN, false);
-        // // uninstall stop signal handler
-        // pcntl_signal(SIGTERM, SIG_IGN, false);
-        // // uninstall graceful stop signal handler
-        // \pcntl_signal(\SIGHUP, \SIG_IGN, false);
-        // // uninstall reload signal handler
-        // pcntl_signal(SIGUSR1, SIG_IGN, false);
-        // // uninstall graceful reload signal handler
-        // \pcntl_signal(\SIGQUIT, \SIG_IGN, false);
-        // // uninstall status signal handler
-        // \pcntl_signal(\SIGUSR2, \SIG_IGN, false);
-        // // uninstall connections status signal handler
-        // \pcntl_signal(\SIGIO, \SIG_IGN, false);
-        // // reinstall stop signal handler
-        // static::$globalEvent->add(\SIGINT, EventInterface::EV_SIGNAL, $signalHandler);
-        // // reinstall graceful stop signal handler
-        // static::$globalEvent->add(\SIGHUP, EventInterface::EV_SIGNAL, $signalHandler);
-        // // reinstall reload signal handler
-        // static::$globalEvent->add(SIGUSR1, EventInterface::EV_SIGNAL, $signalHandler);
-        // // reinstall graceful reload signal handler
-        // static::$globalEvent->add(\SIGQUIT, EventInterface::EV_SIGNAL, $signalHandler);
-        // // reinstall status signal handler
-        // static::$globalEvent->add(\SIGUSR2, EventInterface::EV_SIGNAL, $signalHandler);
-        // // reinstall connection status signal handler
-        // static::$globalEvent->add(\SIGIO, EventInterface::EV_SIGNAL, $signalHandler);
+        // uninstall old pcntl handlers first
+        \pcntl_signal(\SIGINT, \SIG_IGN, false);
+        \pcntl_signal(SIGTERM, \SIG_IGN, false);
+        \pcntl_signal(\SIGHUP, \SIG_IGN, false);
+        \pcntl_signal(SIGUSR1, \SIG_IGN, false);
+        \pcntl_signal(\SIGQUIT, \SIG_IGN, false);
+        \pcntl_signal(\SIGUSR2, \SIG_IGN, false);
+        \pcntl_signal(\SIGIO, \SIG_IGN, false);
+        // reinstall via event loop (supports all available event backends: Select, Event, Ev, etc.)
+        static::$globalEvent->add(\SIGINT, EventInterface::EV_SIGNAL, $signalHandler);
+        static::$globalEvent->add(\SIGHUP, EventInterface::EV_SIGNAL, $signalHandler);
+        static::$globalEvent->add(SIGUSR1, EventInterface::EV_SIGNAL, $signalHandler);
+        static::$globalEvent->add(\SIGQUIT, EventInterface::EV_SIGNAL, $signalHandler);
+        static::$globalEvent->add(\SIGUSR2, EventInterface::EV_SIGNAL, $signalHandler);
+        static::$globalEvent->add(\SIGIO, EventInterface::EV_SIGNAL, $signalHandler);
     }
 
     /**

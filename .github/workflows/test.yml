@@ -21,7 +21,7 @@ jobs:
       should_skip: ${{ steps.skip_check.outputs.should_skip }}
     steps:
       - id: skip_check
-        uses: fkirc/skip-duplicate-actions@v4
+        uses: fkirc/skip-duplicate-actions@v5
         with:
           concurrent_skipping: same_content_newer
           skip_after_successful_duplicate: true
@@ -34,12 +34,12 @@ jobs:
     strategy:
       matrix:
         operating-system: [ ubuntu-latest, windows-latest, macos-latest ]
-        php-version: [ 7.4, 8.0, 8.1 ]
+        php-version: [ 8.1, 8.2, 8.3, 8.4 ]
     name: PHP ${{ matrix.php-version }} Test (${{ matrix.operating-system }})
     runs-on: ${{ matrix.operating-system }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
