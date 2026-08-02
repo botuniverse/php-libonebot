@@ -93,11 +93,47 @@ class Validator
         }
     }
 
+    /**
+     * 验证 URL 是否为合法的 http(s) 地址，且解析后的 IP 不能是内网地址（防止 SSRF）
+     *
+     * 校验策略为 fail-closed：host 不合法、疑似 IP 混淆、或 DNS 无法解析出任何
+     * 记录时，一律拒绝该 URL。
+     *
+     * @throws OneBotFailureException
+     */
     public static function validateHttpUrl(string $url): void
     {
         $parse = parse_url($url);
-        if (!isset($parse['scheme']) || $parse['scheme'] !== 'http' && $parse['scheme'] !== 'https') {
+        if (!isset($parse['scheme']) || !isset($parse['host']) || !is_string($parse['scheme']) || !is_string($parse['host'])
+            || $parse['scheme'] !== 'http' && $parse['scheme'] !== 'https') {
             throw new OneBotFailureException(RetCode::NETWORK_ERROR);
+        }
+        // parse_url 解析出的 IPv6 host 会带有方括号，需要去掉
+        $host = trim($parse['host'], '[]');
+        // host 为空或包含非法字符（空格、% 等）时直接拒绝
+        if (!self::isValidHostSyntax($host)) {
+            throw new OneBotFailureException(RetCode::NETWORK_ERROR, null, 'URL host is invalid');
+        }
+        // 如果 host 本身是 IP 地址，则直接判断
+        if (filter_var($host, FILTER_VALIDATE_IP) !== false) {
+            if (self::isPrivateOrReservedIp($host)) {
+                throw new OneBotFailureException(RetCode::NETWORK_ERROR, null, 'URL host resolves to a private or reserved IP address');
+            }
+            return;
+        }
+        // host 不是合法 IP 字面量，却只包含数字/点/0x 等字符，疑似十进制/八进制/十六进制/短横线 IP 混淆，直接拒绝
+        if (self::isSuspiciousIpLiteral($host)) {
+            throw new OneBotFailureException(RetCode::NETWORK_ERROR, null, 'URL host is not a valid hostname or IP address');
+        }
+        // 域名：解析 DNS（同时支持 A 记录的 ip 键与 AAAA 记录的 ipv6 键），解析失败或无记录时 fail-closed 拒绝
+        $ips = static::lookupHostIps($host);
+        if ($ips === []) {
+            throw new OneBotFailureException(RetCode::NETWORK_ERROR, null, 'URL host cannot be resolved');
+        }
+        foreach ($ips as $ip) {
+            if (self::isPrivateOrReservedIp($ip)) {
+                throw new OneBotFailureException(RetCode::NETWORK_ERROR, null, 'URL host resolves to a private or reserved IP address');
+            }
         }
     }
 
@@ -223,6 +259,142 @@ class Validator
             default:
                 throw new OneBotException('unknown event type');
         }
+    }
+
+    /**
+     * 判断 IP 是否为内网或保留地址（IPv4/IPv6），用于防止 SSRF
+     */
+    public static function isPrivateOrReservedIp(string $ip): bool
+    {
+        $packed = @inet_pton($ip);
+        if ($packed === false) {
+            return false;
+        }
+        if (strlen($packed) === 4) {
+            $n = unpack('N', $packed)[1];
+            // 0.0.0.0/8 保留地址
+            if (($n & 0xFF000000) === 0x00000000) {
+                return true;
+            }
+            // 10.0.0.0/8 私网地址
+            if (($n & 0xFF000000) === 0x0A000000) {
+                return true;
+            }
+            // 100.64.0.0/10 运营商级 NAT 地址
+            if (($n & 0xFFC00000) === 0x64400000) {
+                return true;
+            }
+            // 127.0.0.0/8 回环地址
+            if (($n & 0xFF000000) === 0x7F000000) {
+                return true;
+            }
+            // 169.254.0.0/16 链路本地地址
+            if (($n & 0xFFFF0000) === 0xA9FE0000) {
+                return true;
+            }
+            // 172.16.0.0/12 私网地址
+            if (($n & 0xFFF00000) === 0xAC100000) {
+                return true;
+            }
+            // 192.168.0.0/16 私网地址
+            if (($n & 0xFFFF0000) === 0xC0A80000) {
+                return true;
+            }
+            // 224.0.0.0/4 组播地址
+            if (($n & 0xF0000000) === 0xE0000000) {
+                return true;
+            }
+            // 240.0.0.0/4 保留地址
+            if (($n & 0xF0000000) === 0xF0000000) {
+                return true;
+            }
+            return false;
+        }
+        if (strlen($packed) === 16) {
+            $bytes = unpack('C16', $packed);
+            // ::1 回环地址
+            if ($packed === str_repeat("\0", 15) . "\1") {
+                return true;
+            }
+            // :: 未指定地址
+            if ($packed === str_repeat("\0", 16)) {
+                return true;
+            }
+            // fc00::/7 唯一本地地址
+            if (($bytes[1] & 0xFE) === 0xFC) {
+                return true;
+            }
+            // fe80::/10 链路本地地址
+            if ($bytes[1] === 0xFE && ($bytes[2] & 0xC0) === 0x80) {
+                return true;
+            }
+            // ::ffff:0:0/96 IPv4 映射地址（要求前 80 位全零，否则是合法全局地址），按 IPv4 规则判断
+            if ($bytes[11] === 0xFF && $bytes[12] === 0xFF && strncmp($packed, str_repeat("\0", 10), 10) === 0) {
+                return self::isPrivateOrReservedIp(sprintf('%d.%d.%d.%d', $bytes[13], $bytes[14], $bytes[15], $bytes[16]));
+            }
+            return false;
+        }
+        return false;
+    }
+
+    /**
+     * 解析域名的 DNS 记录并提取全部 IP 列表（A 记录的 ip 键 + AAAA 记录的 ipv6 键）
+     *
+     * 查询失败或无任何有效记录时返回空数组，由调用方决定 fail-closed。
+     */
+    protected static function lookupHostIps(string $host): array
+    {
+        $records = @dns_get_record($host, DNS_A | DNS_AAAA);
+        if ($records === false) {
+            return [];
+        }
+        return static::extractIpsFromDnsRecords($records);
+    }
+
+    /**
+     * 从 DNS 查询结果中提取 IP 列表
+     *
+     * 注意：dns_get_record 对 AAAA 记录返回的键是 ipv6 而非 ip，两者都需要处理，
+     * 否则仅解析到内网 IPv6 的域名会绕过 SSRF 校验。
+     */
+    protected static function extractIpsFromDnsRecords(array $records): array
+    {
+        $ips = [];
+        foreach ($records as $record) {
+            if (!is_array($record)) {
+                continue;
+            }
+            foreach (['ip', 'ipv6'] as $key) {
+                if (isset($record[$key]) && is_string($record[$key]) && filter_var($record[$key], FILTER_VALIDATE_IP) !== false) {
+                    $ips[] = $record[$key];
+                }
+            }
+        }
+        return array_values(array_unique($ips));
+    }
+
+    /**
+     * 判断 host 是否满足基本的 URL 主机名语法（允许域名、IPv4、IPv6 字面量的合法字符）
+     */
+    private static function isValidHostSyntax(string $host): bool
+    {
+        return $host !== '' && preg_match('/^[0-9a-zA-Z:._-]+$/', $host) === 1;
+    }
+
+    /**
+     * 判断 host 是否为疑似 IP 混淆形式（十进制/八进制/十六进制/短横线等）
+     *
+     * 这类 host 无法通过 FILTER_VALIDATE_IP，但某些网络库仍会将其当作 IP 使用，
+     * 且它们不可能同时是合法的域名（域名必须包含字母），因此直接拒绝。
+     */
+    private static function isSuspiciousIpLiteral(string $host): bool
+    {
+        // 不含任何 ASCII 字母，只能是数字/点/冒号等（如 2130706433、127.1、0177.0.0.1）
+        if (preg_match('/[a-zA-Z]/', $host) === 0) {
+            return true;
+        }
+        // 0x 开头的十六进制形式（如 0x7f000001、0x7f.0.0.1）
+        return preg_match('/^0[xX][0-9a-fA-F.]+$/', $host) === 1;
     }
 
     private static function validateExist(Action $action_obj, $k): bool

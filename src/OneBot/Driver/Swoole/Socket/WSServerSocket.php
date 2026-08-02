@@ -24,7 +24,11 @@ class WSServerSocket extends WSServerSocketBase
 
     public function close($fd): bool
     {
-        return false;
+        if ($this->server === null || !$this->server->exists($fd)) {
+            ob_logger()->warning('链接不存在，可能已被关闭或未连接');
+            return false;
+        }
+        return $this->server->close($fd);
     }
 
     public function send($data, $fd): bool
