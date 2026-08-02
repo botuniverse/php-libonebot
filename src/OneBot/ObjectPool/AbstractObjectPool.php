@@ -68,7 +68,13 @@ abstract class AbstractObjectPool
         unset($this->actives[$hash]);
 
         // 放回队列里
-        return $this->queue->push($object);
+        if ($this->queue instanceof Channel) {
+            // Swoole Channel 的 push 返回 bool
+            return $this->queue->push($object);
+        }
+        // SplQueue 的 push 返回 void，视为成功
+        $this->queue->push($object);
+        return true;
     }
 
     abstract protected function makeObject(): object;
