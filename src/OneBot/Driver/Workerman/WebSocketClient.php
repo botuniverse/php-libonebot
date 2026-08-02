@@ -59,7 +59,11 @@ class WebSocketClient implements WebSocketClientInterface
     public function withRequest(RequestInterface $request): WebSocketClientInterface
     {
         // 通过 AsyncTcpConnection 建立连接
-        $this->connection = new AsyncTcpConnection('ws://' . $request->getUri()->getHost() . ':' . $request->getUri()->getPort());
+        $port = $request->getUri()->getPort();
+        if ($port === null) {
+            $port = 80;
+        }
+        $this->connection = new AsyncTcpConnection('ws://' . $request->getUri()->getHost() . ':' . $port);
         // 通过 walkor 的隐藏魔法（无语了），设置请求的 Header。因为 PSR 的 Request 对象返回 Headers 是数组形式的，我们不需要重复的 Header 只取一个就行
         /* @phpstan-ignore-next-line */
         $this->connection->headers = array_map(function ($x) {
