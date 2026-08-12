@@ -125,17 +125,22 @@ class ActionBaseTest extends TestCase
 
     public function testOnUploadFilePath()
     {
+        // 只能上传上传目录内的文件，先在上传目录内创建一个文件
+        $path = ob_config('file_upload.path', getcwd() . '/data/files');
+        $tmp_file = FileUtil::getRealPath($path . '/' . md5('path-upload-test') . '.txt');
+        FileUtil::mkdir($path, 0755, true);
+        file_put_contents($tmp_file, 'upload dir content');
         $resp = self::$handler->onUploadFile(new Action('upload_file', [
             'type' => 'path',
             'name' => 'a.txt',
-            'path' => __FILE__,
+            'path' => $tmp_file,
         ]), ONEBOT_JSON);
         $this->assertEquals(RetCode::OK, $resp->retcode);
         $this->assertArrayHasKey('file_id', $resp->data);
-        $path = ob_config('file_upload.path', getcwd() . '/data/files');
         [$meta, $content] = FileUtil::getMetaFile($path, $resp->data['file_id']);
         $this->assertEquals('a.txt', $meta['name']);
-        $this->assertEquals(file_get_contents(__FILE__), $content);
+        $this->assertEquals('upload dir content', $content);
+        unlink($tmp_file);
     }
 
     public function testOnUploadFileData()

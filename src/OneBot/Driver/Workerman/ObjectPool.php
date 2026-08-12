@@ -24,8 +24,8 @@ class ObjectPool implements PoolInterface
     /** @var array 借出去的对象 Hash 表 */
     protected $out = [];
 
-    /** @var array 用于 Workerman Fiber 对接时保存协程 ID 的 */
-    private static $coroutine_cid = [];
+    /** @var array 用于 Workerman Fiber 对接时保存协程 ID 的（每个池实例独立，避免跨池串对象） */
+    private $coroutine_cid = [];
 
     public function __construct(int $size, string $construct_class, ...$args)
     {
@@ -46,9 +46,9 @@ class ObjectPool implements PoolInterface
     public function get($recursive = 0): object
     {
         if ($this->getFreeCount() <= 0) {       // 当池子见底了，就自动用 Swoole 的 Channel 消费者模型堵起来
-            if (($cid = Adaptive::getCoroutine()->getCid()) !== -1) {
-                self::$coroutine_cid[] = $cid;
-                $result = Adaptive::getCoroutine()->suspend();
+            if (($co = Adaptive::getCoroutine()) !== null && $co->getCid() !== -1) {
+                $this->coroutine_cid[] = $co->getCid();
+                $result = $co->suspend();
             } elseif ($recursive <= 10) {
                 Adaptive::sleep(1);
                 return $this->get(++$recursive);
@@ -72,9 +72,13 @@ class ObjectPool implements PoolInterface
             throw new \RuntimeException('Cannot put object that not got from here');
         }
         unset($this->out[spl_object_hash($object)]);
-        if (!empty(self::$coroutine_cid)) {
-            $cid = array_shift(self::$coroutine_cid);
-            Adaptive::getCoroutine()->resume($cid, $object);
+        if (!empty($this->coroutine_cid)) {
+            $cid = array_shift($this->coroutine_cid);
+            $co = Adaptive::getCoroutine();
+            if ($co === null || $co->resume($cid, $object) === false) {
+                // 协程环境已不可用或等待协程已不存在，无法唤醒；把对象放回空闲队列，避免对象丢失
+                $this->queue->push($object);
+            }
             return true;
         }
         try {

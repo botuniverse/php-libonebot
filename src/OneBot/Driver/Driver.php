@@ -88,6 +88,10 @@ abstract class Driver
                 case 'websocket_reverse':
                     $has_ws_reverse[] = $v;
                     break;
+                default:
+                    // 未知的通信类型直接跳过，并打警告日志
+                    ob_logger()->warning('未知的通信类型: ' . $v['type'] . '，已跳过该配置');
+                    break;
             }
         }
         [$http, $webhook, $ws, $ws_reverse] = $this->initInternalDriverClasses($http_index, $has_http_webhook, $ws_index, $has_ws_reverse);

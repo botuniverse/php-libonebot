@@ -85,7 +85,7 @@ class WebSocketClient implements WebSocketClientInterface
             $uri .= '?' . $query;
         }
         if (($fragment = $this->request->getUri()->getFragment()) !== '') {
-            $uri .= '?' . $fragment;
+            $uri .= '#' . $fragment;
         }
         $r = $this->client->upgrade($uri);
         if ($this->client->errCode !== 0) {

@@ -17,6 +17,12 @@ use Psr\Http\Message\ResponseInterface;
 
 abstract class ActionHandlerBase
 {
+    /** @var int 分片上传缓存的最大数量，防止恶意请求耗尽内存 */
+    private const UPLOAD_FRAGMENT_MAX_COUNT = 100;
+
+    /** @var int 分片上传缓存的过期时间（秒），防止长期不结束的传输占用内存 */
+    private const UPLOAD_FRAGMENT_EXPIRE_TIME = 600;
+
     /** @internal 内部使用的缓存 */
     public static $core_cache;
 
@@ -115,7 +121,15 @@ abstract class ActionHandlerBase
             case 'path':
                 Validator::validateParamsByAction($action, ['path' => ONEBOT_TYPE_STRING]);
                 $from_path = $action->params['path'];
-                if (!file_exists($from_path = FileUtil::getRealPath($from_path))) {
+                // 限制只能读取上传目录内的文件，防止任意文件读取漏洞
+                FileUtil::mkdir($path, 0755, true);
+                $path_real = realpath($path);
+                $from_path_real = realpath($from_path);
+                if ($from_path_real === false || $path_real === false || strpos($from_path_real, $path_real . DIRECTORY_SEPARATOR) !== 0) {
+                    return ActionResponse::create($action)->fail(RetCode::FILESYSTEM_ERROR, 'file not found for path: ' . $from_path);
+                }
+                $from_path = $from_path_real;
+                if (!file_exists($from_path)) {
                     return ActionResponse::create($action)->fail(RetCode::FILESYSTEM_ERROR, 'file not found for path: ' . $from_path);
                 }
                 $file_id = md5_file($from_path);
@@ -170,14 +184,26 @@ abstract class ActionHandlerBase
                 if (!is_int($action->params['total_size']) || $action->params['total_size'] <= 0) {
                     return ActionResponse::create($action)->fail(RetCode::BAD_PARAM);
                 }
-                // 文件ID无法通过文件内容算出来，就通过时间戳获取一个文件ID
-                $file_id = md5(strval(microtime(true)));
+                // 先清理掉过期的缓存，防止内存被长期占用
+                foreach (self::$upload_fragment as $k => $v) {
+                    if (time() - $v['time'] > self::UPLOAD_FRAGMENT_EXPIRE_TIME) {
+                        unset(self::$upload_fragment[$k]);
+                    }
+                }
+                // 超过数量上限则拒绝继续 prepare，防止内存被耗尽
+                if (count(self::$upload_fragment) >= self::UPLOAD_FRAGMENT_MAX_COUNT) {
+                    return ActionResponse::create($action)->fail(RetCode::FILESYSTEM_ERROR, 'too many fragmented uploads prepared, please retry later');
+                }
+                // 文件ID无法通过文件内容算出来，就通过时间戳 + 随机数获取一个唯一的文件ID
+                // （仅用 microtime 的话，快速连续 prepare 时会产生重复 ID，导致分片互相覆盖）
+                $file_id = md5(strval(microtime(true)) . uniqid('', true));
                 // 缓存段
                 self::$upload_fragment[$file_id] = [
                     'name' => $action->params['name'],
                     'total_size' => $action->params['total_size'],
                     'cache' => [],
                     'stream' => Stream::create(),
+                    'time' => time(),
                 ];
                 // 返回文件ID
                 return ActionResponse::create($action)->ok(['file_id' => $file_id]);
@@ -189,6 +215,11 @@ abstract class ActionHandlerBase
                     return ActionResponse::create($action)->fail(RetCode::FILESYSTEM_ERROR, 'file id ' . $action->params['file_id'] . ' not found or not prepared yet');
                 }
                 $file_id = $action->params['file_id'];
+                // 检查分片上传是否过期，过期则清理并拒绝继续传输
+                if (time() - self::$upload_fragment[$file_id]['time'] > self::UPLOAD_FRAGMENT_EXPIRE_TIME) {
+                    unset(self::$upload_fragment[$file_id]);
+                    return ActionResponse::create($action)->fail(RetCode::FILESYSTEM_ERROR, 'file id ' . $file_id . ' expired');
+                }
                 $data = $stream_type === ONEBOT_JSON ? base64_decode($action->params['data']) : $action->params['data'];
                 // 额外的验证，如果数据的长度和传入的size不一致，那么就给个warning
                 if (isset($action->params['size']) && $action->params['size'] !== strlen($data)) {
@@ -214,6 +245,8 @@ abstract class ActionHandlerBase
                     // 传入的 offset 比 stream 长度要长，说明乱序了，要先缓存起来
                     self::$upload_fragment[$file_id]['cache'][$action->params['offset']] = $data;
                 }
+                // 每次成功传输都刷新过期时间，避免慢速大文件传输超过 UPLOAD_FRAGMENT_EXPIRE_TIME 被中途拒绝
+                self::$upload_fragment[$file_id]['time'] = time();
                 return ActionResponse::create($action)->ok();
             case 'finish': // 结束阶段
                 Validator::validateParamsByAction($action, ['file_id' => ONEBOT_TYPE_STRING, 'sha256' => ONEBOT_TYPE_STRING]);
@@ -222,6 +255,11 @@ abstract class ActionHandlerBase
                     return ActionResponse::create($action)->fail(RetCode::FILESYSTEM_ERROR, 'file id ' . $action->params['file_id'] . ' not found or not prepared yet');
                 }
                 $file_id = $action->params['file_id'];
+                // 检查分片上传是否过期，过期则清理并拒绝结束
+                if (time() - self::$upload_fragment[$file_id]['time'] > self::UPLOAD_FRAGMENT_EXPIRE_TIME) {
+                    unset(self::$upload_fragment[$file_id]);
+                    return ActionResponse::create($action)->fail(RetCode::FILESYSTEM_ERROR, 'file id ' . $file_id . ' expired');
+                }
                 // 首先验证文件是不是全的
                 $total = self::$upload_fragment[$file_id]['total_size'];
                 /** @var Stream $stream */

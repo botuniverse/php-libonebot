@@ -210,11 +210,13 @@ class TopEventListener
             }
         } catch (\Throwable $e) {
             ExceptionHandler::getInstance()->handle($e);
-            if (isset($response)) {
-                $response->withStatus(500);
-                $response->withBody('Internal Server Error');
-                $connection->send($response);
+            // 如果异常发生在响应对象创建之前，需要先创建一个 500 响应，否则连接会一直挂起
+            if (!isset($response)) {
+                $response = new WorkermanResponse();
             }
+            $response->withStatus(500);
+            $response->withBody('Internal Server Error');
+            $connection->send($response);
         }
     }
 }

@@ -110,8 +110,12 @@ class OneBotBuilder
     {
         $required_config = ['name', 'platform', 'self_id', 'logger', 'driver', 'communications'];
 
-        if (array_keys($this->components) !== $required_config) {
-            $missing = implode(', ', array_diff($required_config, array_keys($this->components)));
+        // 不校验组件配置的键顺序，只校验是否都配置齐全
+        $component_keys = array_keys($this->components);
+        sort($required_config);
+        sort($component_keys);
+        if ($required_config !== $component_keys) {
+            $missing = implode(', ', array_diff($required_config, $component_keys));
             throw new \InvalidArgumentException('Builder must be configured before building, missing: ' . $missing);
         }
 
