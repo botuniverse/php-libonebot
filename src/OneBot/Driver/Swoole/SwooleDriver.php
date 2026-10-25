@@ -147,6 +147,17 @@ class SwooleDriver extends Driver
                 $this->server->addProcess($process);
             }
             $this->server->set($this->server_set);
+
+            // 开启协程 Hook（对应 config: global.swoole_options.coroutine_hook_flags）。
+            // 不开启的话，请求协程里的阻塞 IO（PDO / Redis / stream_socket / usleep 等）
+            // 会真的把整个 worker 进程占住：SSE 这类长连接每挂一个就吃掉一个 worker，
+            // 12 个 worker 被占满后整台服务就只剩心跳。开了之后这些 IO 会自动让出协程。
+            // 只在配置里显式给了 coroutine_hook_flags 时才开，避免改变既有部署的默认行为。
+            $hook_flags = $this->getParam('coroutine_hook_flags', null);
+            if ($hook_flags !== null && class_exists(\Swoole\Runtime::class)) {
+                \Swoole\Runtime::enableCoroutine((int) $hook_flags);
+            }
+
             // 插入一个退出的 exitcode 全局 atomic
             global $_swoole_exit;
             $_swoole_exit = new Atomic();
@@ -235,6 +246,10 @@ class SwooleDriver extends Driver
         $this->server->on('managerstop', [TopEventListener::getInstance(), 'onManagerStop']);
         $this->server->on('workerstop', [TopEventListener::getInstance(), 'onWorkerStop']);
         $this->server->on('workerexit', [TopEventListener::getInstance(), 'onWorkerExit']);
+        // Worker 异常退出（崩溃）事件：Swoole 中唯一能拿到 exit_code 与 signal 的地方。
+        // 不注册的话，「worker 起来就死、Manager 无限重启」这类问题会完全静默，
+        // 现场只能看到 CPU 被打满，日志里一个字都没有。
+        $this->server->on('workererror', [TopEventListener::getInstance(), 'onWorkerError']);
     }
 
     /**
