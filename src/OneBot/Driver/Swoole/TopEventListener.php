@@ -10,6 +10,7 @@ use Choir\WebSocket\FrameInterface;
 use OneBot\Driver\Coroutine\Adaptive;
 use OneBot\Driver\Event\Http\HttpRequestEvent;
 use OneBot\Driver\Interfaces\StreamResponseInterface;
+use OneBot\Driver\WorkerCrashGuard;
 use OneBot\Driver\Event\Process\ManagerStartEvent;
 use OneBot\Driver\Event\Process\ManagerStopEvent;
 use OneBot\Driver\Event\Process\WorkerExitEvent;
@@ -98,102 +99,14 @@ class TopEventListener
     public function onWorkerError(Server $server, int $worker_id, int $worker_pid, int $exit_code, int $signal)
     {
         $driver = SwooleDriver::getInstance();
-        $window = max(1, (int) $driver->getParam('worker_crash_window', 10));
-        $limit = (int) $driver->getParam('worker_crash_limit', 10);
-        $action = (string) $driver->getParam('worker_crash_action', 'shutdown');
+        $tripped = WorkerCrashGuard::report('swoole', $worker_pid, $exit_code, $signal, [
+            'window' => (int) $driver->getParam('worker_crash_window', 10),
+            'limit' => (int) $driver->getParam('worker_crash_limit', 10),
+        ], 'worker_id=' . $worker_id);
 
-        // 只统计时间窗内的崩溃次数，窗口外的旧记录丢弃
-        $now = microtime(true);
-        self::$worker_crash_times[] = $now;
-        self::$worker_crash_times = array_values(array_filter(
-            self::$worker_crash_times,
-            static fn (float $ts): bool => $now - $ts <= $window
-        ));
-        $recent = count(self::$worker_crash_times);
-
-        $this->writeWorkerErrorLog(sprintf(
-            'Worker 异常退出: worker_id=%d, pid=%d, exit_code=%d, signal=%d(%s), 近 %d 秒内第 %d 次%s',
-            $worker_id,
-            $worker_pid,
-            $exit_code,
-            $signal,
-            self::getSignalName($signal),
-            $window,
-            $recent,
-            self::getSignalHint($exit_code, $signal)
-        ));
-
-        if ($limit > 0 && $recent >= $limit) {
-            $abort = $action !== 'none';
-            $this->writeWorkerErrorLog(sprintf(
-                '检测到 Worker 崩溃风暴：%d 秒内 %d 次（阈值 %d）。%s',
-                $window,
-                $recent,
-                $limit,
-                $abort
-                    ? '已主动中止服务器，避免 Manager 无限重启把 CPU 打满。请根据上面的 exit_code/signal 排查根因。'
-                    : 'worker_crash_action=none，仅记录不停机，请尽快排查根因。'
-            ));
-            if ($abort) {
-                $server->shutdown();
-            }
+        if ($tripped && (string) $driver->getParam('worker_crash_action', 'shutdown') !== 'none') {
+            $server->shutdown();
         }
-    }
-
-    /** @var float[] 最近发生 worker 崩溃的时间戳（只在 Manager 进程内有效，进程重启后自动清零） */
-    private static array $worker_crash_times = [];
-
-    /** @var array<int, string> 常见信号名 */
-    private static array $signal_names = [
-        1 => 'SIGHUP', 2 => 'SIGINT', 3 => 'SIGQUIT', 4 => 'SIGILL', 6 => 'SIGABRT', 8 => 'SIGFPE',
-        9 => 'SIGKILL', 10 => 'SIGBUS', 11 => 'SIGSEGV', 13 => 'SIGPIPE', 14 => 'SIGALRM',
-        15 => 'SIGTERM', 24 => 'SIGXCPU', 25 => 'SIGXFSZ',
-    ];
-
-    private static function getSignalName(int $signal): string
-    {
-        return self::$signal_names[$signal] ?? 'SIG' . $signal;
-    }
-
-    private static function getSignalHint(int $exit_code, int $signal): string
-    {
-        return match ($signal) {
-            11, 10, 4 => '（段错误/总线错误：多半是 PHP 扩展或框架层的非法内存访问，注意日志/IO 递归写入坏掉的控制台也可能触发）',
-            6 => '（abort：PHP 内部致命错误）',
-            9 => '（被 kill -9 或系统因内存不足杀掉）',
-            13 => '（SIGPIPE：往已关闭的管道/tty 写数据，常见于启动它的终端被关掉）',
-            15, 2 => '（收到正常停止信号，若频繁出现请检查是否有外部进程在反复 kill/reload）',
-            0 => $exit_code === 255 ? '（未捕获异常或 PHP Fatal Error，需要看 worker 的标准错误输出）' : '',
-            default => '',
-        };
-    }
-
-    /**
-     * 把 worker 崩溃信息写到 zm_data/logs/worker_error.log
-     *
-     * 刻意不使用 ob_logger()：控制台输出可能正是坏掉的那个 fd。
-     */
-    private function writeWorkerErrorLog(string $message): void
-    {
-        $line = '[' . date('Y-m-d H:i:s') . '] [WORKER_ERROR] ' . $message . PHP_EOL;
-        try {
-            $base = defined('WORKING_DIR') ? WORKING_DIR : (string) getcwd();
-            $dir = $base . '/zm_data/logs';
-            if (!is_dir($dir)) {
-                @mkdir($dir, 0755, true);
-            }
-            $file = $dir . '/worker_error.log';
-            // 防止反复崩溃把磁盘写满：单文件超过 10MB 滚动一次
-            if (is_file($file) && filesize($file) > 10 * 1024 * 1024) {
-                @rename($file, $file . '.1');
-            }
-            if (@file_put_contents($file, $line, FILE_APPEND | LOCK_EX) !== false) {
-                return;
-            }
-        } catch (\Throwable $e) {
-            // 落盘失败也不能让 Manager 崩掉，继续走下面的 error_log 兜底
-        }
-        @error_log(rtrim($line));
     }
 
     /**
