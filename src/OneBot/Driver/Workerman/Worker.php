@@ -6,6 +6,7 @@ declare(strict_types=1);
 
 namespace OneBot\Driver\Workerman;
 
+use OneBot\Driver\WorkerCrashGuard;
 use Workerman\Connection\ConnectionInterface;
 use Workerman\Events\EventInterface;
 use Workerman\Lib\Timer;
@@ -24,6 +25,15 @@ class Worker extends \Workerman\Worker
     public static $internal_running = false;
 
     public static $user_process_pid = -1;
+
+    /** @var int 崩溃熔断统计窗口（秒） */
+    public static $worker_crash_window = 10;
+
+    /** @var int 窗口内允许的崩溃次数，<= 0 表示关闭熔断 */
+    public static $worker_crash_limit = 10;
+
+    /** @var string 熔断动作：shutdown（主动停机）| none（只记录） */
+    public static $worker_crash_action = 'shutdown';
 
     /**
      * @var UserProcess
@@ -478,8 +488,21 @@ class Worker extends \Workerman\Worker
                     if (isset($worker_pid_array[$pid])) {
                         $worker = static::$_workers[$worker_id];
                         // Exit status.
+                        // pcntl_wait 返回的是 wait status 而不是退出码：
+                        // 低 7 位是终止信号，高 8 位才是 exit code（如 exit(255) 时 status=65280）。
                         if ($status !== 0) {
-                            static::log('worker[' . $worker->name . ":{$pid}] exit with status {$status}");
+                            $signal = $status & 0x7F;
+                            $exit_code = ($status >> 8) & 0xFF;
+                            // Workerman 没设 name 时默认是 none，别把 "worker=none" 写进日志
+                            $worker_name = (string) $worker->name;
+                            $tripped = WorkerCrashGuard::report('workerman', $pid, $exit_code, $signal, [
+                                'window' => static::$worker_crash_window,
+                                'limit' => static::$worker_crash_limit,
+                            ], $worker_name === '' || $worker_name === 'none' ? null : 'worker=' . $worker_name);
+                            if ($tripped && static::$worker_crash_action !== 'none') {
+                                // 崩溃风暴：主动停机，避免无限 fork 把 CPU 打满
+                                static::stopAll(0, 'Worker 崩溃风暴，主动停止服务器');
+                            }
                         }
 
                         // For Statistics.

@@ -105,6 +105,11 @@ class WorkermanDriver extends Driver
                 $worker->onWorkerStart = [TopEventListener::getInstance(), 'onWorkerStart'];
                 $worker->onWorkerStop = [TopEventListener::getInstance(), 'onWorkerStop'];
             }
+            // 崩溃熔断配置（与 Swoole 驱动同名同义，来自 global.workerman_options.*）
+            Worker::$worker_crash_window = (int) $this->getParam('worker_crash_window', 10);
+            Worker::$worker_crash_limit = (int) $this->getParam('worker_crash_limit', 10);
+            Worker::$worker_crash_action = (string) $this->getParam('worker_crash_action', 'shutdown');
+
             ob_logger()->debug('启动 Workerman 下的 Worker 们');
             Worker::runAll();
         } catch (\Throwable $e) {

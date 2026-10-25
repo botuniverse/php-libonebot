@@ -67,7 +67,7 @@ class HttpRequestEvent extends DriverEvent
         $this->error_handler = $callable;
     }
 
-    public function getErrorHandler(): callable
+    public function getErrorHandler(): ?callable
     {
         return $this->error_handler;
     }

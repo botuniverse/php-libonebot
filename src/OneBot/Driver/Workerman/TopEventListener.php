@@ -15,6 +15,7 @@ use OneBot\Driver\Event\Process\WorkerStopEvent;
 use OneBot\Driver\Event\WebSocket\WebSocketCloseEvent;
 use OneBot\Driver\Event\WebSocket\WebSocketMessageEvent;
 use OneBot\Driver\Event\WebSocket\WebSocketOpenEvent;
+use OneBot\Driver\Interfaces\StreamResponseInterface;
 use OneBot\Driver\Process\ProcessManager;
 use OneBot\Exception\ExceptionHandler;
 use OneBot\Util\Singleton;
@@ -192,6 +193,10 @@ class TopEventListener
             $event = new HttpRequestEvent($req);
             $event->setSocketConfig($config);
             $send_callable = function (ResponseInterface $psr_response) use ($connection) {
+                if ($psr_response instanceof StreamResponseInterface) {
+                    $this->streamResponse($psr_response, $connection);
+                    return;
+                }
                 $response = new WorkermanResponse();
                 $response->withStatus($psr_response->getStatusCode());
                 $response->withHeaders($psr_response->getHeaders());
@@ -203,6 +208,11 @@ class TopEventListener
 
             ob_event_dispatcher()->dispatch($event);
             if (($psr_response = $event->getResponse()) !== null) {
+                // 流式响应（SSE / 打字机）交给 writeTo() 边算边发，不走「攒齐再 send」
+                if ($psr_response instanceof StreamResponseInterface) {
+                    $this->streamResponse($psr_response, $connection);
+                    return;
+                }
                 $response->withStatus($psr_response->getStatusCode());
                 $response->withHeaders($psr_response->getHeaders());
                 $response->withBody($psr_response->getBody()->getContents());
@@ -217,6 +227,34 @@ class TopEventListener
             $response->withStatus(500);
             $response->withBody('Internal Server Error');
             $connection->send($response);
+        }
+    }
+
+    /**
+     * 输出流式响应（SSE / 上游透传）
+     *
+     * 与普通响应的区别：不把 body 攒齐再 send()，而是交给响应的 writeTo() 边生产边写。
+     * 这里只负责兜住异常（头已发出，改不了状态码，只能补一条 error 事件）并保证收尾。
+     */
+    private function streamResponse(StreamResponseInterface $psr_response, TcpConnection $connection): void
+    {
+        $sink = new WorkermanStreamSink($connection, $psr_response->getStatusCode(), $psr_response->getHeaders());
+        try {
+            $psr_response->writeTo($sink);
+        } catch (\Throwable $e) {
+            try {
+                ExceptionHandler::getInstance()->handle($e);
+            } catch (\Throwable $ignore) {
+                // 异常处理器本身炸了就别再往外抛，否则整个 worker 会挂掉
+            }
+            if (!$sink->isClosed() && stripos($psr_response->getHeaderLine('Content-Type'), 'text/event-stream') !== false) {
+                // 不回显异常原文（可能包含 SQL、内网地址等），细节只留在服务端日志；
+                // 前面补两个换行作为帧边界：上游若停在 "data: partial" 半帧上，
+                // 错误事件才不会被浏览器当成上一条事件的 payload。
+                $sink->write("\n\nevent: error\n" . 'data: ' . json_encode(['message' => 'stream aborted'], JSON_UNESCAPED_UNICODE) . "\n\n");
+            }
+        } finally {
+            $sink->end();
         }
     }
 }
