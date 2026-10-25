@@ -12,6 +12,7 @@ use PHPUnit\Framework\TestCase;
  * SSE 帧格式与流式写出的单元测试
  *
  * 规范参考：https://html.spec.whatwg.org/multipage/server-sent-events.html
+ * @internal
  */
 class SseResponseTest extends TestCase
 {

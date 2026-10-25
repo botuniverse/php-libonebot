@@ -35,9 +35,6 @@ use OneBot\Driver\Interfaces\StreamSinkInterface;
  */
 class SseResponse extends Response implements StreamResponseInterface
 {
-    /** @var callable(StreamSinkInterface, SseResponse):void */
-    private $writer;
-
     /** SSE 的默认响应头；同时挡住 nginx 之类的反向代理缓冲（否则前端会「一次性收到全部」） */
     public const DEFAULT_HEADERS = [
         'Content-Type' => 'text/event-stream; charset=utf-8',
@@ -45,6 +42,9 @@ class SseResponse extends Response implements StreamResponseInterface
         'Connection' => 'keep-alive',
         'X-Accel-Buffering' => 'no',
     ];
+
+    /** @var callable(StreamSinkInterface, SseResponse):void */
+    private $writer;
 
     /**
      * @param callable(StreamSinkInterface, SseResponse):void $writer
@@ -74,9 +74,9 @@ class SseResponse extends Response implements StreamResponseInterface
      * 写一帧标准 SSE 事件
      *
      * @param mixed       $data  数组/对象会被 json_encode；字符串原样（多行会自动拆成多个 data: 行）
-     * @param string|null $event 事件名（前端 addEventListener($event, ...) 能单独接）
-     * @param string|null $id    事件 ID（断线重连时浏览器会带 Last-Event-ID）
-     * @param int|null    $retry 重连间隔（毫秒）
+     * @param null|string $event 事件名（前端 addEventListener($event, ...) 能单独接）
+     * @param null|string $id    事件 ID（断线重连时浏览器会带 Last-Event-ID）
+     * @param null|int    $retry 重连间隔（毫秒）
      *
      * @return bool 对端是否仍可写
      */

@@ -7,6 +7,9 @@ namespace Tests\OneBot\Driver;
 use OneBot\Driver\WorkerCrashGuard;
 use PHPUnit\Framework\TestCase;
 
+/**
+ * @internal
+ */
 class WorkerCrashGuardTest extends TestCase
 {
     private string $log_dir;

@@ -491,8 +491,8 @@ class Worker extends \Workerman\Worker
                         // pcntl_wait 返回的是 wait status 而不是退出码：
                         // 低 7 位是终止信号，高 8 位才是 exit code（如 exit(255) 时 status=65280）。
                         if ($status !== 0) {
-                            $signal = $status & 0x7f;
-                            $exit_code = ($status >> 8) & 0xff;
+                            $signal = $status & 0x7F;
+                            $exit_code = ($status >> 8) & 0xFF;
                             // Workerman 没设 name 时默认是 none，别把 "worker=none" 写进日志
                             $worker_name = (string) $worker->name;
                             $tripped = WorkerCrashGuard::report('workerman', $pid, $exit_code, $signal, [

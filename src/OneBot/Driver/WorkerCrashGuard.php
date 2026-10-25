@@ -20,8 +20,8 @@ namespace OneBot\Driver;
  */
 class WorkerCrashGuard
 {
-    /** @var float[] 最近崩溃时间戳（只在 master/manager 进程内有效，进程重启后自动清零） */
-    private static array $crash_times = [];
+    /** 日志文件超过该大小时滚动一次，避免反复崩溃把磁盘写满 */
+    public const MAX_LOG_BYTES = 10 * 1024 * 1024;
 
     /** @var array<int, string> 常见信号名 */
     private const SIGNAL_NAMES = [
@@ -30,21 +30,21 @@ class WorkerCrashGuard
         15 => 'SIGTERM', 24 => 'SIGXCPU', 25 => 'SIGXFSZ',
     ];
 
-    /** @var string|null 测试用：覆盖日志目录 */
-    private static ?string $log_dir = null;
+    /** @var float[] 最近崩溃时间戳（只在 master/manager 进程内有效，进程重启后自动清零） */
+    private static array $crash_times = [];
 
-    /** 日志文件超过该大小时滚动一次，避免反复崩溃把磁盘写满 */
-    public const MAX_LOG_BYTES = 10 * 1024 * 1024;
+    /** @var null|string 测试用：覆盖日志目录 */
+    private static ?string $log_dir = null;
 
     /**
      * 记录一次 worker 崩溃
      *
-     * @param string                                                  $driver    驱动名（swoole / workerman），只用于日志
-     * @param int                                                     $worker_pid 崩溃的 worker pid
-     * @param int                                                     $exit_code  退出码（signal 为 0 时有效，255 多为未捕获异常）
-     * @param int                                                     $signal     杀死进程的信号，0 表示正常退出码路径
-     * @param array{window?: int, limit?: int} $options  window: 统计窗口秒数；limit: 触发熔断的次数（0 = 关闭）
-     * @param string|null                                             $context 附加到日志里的上下文（如 worker_id）
+     * @param string                           $driver     驱动名（swoole / workerman），只用于日志
+     * @param int                              $worker_pid 崩溃的 worker pid
+     * @param int                              $exit_code  退出码（signal 为 0 时有效，255 多为未捕获异常）
+     * @param int                              $signal     杀死进程的信号，0 表示正常退出码路径
+     * @param array{window?: int, limit?: int} $options    window: 统计窗口秒数；limit: 触发熔断的次数（0 = 关闭）
+     * @param null|string                      $context    附加到日志里的上下文（如 worker_id）
      *
      * @return bool 是否触发熔断（调用方据此停机）
      */

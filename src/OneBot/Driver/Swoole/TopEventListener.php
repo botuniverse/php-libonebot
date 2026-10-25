@@ -9,8 +9,6 @@ use Choir\Http\UploadedFile;
 use Choir\WebSocket\FrameInterface;
 use OneBot\Driver\Coroutine\Adaptive;
 use OneBot\Driver\Event\Http\HttpRequestEvent;
-use OneBot\Driver\Interfaces\StreamResponseInterface;
-use OneBot\Driver\WorkerCrashGuard;
 use OneBot\Driver\Event\Process\ManagerStartEvent;
 use OneBot\Driver\Event\Process\ManagerStopEvent;
 use OneBot\Driver\Event\Process\WorkerExitEvent;
@@ -19,7 +17,9 @@ use OneBot\Driver\Event\Process\WorkerStopEvent;
 use OneBot\Driver\Event\WebSocket\WebSocketCloseEvent;
 use OneBot\Driver\Event\WebSocket\WebSocketMessageEvent;
 use OneBot\Driver\Event\WebSocket\WebSocketOpenEvent;
+use OneBot\Driver\Interfaces\StreamResponseInterface;
 use OneBot\Driver\Process\ProcessManager;
+use OneBot\Driver\WorkerCrashGuard;
 use OneBot\Exception\ExceptionHandler;
 use OneBot\Util\Singleton;
 use Psr\Http\Message\ResponseInterface;
@@ -183,43 +183,6 @@ class TopEventListener
     }
 
     /**
-     * 输出流式响应（SSE / 打字机 / 上游透传）
-     *
-     * 与普通响应的区别：不把 body 攒齐再 end()，而是把控制权交给响应对象的 writeTo()，
-     * 由它边生产边通过 sink 写出。这里只负责三件事：
-     * 1. 先把状态码和响应头发出去（客户端才能尽早进入 streaming 状态）；
-     * 2. 兜住 writeTo() 里的异常——此时头已发出，改不了状态码，只能尽力补一条错误事件；
-     * 3. 保证连接最终被 end() 收尾，不会把 worker 挂死在一个永远不结束的请求上。
-     */
-    private function streamResponse(StreamResponseInterface $psr_response, Response $response): void
-    {
-        foreach ($psr_response->getHeaders() as $header => $value) {
-            // 流式响应必须不带 Content-Length，否则 Swoole 不会使用 chunked，客户端会一直等
-            if (strcasecmp($header, 'Content-Length') === 0) {
-                continue;
-            }
-            $response->setHeader($header, implode(';', $value));
-        }
-        $response->setStatusCode($psr_response->getStatusCode());
-
-        $sink = new SwooleStreamSink($response);
-        try {
-            $psr_response->writeTo($sink);
-        } catch (\Throwable $e) {
-            try {
-                ExceptionHandler::getInstance()->handle($e);
-            } catch (\Throwable $ignore) {
-                // 连异常处理器都炸了就别再往外抛，否则整个 worker 会挂掉
-            }
-            if (!$sink->isClosed() && stripos($psr_response->getHeaderLine('Content-Type'), 'text/event-stream') !== false) {
-                $sink->write('event: error' . "\n" . 'data: ' . json_encode(['message' => $e->getMessage()], JSON_UNESCAPED_UNICODE) . "\n\n");
-            }
-        } finally {
-            $sink->end();
-        }
-    }
-
-    /**
      * Swoole 的顶层 close 事件回调
      *
      * @param int|string $fd
@@ -327,6 +290,43 @@ class TopEventListener
             ob_event_dispatcher()->dispatchWithHandler($event);
         } catch (\Throwable $e) {
             ExceptionHandler::getInstance()->handle($e);
+        }
+    }
+
+    /**
+     * 输出流式响应（SSE / 打字机 / 上游透传）
+     *
+     * 与普通响应的区别：不把 body 攒齐再 end()，而是把控制权交给响应对象的 writeTo()，
+     * 由它边生产边通过 sink 写出。这里只负责三件事：
+     * 1. 先把状态码和响应头发出去（客户端才能尽早进入 streaming 状态）；
+     * 2. 兜住 writeTo() 里的异常——此时头已发出，改不了状态码，只能尽力补一条错误事件；
+     * 3. 保证连接最终被 end() 收尾，不会把 worker 挂死在一个永远不结束的请求上。
+     */
+    private function streamResponse(StreamResponseInterface $psr_response, Response $response): void
+    {
+        foreach ($psr_response->getHeaders() as $header => $value) {
+            // 流式响应必须不带 Content-Length，否则 Swoole 不会使用 chunked，客户端会一直等
+            if (strcasecmp($header, 'Content-Length') === 0) {
+                continue;
+            }
+            $response->setHeader($header, implode(';', $value));
+        }
+        $response->setStatusCode($psr_response->getStatusCode());
+
+        $sink = new SwooleStreamSink($response);
+        try {
+            $psr_response->writeTo($sink);
+        } catch (\Throwable $e) {
+            try {
+                ExceptionHandler::getInstance()->handle($e);
+            } catch (\Throwable $ignore) {
+                // 连异常处理器都炸了就别再往外抛，否则整个 worker 会挂掉
+            }
+            if (!$sink->isClosed() && stripos($psr_response->getHeaderLine('Content-Type'), 'text/event-stream') !== false) {
+                $sink->write('event: error' . "\n" . 'data: ' . json_encode(['message' => $e->getMessage()], JSON_UNESCAPED_UNICODE) . "\n\n");
+            }
+        } finally {
+            $sink->end();
         }
     }
 }

@@ -24,6 +24,7 @@ use OneBot\Util\Singleton;
 use Swoole\Atomic;
 use Swoole\Event;
 use Swoole\Http\Server as SwooleHttpServer;
+use Swoole\Runtime;
 use Swoole\Server;
 use Swoole\Server\Port;
 use Swoole\WebSocket\Server as SwooleWebSocketServer;
@@ -154,8 +155,8 @@ class SwooleDriver extends Driver
             // 12 个 worker 被占满后整台服务就只剩心跳。开了之后这些 IO 会自动让出协程。
             // 只在配置里显式给了 coroutine_hook_flags 时才开，避免改变既有部署的默认行为。
             $hook_flags = $this->getParam('coroutine_hook_flags', null);
-            if ($hook_flags !== null && class_exists(\Swoole\Runtime::class)) {
-                \Swoole\Runtime::enableCoroutine((int) $hook_flags);
+            if ($hook_flags !== null && class_exists(Runtime::class)) {
+                Runtime::enableCoroutine((int) $hook_flags);
             }
 
             // 插入一个退出的 exitcode 全局 atomic
