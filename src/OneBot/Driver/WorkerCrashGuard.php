@@ -178,7 +178,17 @@ class WorkerCrashGuard
         if ($map !== null) {
             return $map;
         }
-        $map = [];
+        // 兜底表：只收「Linux 与 macOS 编号一致」的信号。
+        // 必须留这张表，因为 Windows 没有 pcntl，下面那圈 defined() 全是 false，
+        // 只靠常量解析的话 Windows 上会退化成 SIG11 这种没人看得懂的写法。
+        $map = [
+            1 => 'SIGHUP', 2 => 'SIGINT', 3 => 'SIGQUIT', 4 => 'SIGILL', 5 => 'SIGTRAP',
+            6 => 'SIGABRT', 8 => 'SIGFPE', 9 => 'SIGKILL', 11 => 'SIGSEGV', 13 => 'SIGPIPE',
+            14 => 'SIGALRM', 15 => 'SIGTERM', 24 => 'SIGXCPU', 25 => 'SIGXFSZ',
+        ];
+        // 再用当前平台的常量覆盖：SIGBUS / SIGUSR1 / SIGUSR2 等在不同系统上编号不同
+        // （Linux: SIGBUS=7、SIGUSR1=10；macOS: SIGBUS=10、SIGUSR1=30），
+        // 硬编码任何一个平台的值都会在另一个平台上误报，所以不能放进兜底表。
         $names = [
             'SIGHUP', 'SIGINT', 'SIGQUIT', 'SIGILL', 'SIGTRAP', 'SIGABRT', 'SIGBUS', 'SIGFPE',
             'SIGKILL', 'SIGUSR1', 'SIGSEGV', 'SIGUSR2', 'SIGPIPE', 'SIGALRM', 'SIGTERM', 'SIGXCPU', 'SIGXFSZ',
