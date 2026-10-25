@@ -323,7 +323,10 @@ class TopEventListener
                 // 连异常处理器都炸了就别再往外抛，否则整个 worker 会挂掉
             }
             if (!$sink->isClosed() && stripos($psr_response->getHeaderLine('Content-Type'), 'text/event-stream') !== false) {
-                $sink->write('event: error' . "\n" . 'data: ' . json_encode(['message' => $e->getMessage()], JSON_UNESCAPED_UNICODE) . "\n\n");
+                // 不回显异常原文（可能包含 SQL、内网地址等），细节只留在服务端日志；
+                // 前面补两个换行作为帧边界：上游若停在 "data: partial" 半帧上，
+                // 错误事件才不会被浏览器当成上一条事件的 payload。
+                $sink->write("\n\nevent: error\n" . 'data: ' . json_encode(['message' => 'stream aborted'], JSON_UNESCAPED_UNICODE) . "\n\n");
             }
         } finally {
             $sink->end();

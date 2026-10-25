@@ -69,5 +69,14 @@ class WorkerCrashGuardTest extends TestCase
         self::assertSame('SIG42', WorkerCrashGuard::signalName(42));
         self::assertStringContainsString('未捕获异常', WorkerCrashGuard::signalHint(255, 0));
         self::assertStringContainsString('SIGPIPE', WorkerCrashGuard::signalHint(0, 13));
+
+        // 信号编号按平台常量解析：Linux 上 SIGUSR1=10（曾被误标成 SIGBUS），macOS 上 SIGBUS=10
+        if (defined('SIGBUS')) {
+            self::assertSame('SIGBUS', WorkerCrashGuard::signalName((int) constant('SIGBUS')));
+            self::assertStringContainsString('内存访问错误', WorkerCrashGuard::signalHint(0, (int) constant('SIGBUS')));
+        }
+        if (defined('SIGUSR1')) {
+            self::assertSame('SIGUSR1', WorkerCrashGuard::signalName((int) constant('SIGUSR1')));
+        }
     }
 }

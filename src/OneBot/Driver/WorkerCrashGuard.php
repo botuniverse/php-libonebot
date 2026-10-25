@@ -23,13 +23,6 @@ class WorkerCrashGuard
     /** 日志文件超过该大小时滚动一次，避免反复崩溃把磁盘写满 */
     public const MAX_LOG_BYTES = 10 * 1024 * 1024;
 
-    /** @var array<int, string> 常见信号名 */
-    private const SIGNAL_NAMES = [
-        1 => 'SIGHUP', 2 => 'SIGINT', 3 => 'SIGQUIT', 4 => 'SIGILL', 6 => 'SIGABRT', 8 => 'SIGFPE',
-        9 => 'SIGKILL', 10 => 'SIGBUS', 11 => 'SIGSEGV', 13 => 'SIGPIPE', 14 => 'SIGALRM',
-        15 => 'SIGTERM', 24 => 'SIGXCPU', 25 => 'SIGXFSZ',
-    ];
-
     /** @var float[] 最近崩溃时间戳（只在 master/manager 进程内有效，进程重启后自动清零） */
     private static array $crash_times = [];
 
@@ -115,20 +108,30 @@ class WorkerCrashGuard
 
     public static function signalName(int $signal): string
     {
-        return self::SIGNAL_NAMES[$signal] ?? 'SIG' . $signal;
+        return self::signalMap()[$signal] ?? 'SIG' . $signal;
     }
 
     public static function signalHint(int $exit_code, int $signal): string
     {
-        return match ($signal) {
-            11, 10, 4 => '（段错误/总线错误：多半是 PHP 扩展或框架层的非法内存访问，日志/IO 递归写入坏掉的控制台也可能触发）',
-            6 => '（abort：PHP 内部致命错误）',
-            9 => '（被 kill -9 或系统因内存不足杀掉）',
-            13 => '（SIGPIPE：往已关闭的管道/tty 写数据，常见于启动它的终端被关掉）',
-            15, 2 => '（收到正常停止信号，若频繁出现请检查是否有外部进程在反复 kill/reload）',
-            0 => $exit_code === 255 ? '（未捕获异常或 PHP Fatal Error，需要看 worker 的标准错误输出）' : '',
-            default => '',
-        };
+        switch (self::signalName($signal)) {
+            case 'SIGSEGV':
+            case 'SIGBUS':
+            case 'SIGILL':
+                return '（内存访问错误：多半是 PHP 扩展或框架层的非法内存访问，日志/IO 递归写入坏掉的控制台也可能触发）';
+            case 'SIGABRT':
+                return '（abort：PHP 内部致命错误）';
+            case 'SIGKILL':
+                return '（被 kill -9 或系统因内存不足杀掉）';
+            case 'SIGPIPE':
+                return '（SIGPIPE：往已关闭的管道/tty 写数据，常见于启动它的终端被关掉）';
+            case 'SIGTERM':
+            case 'SIGINT':
+                return '（收到正常停止信号，若频繁出现请检查是否有外部进程在反复 kill/reload）';
+        }
+        if ($signal === 0) {
+            return $exit_code === 255 ? '（未捕获异常或 PHP Fatal Error，需要看 worker 的标准错误输出）' : '';
+        }
+        return '';
     }
 
     /**
@@ -145,6 +148,9 @@ class WorkerCrashGuard
                 @mkdir($dir, 0755, true);
             }
             $file = $dir . '/worker_error.log';
+            // Manager/Master 是长驻进程，is_file()/filesize() 会命中 PHP 的 stat 缓存，
+            // 不清理的话会一直看到旧大小，导致日志滚动永远不触发。
+            clearstatcache(true, $file);
             if (is_file($file) && filesize($file) > self::MAX_LOG_BYTES) {
                 @rename($file, $file . '.1');
             }
@@ -155,5 +161,33 @@ class WorkerCrashGuard
             // 落盘失败也不能让宿主进程崩掉，继续走 error_log 兜底
         }
         @error_log(rtrim($line));
+    }
+
+    /**
+     * 信号编号 => 名称（按当前平台的 pcntl 常量解析）
+     *
+     * 不能硬编码数字：SIGBUS / SIGUSR1 在 Linux 与 macOS 上编号不同
+     * （Linux: SIGBUS=7、SIGUSR1=10；macOS: SIGBUS=10、SIGUSR1=30），
+     * 硬编码会把 Linux 上的 SIGUSR1 误报成总线错误。
+     *
+     * @return array<int, string>
+     */
+    private static function signalMap(): array
+    {
+        static $map;
+        if ($map !== null) {
+            return $map;
+        }
+        $map = [];
+        $names = [
+            'SIGHUP', 'SIGINT', 'SIGQUIT', 'SIGILL', 'SIGTRAP', 'SIGABRT', 'SIGBUS', 'SIGFPE',
+            'SIGKILL', 'SIGUSR1', 'SIGSEGV', 'SIGUSR2', 'SIGPIPE', 'SIGALRM', 'SIGTERM', 'SIGXCPU', 'SIGXFSZ',
+        ];
+        foreach ($names as $name) {
+            if (defined($name)) {
+                $map[(int) constant($name)] = $name;
+            }
+        }
+        return $map;
     }
 }

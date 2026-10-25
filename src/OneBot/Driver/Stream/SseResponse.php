@@ -90,7 +90,14 @@ class SseResponse extends Response implements StreamResponseInterface
      */
     public function comment(StreamSinkInterface $sink, string $text = 'keep-alive'): bool
     {
-        return $sink->write(': ' . $text . "\n\n");
+        // 注释行也必须逐行加 ": " 前缀：否则多行文本里的空行会把后面的内容
+        // 变成独立字段（例如 "hb\n\ndata: x" 会被浏览器当成一条 data 事件）。
+        $buffer = '';
+        foreach (preg_split('/\r\n|\r|\n/', $text) as $line) {
+            $buffer .= ': ' . $line . "\n";
+        }
+
+        return $sink->write($buffer . "\n");
     }
 
     /**
@@ -117,9 +124,11 @@ class SseResponse extends Response implements StreamResponseInterface
         if ($retry !== null) {
             $buffer .= 'retry: ' . $retry . "\n";
         }
-        // 多行数据必须每行一个 data:，否则浏览器只认第一行
-        foreach (explode("\n", rtrim($data, "\r\n")) as $line) {
-            $buffer .= 'data: ' . rtrim($line, "\r") . "\n";
+        // 多行数据必须每行一个 data:，否则浏览器只认第一行。
+        // 这里不能 rtrim：SSE 的行为分隔符是 CRLF / LF / CR 三种，且尾部的空行
+        // 代表数据里的换行（format("a\n\n") 应当保留一个换行），trim 掉就是丢数据。
+        foreach (preg_split('/\r\n|\r|\n/', $data) as $line) {
+            $buffer .= 'data: ' . $line . "\n";
         }
 
         return $buffer . "\n";
